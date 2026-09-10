@@ -1201,3 +1201,17 @@ button { font-family: inherit; }
   visibility: hidden; pointer-events: none;
 }
 .h5-cart-pane.on { position: static; visibility: visible; pointer-events: auto; }
+/* R — 暂存单操作区吸底：激活 pane 撑满 body 高度给 sticky 留出吸附空间；
+   操作行贴面板底（白底 + 分隔线），自带 safe-area 底衬，min-height + 垂直居中 */
+.h5-cart-pane.on { min-height: 100%; display: flex; flex-direction: column; }
+.h5-cart-pane.on > * { flex: 1 1 auto; display: flex; flex-direction: column; }
+.h5-cart-pane:has(.h5-act-row) { padding-bottom: 0; }
+.h5-cart-pane .h5-act-row {
+  position: sticky; bottom: 0; z-index: 5; background: #fff;
+  border-top: 1px solid #E7EAF0;
+  /* margin-top:auto：短内容时自然沉到编辑器根节点底部；内容超出时归 0，
+     由 sticky 兑现滚动吸底 */
+  margin: auto -12px 0;
+  padding: 8px 12px calc(10px + var(--ios-safe-bottom, 0px));
+  min-height: 52px; box-sizing: border-box;
+}

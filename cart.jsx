@@ -89,7 +89,14 @@ function H5CartSheet({ onClose, push }) {
     const panes = [...body.querySelectorAll('.h5-cart-pane')];
     if (!panes.length) return;
     let max = 0;
-    panes.forEach(p => { max = Math.max(max, p.scrollHeight); });
+    panes.forEach(p => {
+      // 激活 pane 被 min-height:100% 拉伸（给吸底操作行留 sticky 空间），
+      // 测高前先归零，保证量到纯内容高度 —— 面板高度规则语义不变
+      const on = p.classList.contains('on');
+      if (on) p.style.minHeight = '0px';
+      max = Math.max(max, p.scrollHeight);
+      if (on) p.style.minHeight = '';
+    });
     // 面板顶部非内容区（grip + 标题行 + 页签栏 + sheet 自身 padding）
     const chrome = sheet.offsetHeight - body.offsetHeight;
     const screenH = sheet.parentElement ? sheet.parentElement.clientHeight : window.innerHeight;
