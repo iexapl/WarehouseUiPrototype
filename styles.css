@@ -756,7 +756,7 @@ button { font-family: inherit; }
   font-size: 12px; line-height: 1.6; display: flex; gap: 10px; margin-bottom: 10px;
 }
 .h5-segments { display: flex; background: #fff; border-radius: 9px; padding: 3px; gap: 2px; }
-.h5-segment { flex: 1; border: none; background: transparent; padding: 7px 0; border-radius: 7px; font-size: 12.5px; color: var(--text-2); cursor: pointer; }
+.h5-segment { flex: 1; border: none; background: transparent; padding: 7px 0; border-radius: 7px; font-size: 12.5px; color: var(--text-2); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
 .h5-segment.active { background: var(--primary); color: #fff; font-weight: 600; }
 
 /* ai summary */
@@ -1170,8 +1170,8 @@ button { font-family: inherit; }
 /* mobile bottom sheet (three module carts on segments) */
 .h5-cart-mask { position: absolute; inset: 0; background: rgba(23, 35, 47, 0.5); z-index: 400; display: flex; flex-direction: column; justify-content: flex-end; }
 .h5-cart-sheet {
-  background: #F1F3F6; border-radius: 14px 14px 0 0; max-height: 80%; display: flex; flex-direction: column;
-  animation: h5CartUp 0.22s ease; padding-bottom: calc(12px + var(--ios-safe-bottom, 0px));
+  background: #F1F3F6; border-radius: 14px 14px 0 0; max-height: 75%; display: flex; flex-direction: column;
+  animation: h5CartUp 0.22s ease; padding-bottom: 0;
 }
 @keyframes h5CartUp { from { transform: translateY(60px); opacity: 0.4; } to { transform: none; opacity: 1; } }
 .h5-cart-grip { width: 36px; height: 4px; border-radius: 2px; background: #D6DEE8; margin: 8px auto 0; flex-shrink: 0; }
@@ -1193,10 +1193,11 @@ button { font-family: inherit; }
 .h5-cart-seg.on .h5-cart-seg-n { background: var(--primary-light); color: var(--primary); }
 /* 面板高度固定：三个页签内容常驻渲染，隐藏 pane 绝对定位参与测高；
    body 高度由 JS 设为三页签内容最大值（封顶 2/3 屏），切换页签高度不变 */
-.h5-cart-body { position: relative; overflow: hidden; padding: 0; flex-shrink: 1; }
+.h5-cart-body { position: relative; overflow: hidden; padding: 0; flex-shrink: 1; background: #fff; }
 .h5-cart-pane {
   position: absolute; top: 0; left: 0; right: 0; box-sizing: border-box;
-  padding: 4px 12px 4px; overflow-y: auto; -webkit-overflow-scrolling: touch;
+  padding: 4px 12px calc(10px + var(--ios-safe-bottom, 0px));
+  overflow-y: auto; -webkit-overflow-scrolling: touch;
   visibility: hidden; pointer-events: none;
 }
 .h5-cart-pane.on { position: static; visibility: visible; pointer-events: auto; }

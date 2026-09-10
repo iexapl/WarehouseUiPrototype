@@ -79,8 +79,8 @@ function H5CartSheet({ onClose, push }) {
   const bodyRef = useRef(null);
   // 面板高度规则：三个页签内容都常驻渲染（未激活 pane 隐藏但仍参与测高，
   // 含空态文案），body 高度 = 三页签内容自然高度的最大值，且总面板不超过
-  // 手机屏高 2/3（超出则封顶，各 pane 内部滚动）。内容变化时重算，
-  // 切换页签不再改变面板高度。
+  // 手机屏高 3/4（超出则封顶，各 pane 内部滚动）。内容变化时重算，
+  // 切换页签不再改变面板高度；面板贴底（下边距 0，仅顶圆角）。
   const [bodyH, setBodyH] = useState(null);
   useEffect(() => {
     const sheet = sheetRef.current;
@@ -93,7 +93,7 @@ function H5CartSheet({ onClose, push }) {
     // 面板顶部非内容区（grip + 标题行 + 页签栏 + sheet 自身 padding）
     const chrome = sheet.offsetHeight - body.offsetHeight;
     const screenH = sheet.parentElement ? sheet.parentElement.clientHeight : window.innerHeight;
-    const cap = Math.max(180, Math.round(screenH * 2 / 3) - chrome);
+    const cap = Math.max(180, Math.round(screenH * 3 / 4) - chrome);
     setBodyH(Math.min(max, cap));
   }, [carts]);
   return (
