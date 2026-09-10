@@ -93,9 +93,11 @@ function H5CartSheet({ onClose, push }) {
       // 激活 pane 被 min-height:100% 拉伸（给吸底操作行留 sticky 空间），
       // 测高前先归零，保证量到纯内容高度 —— 面板高度规则语义不变
       const on = p.classList.contains('on');
-      if (on) p.style.minHeight = '0px';
+      // 激活 pane 是 flex 布局（内容区/操作行分离），测高前临时转回块布局，
+      // 与隐藏 pane 同构，保证量到纯内容自然高度 —— 面板高度规则语义不变
+      if (on) { p.style.minHeight = '0px'; p.style.display = 'block'; }
       max = Math.max(max, p.scrollHeight);
-      if (on) p.style.minHeight = '';
+      if (on) { p.style.minHeight = ''; p.style.display = ''; }
     });
     // 面板顶部非内容区（grip + 标题行 + 页签栏 + sheet 自身 padding）
     const chrome = sheet.offsetHeight - body.offsetHeight;
@@ -170,6 +172,7 @@ function InquiryCartEditor({ onDone, push }) {
   };
   return (
     <div>
+      <div className="h5-cart-scroll">
       {lines.length === 0 && <H5Empty icon="cart" message="Inquiry staging is empty" hint="Add upstream products while browsing the sourcing channel" />}
       {groups.map(g => {
         const tn = db.tenants.find(x => x.id === g.ownerId);
@@ -211,12 +214,15 @@ function InquiryCartEditor({ onDone, push }) {
             <div className="muted" style={{ fontSize: 11, marginTop: 8, lineHeight: 1.5 }}><Icon name="info" size={11} /> {t('Lines are grouped by supplier — one inquiry is created per supplier.')}</div>
             <div className="muted" style={{ fontSize: 11, marginTop: 4, lineHeight: 1.5 }}><Icon name="whatsapp" size={11} /> {t("After submitting, each inquiry is sent to the supplier's WhatsApp chat.")}</div>
           </div>
-          <div className="h5-act-row" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ flex: 1, fontSize: 12.5, color: 'var(--text-2)' }}>{`${lines.length} items · ${totalQty} units · ${groups.length} suppliers`}</div>
-            <button type="button" className="h5-btn" onClick={() => { cartApi.clear('inquiry'); toast('Inquiry staging cleared', 'info'); }}><Icon name="trash" size={14} />{t('Clear')}</button>
-            <button type="button" className="h5-btn primary" onClick={submit}><Icon name="whatsapp" size={14} />{t('Submit Inquiry')}</button>
-          </div>
         </React.Fragment>
+      )}
+      </div>
+      {lines.length > 0 && (
+        <div className="h5-act-row" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ flex: 1, fontSize: 12.5, color: 'var(--text-2)' }}>{`${lines.length} items · ${totalQty} units · ${groups.length} suppliers`}</div>
+          <button type="button" className="h5-btn" onClick={() => { cartApi.clear('inquiry'); toast('Inquiry staging cleared', 'info'); }}><Icon name="trash" size={14} />{t('Clear')}</button>
+          <button type="button" className="h5-btn primary" onClick={submit}><Icon name="whatsapp" size={14} />{t('Submit Inquiry')}</button>
+        </div>
       )}
     </div>
   );
@@ -274,6 +280,7 @@ function InboundCartEditor({ onDone }) {
   };
   return (
     <div>
+      <div className="h5-cart-scroll">
       {lines.length === 0 && <H5Empty icon="warehouse" message="Inbound staging is empty" hint="Scan barcodes, or tap Stock In on the My Warehouse list" />}
       {lines.map((l, i) => {
         const qty = Number(l.qty) || 0;
@@ -385,12 +392,15 @@ function InboundCartEditor({ onDone }) {
               <input className="input" style={{ height: 32, flex: 1 }} value={note} onChange={e => setNote(e.target.value)} placeholder={t('e.g. purchase arrival')} />
             </div>
           </div>
-          <div className="h5-act-row" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ flex: 1, fontSize: 12.5, color: 'var(--text-2)' }}>{t('Unit price × qty = stock-in amount')}</div>
-            <button type="button" className="h5-btn" onClick={() => { cartApi.clear('inbound'); toast('Inbound staging cleared', 'info'); }}><Icon name="trash" size={14} />{t('Clear')}</button>
-            <button type="button" className="h5-btn primary" onClick={confirm}><Icon name="download" size={14} />{t('Confirm Stock In')}</button>
-          </div>
         </React.Fragment>
+      )}
+      </div>
+      {lines.length > 0 && (
+        <div className="h5-act-row" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ flex: 1, fontSize: 12.5, color: 'var(--text-2)' }}>{t('Unit price × qty = stock-in amount')}</div>
+          <button type="button" className="h5-btn" onClick={() => { cartApi.clear('inbound'); toast('Inbound staging cleared', 'info'); }}><Icon name="trash" size={14} />{t('Clear')}</button>
+          <button type="button" className="h5-btn primary" onClick={confirm}><Icon name="download" size={14} />{t('Confirm Stock In')}</button>
+        </div>
       )}
     </div>
   );
@@ -430,6 +440,7 @@ function OutboundCartEditor({ onDone }) {
   };
   return (
     <div>
+      <div className="h5-cart-scroll">
       {lines.length === 0 && <H5Empty icon="truck" message="Outbound staging is empty" hint="Scan items, or tap Stock Out on the My Warehouse list" />}
       {lines.map((l, i) => {
         const p = db.products.find(x => x.id === l.pid) || {};
@@ -517,12 +528,15 @@ function OutboundCartEditor({ onDone }) {
           {Object.keys(totalsByCur).length > 1 && (
             <div className="muted" style={{ fontSize: 11, margin: '0 4px 8px', lineHeight: 1.5 }}><Icon name="info" size={11} /> {t('Multi-currency lines are subtotaled per currency — demo, no FX conversion')}</div>
           )}
-          <div className="h5-act-row" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ flex: 1, fontSize: 12.5, color: 'var(--text-2)' }}>{t('Actual sales price × qty = outbound amount')}</div>
-            <button type="button" className="h5-btn" onClick={() => { cartApi.clear('outbound'); toast('Outbound staging cleared', 'info'); }}><Icon name="trash" size={14} />{t('Clear')}</button>
-            <button type="button" className="h5-btn primary" onClick={confirm}><Icon name="truck" size={14} />{t('Confirm Stock Out')}</button>
-          </div>
         </React.Fragment>
+      )}
+      </div>
+      {lines.length > 0 && (
+        <div className="h5-act-row" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ flex: 1, fontSize: 12.5, color: 'var(--text-2)' }}>{t('Actual sales price × qty = outbound amount')}</div>
+          <button type="button" className="h5-btn" onClick={() => { cartApi.clear('outbound'); toast('Outbound staging cleared', 'info'); }}><Icon name="trash" size={14} />{t('Clear')}</button>
+          <button type="button" className="h5-btn primary" onClick={confirm}><Icon name="truck" size={14} />{t('Confirm Stock Out')}</button>
+        </div>
       )}
     </div>
   );
