@@ -400,11 +400,7 @@ function InboundCartEditor({ onDone }) {
                 </div>
                 <span className="h5-back" title={t('Remove')} onClick={() => cartApi.removeAt('inbound', i)} style={{ color: 'var(--danger)' }}><Icon name="trash" size={16} /></span>
               </div>
-            <div className="flex mt8" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
-              <span className="muted mono" style={{ fontSize: 11.5 }}>{p.unit} × {l.qty}</span>
-              <CartStepper value={l.qty} onChange={q => cartApi.setQty('inbound', i, q)} />
-            </div>
-            {/* 物料单价（默认参考价/渠道价，可改）+ 独立币种 → 行金额 = 单价 × 数量 */}
+            {/* 物料单价（默认参考价/渠道价，可改）+ 独立币种 → 行金额 = 单价 × 数量；单价在前、数量在后 */}
               <div className="flex mt8" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
                 <span className="muted" style={{ fontSize: 11.5 }}>{t('Unit Price')}</span>
                 <span className="flex" style={{ alignItems: 'center', gap: 6 }}>
@@ -414,6 +410,10 @@ function InboundCartEditor({ onDone }) {
                     value={ifnull(l.unitPrice, 0)} aria-label={t('Unit Price')} onChange={e => cartApi.setField('inbound', i, 'unitPrice', e.target.value)} />
                 </span>
               </div>
+            <div className="flex mt8" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
+              <span className="muted mono" style={{ fontSize: 11.5 }}>{p.unit} × {l.qty}</span>
+              <CartStepper value={l.qty} onChange={q => cartApi.setQty('inbound', i, q)} />
+            </div>
               <div className="flex mt4" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
                 <span className="muted mono" style={{ fontSize: 11 }}>{onHand} → {onHand + qty} {p.unit}</span>
                 <span className="mono" style={{ fontSize: 11.5 }}>{t('Amount')}: <b style={{ color: '#D35400' }}>{money(qty * (Number(l.unitPrice) || 0), lineCur(l, p)).text}</b></span>
@@ -558,11 +558,7 @@ function OutboundCartEditor({ onDone }) {
               </div>
               <span className="h5-back" title={t('Remove')} onClick={() => cartApi.removeAt('outbound', i)} style={{ color: 'var(--danger)' }}><Icon name="trash" size={16} /></span>
             </div>
-            <div className="flex mt8" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
-              <span className="muted mono" style={{ fontSize: 11.5 }}>{p.unit} × {l.qty}</span>
-              <CartStepper value={l.qty} onChange={q => cartApi.setQty('outbound', i, q)} />
-            </div>
-            {/* 价格体系：市场指导价 / 渠道销售价只读参考；实际销售价可改（默认渠道价及其币种） */}
+            {/* 价格体系：市场指导价 / 渠道销售价只读参考；实际销售价可改（默认渠道价及其币种）；价格区块在前、数量在后 */}
             <div className="flex mt8" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
               <span className="muted mono" style={{ fontSize: 11 }}>{t('Market Reference Price')}: <b>{money(ifnull(p.marketPrice, p.price), marketCurOf(p)).text}</b></span>
               <span className="muted mono" style={{ fontSize: 11 }}>{t('Channel Sales Price')}: <b>{money(p.price, p.currency).text}</b></span>
@@ -575,6 +571,10 @@ function OutboundCartEditor({ onDone }) {
                 <input className="input mono" style={{ height: 30, width: 92, textAlign: 'right' }} type="number" min="0" step="0.01"
                   value={ifnull(l.salePrice, ifnull(p.price, 0))} aria-label={t('Actual Sales Price')} onChange={e => cartApi.setField('outbound', i, 'salePrice', e.target.value)} />
               </span>
+            </div>
+            <div className="flex mt8" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
+              <span className="muted mono" style={{ fontSize: 11.5 }}>{p.unit} × {l.qty}</span>
+              <CartStepper value={l.qty} onChange={q => cartApi.setQty('outbound', i, q)} />
             </div>
             <div className="flex mt4" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
               <span className="muted mono" style={{ fontSize: 11 }}>{onHand} → {onHand - qty} {p.unit}</span>
