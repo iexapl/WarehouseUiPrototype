@@ -2,7 +2,9 @@
 
 ## 应用版本
 
-- 当前应用 `app_17dufj267uz`（购物车改造版，从原应用拉取）：扫码入库/批量入库已合并为单入口「扫码入库」（连续识别多条、一次确认）；询价/入库/出库三购物车；入库确认时选/新建供货方。
+- 当前应用 `app_17dufj267uz`（暂存单改造版）：扫码入库单入口（连续识别、一次确认）；询价/入库/出库三暂存单；入库确认时选/新建供货方。
+- 界面统称已从「购物车/Cart」全量改为「暂存单/Staging」（FAB、面板标题、空态、toast）；三车标签 = Inquiry/Inbound/Outbound Staging（询价/入库/出库暂存）。代码标识符保留历史命名 cart/cartApi/CART_MODULES。
+- 移动端仓库页按钮模型（2026-09-10 改造）：我的仓库列表项 = 调价 / 入库 / 出库 / 查看库存（入库/出库把物料加入对应暂存，已在车中 +1）；采购渠道列表项 = 单「询价」按钮（加入询价暂存，原加入询价车按钮与 quickInq 快速询价弹窗已删除）；商品详情页同步。adjustStock 移动端页面已无入口（Web 端「调整库存」保留）。
 - 购物车架构：`cart.jsx` 提供共享组件（InboundCartEditor/OutboundCartEditor/InquiryCartEditor/H5CartFab/H5CartSheet/NewSupplierDialog/WebCartFab/WebInquiryCartDialog）；三车数据 `{ inquiry, inbound, outbound }` 是 **App 层 useState**，必须放在 lang-remount key 之上（语言切换不丢车）；`cartApi` useMemo 引用 `act`，**必须定义在 `act` 之后**（放前面会 TDZ ReferenceError 白屏）。
 - 移动端购物车 UI：`.h5-cart-fab`（.h5-app 内 absolute，z-index 60）+ `.h5-cart-mask/.h5-cart-sheet` 底部面板；Web 端 `.web-cart-fab`（fixed）+ Dialog。样式在 styles.css 末尾「Shopping-cart」区块。
 - 新建供货方：`act.createSupplier` 建一个 Supplier 型租户（无链路关系），入库流水带 `supplierId`，reason 组合 `note · Supplier: X · Batch scan stock-in (scan)`。

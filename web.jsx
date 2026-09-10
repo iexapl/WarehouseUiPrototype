@@ -508,8 +508,8 @@ function ProductListPage() {
           { key: 'status', label: 'Status', width: 110, render: p => <Tag tone={p.onSale === false ? 'dark' : 'teal'} dot>{p.onSale === false ? 'Discontinued' : 'On Sale'}</Tag> },
           { key: 'act', label: 'Actions', width: isTenant && tab === 'channel' ? 200 : 280, render: p => isTenant && tab === 'channel' ? (
             <div className="row-actions">
-              {/* 加入询价车：逐项累积（数量默认 1，可在购物车内增减） */}
-              <button className="btn sm text" title={t('Add to Cart')} onClick={() => { cartApi.add('inquiry', { pid: p.id, qty: 1 }); toast(`${p.name} added to the inquiry cart`, 'success'); }}><Icon name="cart" size={13} />{t('Add to Cart')}</button>
+              {/* 加入询价暂存：逐项累积（数量默认 1，可在暂存单内增减） */}
+              <button className="btn sm text" title={t('Add to Inquiry Staging')} onClick={() => { cartApi.add('inquiry', { pid: p.id, qty: 1 }); toast(`${p.name} added to the inquiry staging`, 'success'); }}><Icon name="cart" size={13} />{t('Add to Inquiry Staging')}</button>
               <button className="btn sm text" onClick={() => setDialog('inquire:' + p.id)}><Icon name="edit" size={13} />Inquire</button>
             </div>
           ) : canManageProduct(db, account, p) ? (

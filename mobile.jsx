@@ -582,18 +582,6 @@ function H5Products({ push, platform, skReady = true }) {
   const canInquire = showTabs && !(tenant && tenant.type === 'Supplier') && upstream.length > 0;
   const togglePick = (id) => setPicked(sel => sel.includes(id) ? sel.filter(x => x !== id) : [...sel, id]);
   const exitPick = () => { setPickMode(false); setPicked([]); };
-  // round 51 — per-item quick inquiry: tap the inquire icon on a channel item
-  // to open a compact form (seller auto-follows the product owner)
-  const [quickInq, setQuickInq] = useState(null);
-  const [qQty, setQQty] = useState('1');
-  const [qDate, setQDate] = useState('');
-  const openQuickInq = (p) => { setQuickInq(p); setQQty('1'); setQDate(''); };
-  const submitQuickInq = () => {
-    if (!qQty || Number(qQty) <= 0) { toast('Enter quantities', 'error'); return; }
-    if (!qDate) { toast('Delivery date is required', 'error'); return; }
-    const saved = act.saveInquiry({ seller: quickInq.ownerId, deliveryDate: qDate, items: [{ pid: quickInq.id, qty: Number(qQty) }] }, true);
-    if (saved) { setQuickInq(null); push({ name: 'waChat', docId: saved.id }); }
-  };
   const switchTab = (id) => { productsTab = id; setTabState(id); exitPick(); setQ(''); setCat(''); setSupplier('ALL'); };
   const rows = db.products.filter(p => {
     if (showTabs && (tab === 'mine' ? p.ownerId !== account.tenantId : !upstreamIds.has(p.ownerId))) return false;
@@ -662,7 +650,7 @@ function H5Products({ push, platform, skReady = true }) {
       <div className="h5-tabbody tight" style={{ paddingBottom: pickMode ? 0 : undefined }}>
       {/* R100j — 骨架屏只加在滚动内容区：固定的段选/筛选头（tabhead）不闪骨架 */}
       {!skReady ? <H5Skeleton variant="list" /> : (<React.Fragment>
-      {pickMode && <div className="h5-card muted" style={{ fontSize: 11.5, lineHeight: 1.6, marginBottom: 10 }}><Icon name="info" size={12} /> Select the products you want to inquire about, then add them to the inquiry cart — quantities default to 1 and can be adjusted in the cart before submitting. Only upstream supplier products can be picked; own and downstream products are locked.</div>}
+      {pickMode && <div className="h5-card muted" style={{ fontSize: 11.5, lineHeight: 1.6, marginBottom: 10 }}><Icon name="info" size={12} /> Select the products you want to inquire about, then add them to the inquiry staging — quantities default to 1 and can be adjusted in the staging before submitting. Only upstream supplier products can be picked; own and downstream products are locked.</div>}
       {refreshing ? <div className="h5-card" style={{ textAlign: 'center', color: 'var(--text-3)', fontSize: 12.5 }}>Refreshing…</div> :
         rows.map(p => {
           // tenant boundary holds naturally: the channel tab lists upstream-owned
@@ -716,9 +704,8 @@ function H5Products({ push, platform, skReady = true }) {
             {!pickMode && tab === 'channel' && showTabs && inq && (
               <div className="p-foot">
                 <div className="row-actions" onClick={e => e.stopPropagation()}>
-                  {/* 加入询价车：逐项累积到询价车（数量默认 1，可在购物车里增减） */}
-                  <button className="h5-item-act" title={t('Add to Cart')} aria-label={t('Add to Cart')} onClick={() => { cartApi.add('inquiry', { pid: p.id, qty: 1 }); toast(`${p.name} added to the inquiry cart`, 'success'); }}><Icon name="cart" size={12} />{t('Add to Cart')}</button>
-                  <button className="h5-item-act" title={t('Inquire')} aria-label={t('Inquire')} onClick={() => openQuickInq(p)}><Icon name="edit" size={12} />{t('Inquire')}</button>
+                  {/* 询价 = 加入询价暂存：单项入口，数量默认 1，已在车中则 +1 */}
+                  <button className="h5-item-act" title={t('Inquire')} aria-label={t('Inquire')} onClick={() => { cartApi.add('inquiry', { pid: p.id, qty: 1 }); toast(`${p.name} added to the inquiry staging`, 'success'); }}><Icon name="edit" size={12} />{t('Inquire')}</button>
                 </div>
               </div>
             )}
@@ -726,7 +713,9 @@ function H5Products({ push, platform, skReady = true }) {
               <div className="p-foot">
                 <div className="row-actions" onClick={e => e.stopPropagation()}>
                   <button className="h5-item-act" title={t('Adjust Price')} aria-label={t('Adjust Price')} onClick={() => push({ name: 'adjustPrice', productId: p.id })}><Icon name="tag" size={12} />{t('Adjust Price')}</button>
-                  <button className="h5-item-act" title={t('Adjust Stock')} aria-label={t('Adjust Stock')} onClick={() => push({ name: 'adjustStock', productId: p.id })}><Icon name="warehouse" size={12} />{t('Adjust Stock')}</button>
+                  {/* 调整库存拆分：入库/出库加入对应暂存（数量默认 1，已在车中则 +1） */}
+                  <button className="h5-item-act" title={t('Stock In')} aria-label={t('Stock In')} onClick={() => { cartApi.add('inbound', { kind: 'exist', pid: p.id, qty: 1 }); toast(`${p.name} added to the inbound staging`, 'success'); }}><Icon name="download" size={12} />{t('Stock In')}</button>
+                  <button className="h5-item-act" title={t('Stock Out')} aria-label={t('Stock Out')} onClick={() => { cartApi.add('outbound', { pid: p.id, qty: 1 }); toast(`${p.name} added to the outbound staging`, 'success'); }}><Icon name="truck" size={12} />{t('Stock Out')}</button>
                   <button className="h5-item-act" title={t('View Stock')} aria-label={t('View Stock')} onClick={() => push({ name: 'channelStock', productId: p.id })}><Icon name="eye" size={12} />{t('View Stock')}</button>
                 </div>
               </div>
@@ -746,28 +735,15 @@ function H5Products({ push, platform, skReady = true }) {
       {pickMode ? (
         <div key="pickbar" className="h5-actionbar">
           <button className="h5-btn" onClick={exitPick}><Icon name="close" size={14} />Cancel</button>
-          {/* 多选加入询价车：勾选的商品逐项累积，数量默认 1，去购物车确认生成询价单 */}
-          <button className="h5-btn primary" disabled={!picked.length} onClick={() => { cartApi.addMany('inquiry', picked); toast(picked.length + (picked.length === 1 ? ' product added to the inquiry cart' : ' products added to the inquiry cart'), 'success'); exitPick(); }}>
-            <Icon name="cart" size={14} />Add to Cart{picked.length ? ` (${picked.length})` : ''}
+          {/* 多选加入询价暂存：勾选的商品逐项累积，数量默认 1，去暂存单确认生成询价单 */}
+          <button className="h5-btn primary" disabled={!picked.length} onClick={() => { cartApi.addMany('inquiry', picked); toast(picked.length + (picked.length === 1 ? ' product added to the inquiry staging' : ' products added to the inquiry staging'), 'success'); exitPick(); }}>
+            <Icon name="cart" size={14} />{t('Add to Inquiry Staging')}{picked.length ? ` (${picked.length})` : ''}
           </button>
         </div>
       ) : (
         <div key="idlehint" className="muted" style={{ textAlign: 'center', fontSize: 11, marginTop: 14 }}>Pull down to refresh · pull up to load more</div>
       )}
 
-      {quickInq && (
-        <Dialog title="Quick Inquiry" width="92%" onClose={() => setQuickInq(null)}
-          footer={<React.Fragment>
-            <button className="btn" onClick={() => setQuickInq(null)}><Icon name="close" size={13} />Cancel</button>
-            <button className="btn primary" onClick={submitQuickInq}><Icon name="check" size={13} />Submit Inquiry</button>
-          </React.Fragment>}>
-          <div className="h5-form-row"><span className="k">Product</span><div style={{ flex: 1, fontSize: 13, minWidth: 0 }}><b>{quickInq.name}</b><div className="muted" style={{ fontSize: 11, marginTop: 2 }}>{quickInq.model} · {quickInq.spec}</div></div></div>
-          <div className="h5-form-row"><span className="k">Supplier</span><div style={{ flex: 1, fontSize: 13 }}>{productOwnerName(db, quickInq)}</div></div>
-          <div className="h5-form-row"><span className="k">Quantity *</span><input className="input" type="number" min="1" style={{ height: 32, flex: 1 }} value={qQty} onChange={e => setQQty(e.target.value)} placeholder="Qty" autoFocus /></div>
-          <div className="h5-form-row" style={{ borderBottom: 'none' }}><span className="k">Delivery Date *</span><input className="input" type="date" style={{ height: 32, flex: 1 }} value={qDate} onChange={e => setQDate(e.target.value)} /></div>
-          <div className="muted" style={{ fontSize: 11, marginTop: 8 }}>Submitted inquiries reach the supplier instantly — the demo continues in the WhatsApp conversation.</div>
-        </Dialog>
-      )}
       </React.Fragment>)}
       </div>
     </div>
@@ -1872,17 +1848,18 @@ function H5ProductPage({ productId, push, platform }) {
       </div>
       {hasActions && (
         <div className="h5-act-row">
-          {/* 加入询价车（数量默认 1，可在购物车内增减） */}
-          {inqOk && <button className="h5-btn primary" onClick={() => { cartApi.add('inquiry', { pid: p.id, qty: 1 }); toast(`${p.name} added to the inquiry cart`, 'success'); }}><Icon name="cart" size={14} />Add to Cart</button>}
-          {inqOk && <button className="h5-btn" onClick={() => push({ name: 'inquiry', items: [p.id] })}><Icon name="edit" size={14} />Inquire</button>}
-          {mgrOk && <button className="h5-btn" onClick={() => push({ name: 'adjustPrice', productId: p.id })}><Icon name="tag" size={14} />Adjust Price</button>}
-          {mgrOk && <button className="h5-btn" onClick={() => push({ name: 'adjustStock', productId: p.id })}><Icon name="warehouse" size={14} />Adjust Stock</button>}
-          {mgrOk && <button className="h5-btn" onClick={() => push({ name: 'channelStock', productId: p.id })}><Icon name="eye" size={14} />View Stock</button>}
+          {/* 询价 = 加入询价暂存（数量默认 1，已在车中则 +1） */}
+          {inqOk && <button className="h5-btn primary" onClick={() => { cartApi.add('inquiry', { pid: p.id, qty: 1 }); toast(`${p.name} added to the inquiry staging`, 'success'); }}><Icon name="edit" size={14} />{t('Inquire')}</button>}
+          {mgrOk && <button className="h5-btn" onClick={() => push({ name: 'adjustPrice', productId: p.id })}><Icon name="tag" size={14} />{t('Adjust Price')}</button>}
+          {/* 调整库存拆分：入库/出库加入对应暂存 */}
+          {mgrOk && <button className="h5-btn" onClick={() => { cartApi.add('inbound', { kind: 'exist', pid: p.id, qty: 1 }); toast(`${p.name} added to the inbound staging`, 'success'); }}><Icon name="download" size={14} />{t('Stock In')}</button>}
+          {mgrOk && <button className="h5-btn" onClick={() => { cartApi.add('outbound', { pid: p.id, qty: 1 }); toast(`${p.name} added to the outbound staging`, 'success'); }}><Icon name="truck" size={14} />{t('Stock Out')}</button>}
+          {mgrOk && <button className="h5-btn" onClick={() => push({ name: 'channelStock', productId: p.id })}><Icon name="eye" size={14} />{t('View Stock')}</button>}
         </div>
       )}
       {(canInquire || canManage) && !inqOk && !mgrOk && (
         <div className="h5-card muted" style={{ fontSize: 11.5, lineHeight: 1.6, marginTop: 12 }}>
-          <Icon name="lock" size={12} /> {`Owned by ${productOwnerName(db, p)} — you can inquire upstream products and adjust price / stock on your own products only.`}
+          <Icon name="lock" size={12} /> {`Owned by ${productOwnerName(db, p)} — you can inquire upstream products and stock in / out your own products only.`}
         </div>
       )}
     </div>

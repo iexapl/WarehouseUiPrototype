@@ -1,6 +1,8 @@
 // ============================================================
-// cart.jsx — shopping-cart interaction for Inquiry / Inbound / Outbound
-// Cart STATE lives in App (app.jsx) and is exposed through AppCtx as
+// cart.jsx — staging-list interaction for Inquiry / Inbound / Outbound
+// ("staging" is the user-facing umbrella term; code identifiers keep the
+// historical cart names: carts / cartApi / CartStepper / ...)
+// Staging STATE lives in App (app.jsx) and is exposed through AppCtx as
 // `carts` + `cartApi`; this file renders the shared UI pieces:
 //   - H5CartFab / WebCartFab      floating entry with line-count badge
 //   - H5CartSheet                 mobile bottom sheet (3 module carts)
@@ -12,9 +14,9 @@
 // ============================================================
 
 const CART_MODULES = [
-  { id: 'inquiry', label: 'Inquiry Cart', icon: 'edit' },
-  { id: 'inbound', label: 'Inbound Cart', icon: 'download' },
-  { id: 'outbound', label: 'Outbound Cart', icon: 'truck' },
+  { id: 'inquiry', label: 'Inquiry Staging', icon: 'edit' },
+  { id: 'inbound', label: 'Inbound Staging', icon: 'download' },
+  { id: 'outbound', label: 'Outbound Staging', icon: 'truck' },
 ];
 
 function emptyCarts() { return { inquiry: [], inbound: [], outbound: [] }; }
@@ -45,7 +47,7 @@ function H5CartFab({ count, bottom, onClick }) {
   if (!count) return null;
   return (
     <button type="button" className="h5-cart-fab" style={{ bottom: bottom || 84 }} onClick={onClick}
-      title={t('Carts')} aria-label={t('Carts')}>
+      title={t('Staging')} aria-label={t('Staging')}>
       <Icon name="cart" size={20} />
       <span className="cart-fab-badge">{count > 99 ? '99+' : count}</span>
     </button>
@@ -56,7 +58,7 @@ function WebCartFab({ count, onClick }) {
   if (!count) return null;
   return (
     <button type="button" className="web-cart-fab" onClick={onClick}
-      title={t('Inquiry Cart')} aria-label={t('Inquiry Cart')}>
+      title={t('Staging')} aria-label={t('Staging')}>
       <Icon name="cart" size={22} />
       <span className="cart-fab-badge">{count > 99 ? '99+' : count}</span>
     </button>
@@ -75,7 +77,7 @@ function H5CartSheet({ onClose }) {
       <div className="h5-cart-sheet" onClick={e => e.stopPropagation()}>
         <div className="h5-cart-grip" />
         <div className="h5-cart-head">
-          <div className="h5-cart-title"><Icon name="cart" size={16} /><span>{t('Carts')}</span></div>
+          <div className="h5-cart-title"><Icon name="cart" size={16} /><span>{t('Staging')}</span></div>
           <button type="button" className="icon-btn" onClick={onClose} aria-label="Close"><Icon name="close" size={16} /></button>
         </div>
         <div className="h5-cart-segs">
@@ -112,7 +114,7 @@ function InquiryCartEditor({ onDone }) {
   };
   return (
     <div>
-      {lines.length === 0 && <H5Empty icon="cart" message="Inquiry cart is empty" hint="Add upstream products while browsing the sourcing channel" />}
+      {lines.length === 0 && <H5Empty icon="cart" message="Inquiry staging is empty" hint="Add upstream products while browsing the sourcing channel" />}
       {lines.map((l, i) => {
         const p = db.products.find(x => x.id === l.pid) || {};
         return (
@@ -143,7 +145,7 @@ function InquiryCartEditor({ onDone }) {
           </div>
           <div className="h5-act-row" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{ flex: 1, fontSize: 12.5, color: 'var(--text-2)' }}>{`${lines.length} items · ${totalQty} units`}</div>
-            <button type="button" className="h5-btn" onClick={() => { cartApi.clear('inquiry'); toast('Inquiry cart cleared', 'info'); }}><Icon name="trash" size={14} />{t('Clear')}</button>
+            <button type="button" className="h5-btn" onClick={() => { cartApi.clear('inquiry'); toast('Inquiry staging cleared', 'info'); }}><Icon name="trash" size={14} />{t('Clear')}</button>
             <button type="button" className="h5-btn primary" onClick={submit}><Icon name="check" size={14} />{t('Submit Inquiry')}</button>
           </div>
         </React.Fragment>
@@ -172,7 +174,7 @@ function InboundCartEditor({ onDone }) {
   };
   return (
     <div>
-      {lines.length === 0 && <H5Empty icon="warehouse" message="Inbound cart is empty" hint="Scan or enter barcodes on the Scan to Stock In page" />}
+      {lines.length === 0 && <H5Empty icon="warehouse" message="Inbound staging is empty" hint="Scan barcodes, or tap Stock In on the My Warehouse list" />}
       {lines.map((l, i) => {
         const qty = Number(l.qty) || 0;
         if (l.kind === 'exist') {
@@ -234,7 +236,7 @@ function InboundCartEditor({ onDone }) {
           </div>
           <div className="h5-act-row" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{ flex: 1, fontSize: 12.5, color: 'var(--text-2)' }}>{`${lines.length} items · ${totalQty} units`}</div>
-            <button type="button" className="h5-btn" onClick={() => { cartApi.clear('inbound'); toast('Inbound cart cleared', 'info'); }}><Icon name="trash" size={14} />{t('Clear')}</button>
+            <button type="button" className="h5-btn" onClick={() => { cartApi.clear('inbound'); toast('Inbound staging cleared', 'info'); }}><Icon name="trash" size={14} />{t('Clear')}</button>
             <button type="button" className="h5-btn primary" onClick={confirm}><Icon name="download" size={14} />{t('Confirm Batch Stock In')}</button>
           </div>
         </React.Fragment>
@@ -258,7 +260,7 @@ function OutboundCartEditor({ onDone }) {
   };
   return (
     <div>
-      {lines.length === 0 && <H5Empty icon="truck" message="Outbound cart is empty" hint="Scan items on the Scan Batch Outbound page" />}
+      {lines.length === 0 && <H5Empty icon="truck" message="Outbound staging is empty" hint="Scan items, or tap Stock Out on the My Warehouse list" />}
       {lines.map((l, i) => {
         const p = db.products.find(x => x.id === l.pid) || {};
         const onHand = stockOf(l.pid);
@@ -291,7 +293,7 @@ function OutboundCartEditor({ onDone }) {
           </div>
           <div className="h5-act-row" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{ flex: 1, fontSize: 12.5, color: 'var(--text-2)' }}>{`${lines.length} items · ${totalQty} units`}</div>
-            <button type="button" className="h5-btn" onClick={() => { cartApi.clear('outbound'); toast('Outbound cart cleared', 'info'); }}><Icon name="trash" size={14} />{t('Clear')}</button>
+            <button type="button" className="h5-btn" onClick={() => { cartApi.clear('outbound'); toast('Outbound staging cleared', 'info'); }}><Icon name="trash" size={14} />{t('Clear')}</button>
             <button type="button" className="h5-btn primary" onClick={confirm}><Icon name="truck" size={14} />{t('Confirm Batch Outbound')}</button>
           </div>
         </React.Fragment>
@@ -353,9 +355,9 @@ function WebInquiryCartDialog({ onClose }) {
     if (res && res.count > 0) onClose();
   };
   return (
-    <Dialog title="Inquiry Cart" width="720px" onClose={onClose}
+    <Dialog title={t('Inquiry Staging')} width="720px" onClose={onClose}
       footer={<React.Fragment>
-        <button className="btn" onClick={() => { cartApi.clear('inquiry'); toast('Inquiry cart cleared', 'info'); }}><Icon name="trash" size={13} />Clear</button>
+        <button className="btn" onClick={() => { cartApi.clear('inquiry'); toast('Inquiry staging cleared', 'info'); }}><Icon name="trash" size={13} />Clear</button>
         <button className="btn" onClick={onClose}><Icon name="close" size={13} />Cancel</button>
         <button className="btn primary" onClick={submit} disabled={!lines.length}><Icon name="check" size={13} />Submit Inquiry</button>
       </React.Fragment>}>
@@ -366,7 +368,7 @@ function WebInquiryCartDialog({ onClose }) {
         <div className="form-grid-hr"></div>
         <div className="form-row span2">
           <label className="form-label">Item Lines <span className="req">*</span></label>
-          {lines.length === 0 && <div className="banner info"><Icon name="info" size={15} /><div>Inquiry cart is empty — add upstream products from the Sourcing Channel tab.</div></div>}
+          {lines.length === 0 && <div className="banner info"><Icon name="info" size={15} /><div>Inquiry staging is empty — add upstream products from the Sourcing Channel tab.</div></div>}
           {lines.length > 0 && (
             <div className="table-wrap">
               <table className="table">

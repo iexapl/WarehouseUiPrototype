@@ -799,7 +799,7 @@ function App() {
     function clear(module) { update(module, () => []); }
     function submitInquiry(date) {
       const lines = (carts.inquiry || []).filter(l => l.pid && norm(l.qty) > 0);
-      if (!lines.length) { toast('Inquiry cart is empty', 'error'); return { ok: false, count: 0 }; }
+      if (!lines.length) { toast('Inquiry staging is empty', 'error'); return { ok: false, count: 0 }; }
       if (!date) { toast('Enter a delivery date', 'error'); return { ok: false, count: 0 }; }
       // group by product owner → one inquiry per supplier (upstream-only
       // boundary still enforced inside saveInquiry)
@@ -817,7 +817,7 @@ function App() {
       });
       if (count > 0) {
         update('inquiry', () => []);
-        toast(count === 1 ? 'Inquiry cart submitted — 1 inquiry created' : `Inquiry cart submitted — ${count} inquiries created`, 'success');
+        toast(count === 1 ? 'Inquiry staging submitted — 1 inquiry created' : `Inquiry staging submitted — ${count} inquiries created`, 'success');
       }
       return { ok: count > 0, count };
     }
