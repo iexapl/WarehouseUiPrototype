@@ -218,8 +218,7 @@ function InquiryCartEditor({ onDone, push }) {
       )}
       </div>
       {lines.length > 0 && (
-        <div className="h5-act-row" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ flex: 1, fontSize: 12.5, color: 'var(--text-2)' }}>{`${lines.length} items · ${totalQty} units · ${groups.length} suppliers`}</div>
+        <div className="h5-act-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
           <button type="button" className="h5-btn" onClick={() => { cartApi.clear('inquiry'); toast('Inquiry staging cleared', 'info'); }}><Icon name="trash" size={14} />{t('Clear')}</button>
           <button type="button" className="h5-btn primary" onClick={submit}><Icon name="whatsapp" size={14} />{t('Submit Inquiry')}</button>
         </div>
@@ -396,8 +395,7 @@ function InboundCartEditor({ onDone }) {
       )}
       </div>
       {lines.length > 0 && (
-        <div className="h5-act-row" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ flex: 1, fontSize: 12.5, color: 'var(--text-2)' }}>{t('Unit price × qty = stock-in amount')}</div>
+        <div className="h5-act-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
           <button type="button" className="h5-btn" onClick={() => { cartApi.clear('inbound'); toast('Inbound staging cleared', 'info'); }}><Icon name="trash" size={14} />{t('Clear')}</button>
           <button type="button" className="h5-btn primary" onClick={confirm}><Icon name="download" size={14} />{t('Confirm Stock In')}</button>
         </div>
@@ -532,8 +530,7 @@ function OutboundCartEditor({ onDone }) {
       )}
       </div>
       {lines.length > 0 && (
-        <div className="h5-act-row" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ flex: 1, fontSize: 12.5, color: 'var(--text-2)' }}>{t('Actual sales price × qty = outbound amount')}</div>
+        <div className="h5-act-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
           <button type="button" className="h5-btn" onClick={() => { cartApi.clear('outbound'); toast('Outbound staging cleared', 'info'); }}><Icon name="trash" size={14} />{t('Clear')}</button>
           <button type="button" className="h5-btn primary" onClick={confirm}><Icon name="truck" size={14} />{t('Confirm Stock Out')}</button>
         </div>
