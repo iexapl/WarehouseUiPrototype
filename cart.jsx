@@ -424,73 +424,12 @@ function NewSupplierDialog({ onClose, onCreated }) {
   );
 }
 
-// ============================================================
-// Web console — inquiry cart dialog (scan flows are mobile-only,
-// so the web floating cart carries the sourcing-channel picks)
-// ============================================================
-
-function WebInquiryCartDialog({ onClose }) {
-  const { db, carts, cartApi, toast } = useApp();
-  const [date, setDate] = useState('');
-  const lines = carts.inquiry || [];
-  const submit = () => {
-    const res = cartApi.submitInquiry(date);
-    if (res && res.count > 0) onClose();
-  };
-  return (
-    <Dialog title={t('Inquiry Staging')} width="720px" onClose={onClose}
-      footer={<React.Fragment>
-        <button className="btn" onClick={() => { cartApi.clear('inquiry'); toast('Inquiry staging cleared', 'info'); }}><Icon name="trash" size={13} />Clear</button>
-        <button className="btn" onClick={onClose}><Icon name="close" size={13} />Cancel</button>
-        <button className="btn primary" onClick={submit} disabled={!lines.length}><Icon name="check" size={13} />Submit Inquiry</button>
-      </React.Fragment>}>
-      <div className="form">
-        <FormRow label="Delivery Date" required>
-          <Input value={date} onChange={setDate} type="date" />
-        </FormRow>
-        <div className="form-grid-hr"></div>
-        <div className="form-row span2">
-          <label className="form-label">Item Lines <span className="req">*</span></label>
-          {lines.length === 0 && <div className="banner info"><Icon name="info" size={15} /><div>Inquiry staging is empty — add upstream products from the Sourcing Channel tab.</div></div>}
-          {lines.length > 0 && (
-            <div className="table-wrap">
-              <table className="table">
-                <thead><tr><th>Product</th><th style={{ width: 150 }}>Supplier</th><th style={{ width: 110 }}>Ref Price</th><th style={{ width: 130 }}>Qty</th><th style={{ width: 36 }}></th></tr></thead>
-                <tbody>
-                  {lines.map((l, i) => {
-                    const p = db.products.find(x => x.id === l.pid) || {};
-                    return (
-                      <tr key={l.pid}>
-                        <td>
-                          <div className="flex gap10">
-                            <img src={prodImg(p)} alt="" style={{ width: 36, height: 36, borderRadius: 6, objectFit: 'cover' }} />
-                            <div>
-                              <div style={{ fontSize: 13, fontWeight: 600 }}>{p.name}</div>
-                              <div className="cell-sub mono">{p.model}</div>
-                            </div>
-                          </div>
-                        </td>
-                        <td><span className="small">{productOwnerName(db, p)}</span></td>
-                        <td><Money amount={p.price || 0} currency={p.currency} /></td>
-                        <td><Input value={String(l.qty)} onChange={v => cartApi.setQty('inquiry', i, Math.max(0, parseInt(v, 10) || 0))} type="number" /></td>
-                        <td><button className="btn sm text danger-text" onClick={() => cartApi.removeAt('inquiry', i)}><Icon name="trash" size={13} /></button></td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-          <div className="muted small" style={{ marginTop: 8 }}><Icon name="info" size={12} /> Lines are grouped by supplier — one inquiry is created per supplier.</div>
-        </div>
-      </div>
-    </Dialog>
-  );
-}
+// (Web 控制台询价车弹窗已由 web-staging.jsx 的 WebStagingDialog 取代：
+//  三模块暂存 + 按供货方分组 + 提交后 WhatsApp 对话窗口)
 
 Object.assign(window, {
   emptyCarts, cartTotalCount, CART_MODULES,
   CartStepper, H5CartFab, WebCartFab, H5CartSheet,
   InquiryCartEditor, InboundCartEditor, OutboundCartEditor,
-  NewSupplierDialog, WebInquiryCartDialog,
+  NewSupplierDialog,
 });

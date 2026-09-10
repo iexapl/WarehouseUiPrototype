@@ -154,9 +154,11 @@ function WebConsole() {
   const [permOpen, setPermOpen] = useState(false);
   const [notesOpen, setNotesOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
-  // 询价购物车（Web 端）：渠道商品加入询价车后 FAB 带角标常驻，点开可改量/移除并提交
+  // 暂存单（Web 端）：三模块暂存（询价/入库/出库）共用一个 FAB 入口；
+  // 提交询价后弹出桌面版 WhatsApp 对话窗口（与移动端同一套数据与流程）
   const [cartOpen, setCartOpen] = useState(false);
-  const cartCount = (carts.inquiry || []).length;
+  const [waDocIds, setWaDocIds] = useState(null);
+  const cartCount = cartTotalCount(carts);
 
   useEffect(() => {
     const m = webMenuFor(account, tenant, db);
@@ -255,9 +257,10 @@ function WebConsole() {
       {permOpen && <PermissionSummaryDialog onClose={() => setPermOpen(false)} />}
       {notesOpen && <DataNotesDialog onClose={() => setNotesOpen(false)} />}
       {profileOpen && <ProfileDialog onClose={() => setProfileOpen(false)} />}
-      {/* 询价车悬浮入口（仅租户账号、角标 = 已加商品数） */}
+      {/* 暂存单悬浮入口（仅租户账号，角标 = 三模块行数合计） */}
       {account.type === 'tenant' && <WebCartFab count={cartCount} onClick={() => setCartOpen(true)} />}
-      {cartOpen && <WebInquiryCartDialog onClose={() => setCartOpen(false)} />}
+      {cartOpen && <WebStagingDialog onClose={() => setCartOpen(false)} onInquired={ids => { setCartOpen(false); setWaDocIds(ids); }} />}
+      {waDocIds && waDocIds.length > 0 && <WebWhatsAppDialog docIds={waDocIds} onOpenDoc={openDoc} onClose={() => setWaDocIds(null)} />}
     </div>
   );
 }
@@ -506,7 +509,7 @@ function ProductListPage() {
           ) },
           { key: 'stock', label: 'My Stock', width: 100, align: 'center', render: p => <span className="mono bold">{ifnull((db.stock[account.tenantId] || {})[p.id], 0)} {p.unit}</span> },
           { key: 'status', label: 'Status', width: 110, render: p => <Tag tone={p.onSale === false ? 'dark' : 'teal'} dot>{p.onSale === false ? 'Discontinued' : 'On Sale'}</Tag> },
-          { key: 'act', label: 'Actions', width: isTenant && tab === 'channel' ? 200 : 280, render: p => isTenant && tab === 'channel' ? (
+          { key: 'act', label: 'Actions', width: isTenant && tab === 'channel' ? 200 : 360, render: p => isTenant && tab === 'channel' ? (
             <div className="row-actions">
               {/* 加入询价暂存：逐项累积（数量默认 1，可在暂存单内增减） */}
               <button className="btn sm text" title={t('Add to Inquiry Staging')} onClick={() => { cartApi.add('inquiry', { pid: p.id, qty: 1 }); toast(`${p.name} added to the inquiry staging`, 'success'); }}><Icon name="cart" size={13} />{t('Add to Inquiry Staging')}</button>
@@ -514,6 +517,9 @@ function ProductListPage() {
             </div>
           ) : canManageProduct(db, account, p) ? (
             <div className="row-actions">
+              {/* 加入入库/出库暂存（与移动端同一套暂存数据） */}
+              <button className="btn sm text" title={t('Add to Inbound Staging')} onClick={() => { cartApi.add('inbound', { kind: 'exist', pid: p.id, qty: 1 }); toast(`${p.name} added to the inbound staging`, 'success'); }}><Icon name="download" size={13} />{t('Stock In')}</button>
+              <button className="btn sm text" title={t('Add to Outbound Staging')} onClick={() => { cartApi.add('outbound', { pid: p.id, qty: 1 }); toast(`${p.name} added to the outbound staging`, 'success'); }}><Icon name="truck" size={13} />{t('Stock Out')}</button>
               <button className="btn sm text" onClick={() => setDialog('edit:' + p.id)}><Icon name="edit" size={13} />Edit</button>
               <button className="btn sm text" onClick={() => setDialog('stock:' + p.id)}><Icon name="warehouse" size={13} />Adjust Stock</button>
               <button className="btn sm text" onClick={() => setDialog('chain:' + p.id)}><Icon name="link" size={13} />View Stock</button>
@@ -918,6 +924,12 @@ function MovementsPage() {
           { key: 'qty', label: 'Qty', width: 90, align: 'center', render: m => <span className="mono bold" style={{ color: m.qty > 0 ? 'var(--success)' : 'var(--warning)' }}>{m.qty > 0 ? '+' : ''}{m.qty}{unitOf(m.productId) && <React.Fragment> {unitOf(m.productId)}</React.Fragment>}</span> },
           { key: 'before', label: 'Before', width: 90, align: 'center', render: m => <span className="mono small muted">{m.before}{unitOf(m.productId) && <React.Fragment> {unitOf(m.productId)}</React.Fragment>}</span> },
           { key: 'after', label: 'After', width: 90, align: 'center', render: m => <span className="mono small">{m.after}{unitOf(m.productId) && <React.Fragment> {unitOf(m.productId)}</React.Fragment>}</span> },
+          { key: 'amount', label: 'Amount', width: 160, align: 'right', render: m => (m.type === 'IN' && m.amount != null)
+            ? <span className="small mono">{money(m.price, m.currency).text} × {Math.abs(m.qty)} = <b style={{ color: '#D35400' }}>{money(m.amount, m.currency).text}</b></span>
+            : <span className="muted small">—</span> },
+          { key: 'receiver', label: 'Receiver', width: 150, render: m => m.receiverName
+            ? <span className="small">{m.receiverName}{m.receiverPhone ? <span className="mono muted"> · {m.receiverPhone}</span> : null}</span>
+            : <span className="muted small">—</span> },
           { key: 'ref', label: 'Ref Doc', width: 150, render: m => <span className="mono small">{m.refNo}</span> },
           { key: 'supplier', label: 'Supplier', width: 140, render: m => m.supplierId ? <span className="small">{tenantName(db, m.supplierId)}</span> : <span className="muted small">—</span> },
           { key: 'by', label: 'By', width: 110, render: m => <span className="small">{m.by}</span> },

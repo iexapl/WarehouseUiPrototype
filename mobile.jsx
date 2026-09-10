@@ -1349,7 +1349,9 @@ function H5WhatsAppPage({ docId, push, setConfirm, platform, noPerm }) {
 // The supplier proposes prices, the buyer negotiates (quick-reply chips or
 // free text), then the supplier confirms and pushes the quotation link back
 // here. All replies are simulated — no real message leaves the prototype.
-function H5WhatsAppChatPage({ docId, push, back }) {
+// 共享对话内核：移动端页面（下方 H5WhatsAppChatPage 薄壳）与 Web 控制台
+// 弹窗（web-staging.jsx 的 WebWhatsAppDialog）共用同一套气泡/议价脚本/报价卡片。
+function WaChatCore({ docId, back, onClose, onOpenDoc }) {
   const { db, act } = useApp();
   const doc = db.docs.find(d => d.id === docId);
   const supplier = doc ? db.tenants.find(t => t.id === doc.seller) : null;
@@ -1463,6 +1465,10 @@ function H5WhatsAppChatPage({ docId, push, back }) {
           </div>
         </div>
         <Icon name="whatsapp" size={18} color="#fff" />
+        {/* 桌面端弹窗用右上角 X 关闭；移动端无此按钮（用页头返回） */}
+        {onClose && (
+          <button type="button" className="wa-back" aria-label="Close" title="Close" onClick={onClose}><Icon name="close" size={17} color="#fff" /></button>
+        )}
       </div>
       <div className="wa-banner-mini"><Icon name="info" size={12} /> Demo simulation — inquiry pushed to the supplier's WhatsApp; replies are simulated.</div>
       <div className="wa-chat-body">
@@ -1470,7 +1476,7 @@ function H5WhatsAppChatPage({ docId, push, back }) {
         {msgs.map((m, i) => (
           <div key={i} className={`wa-row${m.me ? ' me' : ''}`}>
             {m.quote ? (
-              <div className="wa-bubble wa-quote-card" onClick={() => push({ name: 'doc', docId: m.quote.docId })}>
+              <div className="wa-bubble wa-quote-card" onClick={() => onOpenDoc && onOpenDoc(m.quote.docId)}>
                 <div className="wa-qc-title"><Icon name="file" size={14} /> {m.quote.no}</div>
                 <div className="wa-qc-sub">Quotation · {m.quote.total} · valid until {m.quote.valid}</div>
                 <div className="wa-qc-link">Tap to view the quotation <Icon name="chevronRight" size={11} /></div>
@@ -1499,6 +1505,11 @@ function H5WhatsAppChatPage({ docId, push, back }) {
   );
 }
 
+// ---------- WhatsApp 对话页（移动端壳：报价卡片跳单据详情页） ----------
+function H5WhatsAppChatPage({ docId, push, back }) {
+  return <WaChatCore docId={docId} back={back} onOpenDoc={id => push({ name: 'doc', docId: id })} />;
+}
+
 // ---------- WhatsApp 发送列表（询价暂存按供货方分组提交后） ----------
 // 多个供货方时，一次提交生成多张询价单；本页列出各张单据的 WhatsApp
 // 发送状态（已送达），点击进入对应供货方的对话界面进行询价沟通。
@@ -1514,7 +1525,7 @@ function H5WaInboxPage({ docIds, push, back }) {
         )}
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ color: '#fff', fontWeight: 700, fontSize: 14 }}>WhatsApp</div>
-          <div style={{ color: '#B8D8D0', fontSize: 11 }}>{docs.length} inquiries sent</div>
+          <div style={{ color: '#B8D8D0', fontSize: 11 }}>{t(docs.length === 1 ? '1 inquiry sent' : docs.length + ' inquiries sent')}</div>
         </div>
         <Icon name="whatsapp" size={18} color="#fff" />
       </div>
@@ -1916,4 +1927,4 @@ function H5GuidePage() {
   );
 }
 
-Object.assign(window, { MobileStage, MobileApp });
+Object.assign(window, { MobileStage, MobileApp, WaChatCore });

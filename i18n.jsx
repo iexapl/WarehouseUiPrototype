@@ -1644,6 +1644,12 @@ const ZH = {
   'Inquiry sent via WhatsApp — tap the supplier to open the chat': '询价单已通过 WhatsApp 发送——点击供货方打开对话',
   'Enter a delivery date': '请填写交货日期',
   'Ref Price': '参考价',
+  'Add to Inbound Staging': '加入入库暂存',
+  'Add to Outbound Staging': '加入出库暂存',
+  'Add upstream products from the Sourcing Channel tab': '在采购渠道页把上游商品加入暂存',
+  'Stock In on the My Products list adds items here': '在「我的商品」列表点入库即可把物料加入入库暂存',
+  'Stock Out on the My Products list adds items here': '在「我的商品」列表点出库即可把物料加入出库暂存',
+  '1 inquiry sent': '已发送 1 张询价单',
   'Select the products you want to inquire about, then add them to the inquiry staging — quantities default to 1 and can be adjusted in the staging before submitting. Only upstream supplier products can be picked; own and downstream products are locked.': '勾选要询价的物料后加入询价暂存——数量默认为 1，可在暂存单内提交前调整。仅上游供应商商品可勾选；自有与下游商品锁定。',
 };
 

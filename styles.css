@@ -683,6 +683,12 @@ button { font-family: inherit; }
 .wa-qc-title { font-weight: 700; font-size: 13px; display: flex; align-items: center; gap: 5px; color: #075E54; }
 .wa-qc-sub { font-size: 11.5px; color: #54656F; margin-top: 3px; }
 .wa-qc-link { font-size: 12px; color: #128C7E; font-weight: 600; margin-top: 6px; display: flex; align-items: center; gap: 3px; }
+
+/* ---------- Web 控制台桌面版 WhatsApp 窗口 ---------- */
+/* 与 Dialog(z-index 200) 分层：WhatsApp 窗口在 190，单击报价卡片打开的单据详情
+   弹窗（200）盖在其上，关闭详情后回到仍打开的对话 */
+.web-wa-mask { position: fixed; inset: 0; background: rgba(23, 35, 47, 0.5); z-index: 190; display: flex; align-items: center; justify-content: center; animation: fadeIn 0.15s ease; }
+.web-wa-window { width: 460px; height: min(660px, 88vh); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; background: #ECE5DD; box-shadow: 0 18px 55px rgba(23, 35, 47, 0.38); animation: dialogIn 0.18s ease; }
 .h5-doc .d-act { border: 1px solid var(--border); background: #fff; border-radius: 14px; padding: 0 11px; height: 26px; font-size: 11.5px; color: var(--text-2); cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0; }
 .h5-doc .d-act:active { opacity: 0.7; }
 .h5-doc .d-act.primary { background: var(--primary); border-color: var(--primary); color: #fff; }
