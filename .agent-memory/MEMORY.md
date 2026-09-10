@@ -5,9 +5,12 @@
 - 当前应用 `app_17dufj267uz`（暂存单改造版）：扫码入库单入口（连续识别、一次确认）；询价/入库/出库三暂存单；入库确认时选/新建供货方。
 - 界面统称已从「购物车/Cart」全量改为「暂存单/Staging」（FAB、面板标题、空态、toast）；三车标签 = Inquiry/Inbound/Outbound Staging（询价/入库/出库暂存）。代码标识符保留历史命名 cart/cartApi/CART_MODULES。
 - 移动端仓库页按钮模型（2026-09-10 改造）：我的仓库列表项 = 调价 / 入库 / 出库 / 查看库存（入库/出库把物料加入对应暂存，已在车中 +1）；采购渠道列表项 = 单「询价」按钮直接加入询价暂存（原加入询价车按钮、quickInq 快速询价弹窗、页头 Inquire 多选模式均已删除，pickMode/picked 状态整体移除）；商品详情页同步。adjustStock 移动端页面已无入口（Web 端「调整库存」保留）。
-- 购物车架构：`cart.jsx` 提供共享组件（InboundCartEditor/OutboundCartEditor/InquiryCartEditor/H5CartFab/H5CartSheet/NewSupplierDialog/WebCartFab/WebInquiryCartDialog）；三车数据 `{ inquiry, inbound, outbound }` 是 **App 层 useState**，必须放在 lang-remount key 之上（语言切换不丢车）；`cartApi` useMemo 引用 `act`，**必须定义在 `act` 之后**（放前面会 TDZ ReferenceError 白屏）。
+- 购物车架构：`cart.jsx` 提供移动端共享组件（InboundCartEditor/OutboundCartEditor/InquiryCartEditor/H5CartFab/H5CartSheet/NewSupplierDialog/WebCartFab）；Web 控制台三模块暂存弹窗在 `web-staging.jsx`（WebStagingDialog 三 segments + WebInquiryPanel 按供货方分组 / WebInboundPanel 单价金额合计 / WebOutboundPanel 收货方必选 + WebWhatsAppDialog）；三车数据 `{ inquiry, inbound, outbound }` 是 **App 层 useState**，必须放在 lang-remount key 之上（语言切换不丢车）；`cartApi` useMemo 引用 `act`，**必须定义在 `act` 之后**（放前面会 TDZ ReferenceError 白屏）。
 - 移动端购物车 UI：`.h5-cart-fab`（.h5-app 内 absolute，z-index 60）+ `.h5-cart-mask/.h5-cart-sheet` 底部面板；Web 端 `.web-cart-fab`（fixed）+ Dialog。样式在 styles.css 末尾「Shopping-cart」区块。
-- 新建供货方：`act.createSupplier` 建一个 Supplier 型租户（无链路关系），入库流水带 `supplierId`，reason 组合 `note · Supplier: X · Batch scan stock-in (scan)`。
+- 新建供货方：`act.createSupplier` 建一个 Supplier 型租户（无链路关系），入库流水带 `supplierId`，reason 组合 `note · Supplier: X · Batch scan stock-in (scan)`。移动端入库暂存的供货方交互与出库收货方同构（cart.jsx InboundCartEditor：上游租户 ∪ Supplier 型租户下拉 + 手动输入名称/手机号，未选校验；手动提交时直接把新租户**对象**传 `cartApi.submitInbound`）。
+- 移动端入库暂存（2026-09-10）：每行可独立设币种（cart.jsx `CURRENCIES`，exist 行默认物料币种、new 行 USD），行金额/合计按币种分别小计（多币种不相加，带演示提示）；首页功能导航「询价单」→ 交易页签 IQ 段；`.h5-cart-seg` 已从胶囊按钮改为下划线页签样式（styles.css）。中文入库上下文统一「供货方」（i18n 'Supplier' 与 `^Supplier: (.+)$` 模式均改，Web 面板 zh 跟随）。
+- WhatsApp 对话：`mobile.jsx` 的 `WaChatCore` 是移动端页与 Web 弹窗共享内核（props：docId/back/onClose/onOpenDoc；H5WhatsAppChatPage 是薄壳）。桌面窗口 `.web-wa-mask/.web-wa-window` z-index 190，低于 Dialog 的 200——报价卡片点开的单据详情盖在 WhatsApp 窗口之上，关闭详情回到仍打开的对话。移动端产品列表行 = 调价/入库/出库/查看库存；Web 端「我的物料」行有 Stock In/Stock Out 加入暂存，FAB 角标 = 三模块行数合计。
+- E2E 注入技巧：多供货方 WhatsApp 发送列表在演示数据里只有单上游租户，可用 fiber 手术触发——`document.querySelector('.console')` 取 `__reactFiber$`，向上找 `f.type.name === 'WebConsole'`，遍历 `memoizedState` hook 链取第 8 个（waDocIds）`hook.queue.dispatch([docId1, docId2])`；db 可从任一 fiber 的 `dependencies.firstContext.memoizedValue.db` 读。注意 Chrome 自动翻译会把 aria-label="Close" 改成「关闭」，断言别依赖属性文本。
 
 ## 架构约定（无构建步骤原型）
 
@@ -28,6 +31,7 @@
 
 ## 踩坑经验
 
+- **同一事件内 createSupplier + submit 会查不到新租户**：`act.createSupplier` 内部 `setDb(prev => ...)` 是异步排队，紧接着的 `batchScanIn` 闭包里 `db.tenants` 还是旧快照，`find(id)` 返回 null → 误报「请选择供货方」。修复：提交函数允许直接传新建租户对象（`typeof supplier === 'object'` 分支），不要依赖同一次点击内写入的 id。
 - **平台管理员是 Alex Morgan（a-alex）**；David Chen 是供应商 t-sup 的成员账号，别拿他当平台账号写测试。
 - headless virtual-time 下 `.h5-page` 的 slideIn 动画停在 translateX(40px) 起始帧：几何断言要相对 `.h5-page` 测量，不要相对 `.h5-app`。
 - 移动端单层导航：push 页面点返回直接回 Tab 视图，不要连点两次返回。

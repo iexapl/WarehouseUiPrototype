@@ -1168,16 +1168,18 @@ button { font-family: inherit; }
 .h5-cart-grip { width: 36px; height: 4px; border-radius: 2px; background: #D6DEE8; margin: 8px auto 0; flex-shrink: 0; }
 .h5-cart-head { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px 6px; flex-shrink: 0; background: #F1F3F6; }
 .h5-cart-title { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 700; color: var(--text); }
-.h5-cart-segs { display: flex; gap: 6px; padding: 0 14px 8px; flex-shrink: 0; background: #F1F3F6; }
+/* 暂存单面板页签（tabs）：下划线指示当前模块，替代原胶囊按钮组 */
+.h5-cart-segs { display: flex; padding: 0 8px; flex-shrink: 0; background: #F1F3F6; border-bottom: 1px solid var(--border-light); }
 .h5-cart-seg {
   flex: 1 1 0; min-width: 0; display: flex; align-items: center; justify-content: center; gap: 4px;
-  height: 32px; border-radius: 16px; border: 1px solid var(--border); background: #fff;
-  font-size: 12px; font-weight: 600; color: var(--text-2); cursor: pointer; padding: 0 6px;
+  height: 38px; border-radius: 0; border: none; border-bottom: 2px solid transparent; margin-bottom: -1px;
+  background: transparent; font-size: 12px; font-weight: 600; color: var(--text-2);
+  cursor: pointer; padding: 0 6px;
 }
-.h5-cart-seg.on { background: var(--primary); border-color: var(--primary); color: #fff; }
+.h5-cart-seg.on { background: transparent; color: var(--primary); border-bottom-color: var(--primary); }
 .h5-cart-seg-n {
   min-width: 16px; height: 16px; border-radius: 9px; background: var(--danger); color: #fff;
   font-size: 10.5px; font-weight: 700; line-height: 16px; padding: 0 4px; flex-shrink: 0;
 }
-.h5-cart-seg.on .h5-cart-seg-n { background: rgba(255, 255, 255, 0.9); color: var(--primary); }
+.h5-cart-seg.on .h5-cart-seg-n { background: var(--primary-light); color: var(--primary); }
 .h5-cart-body { overflow-y: auto; padding: 4px 12px 4px; -webkit-overflow-scrolling: touch; }

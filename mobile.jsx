@@ -392,7 +392,8 @@ function H5Home({ openDoc, push, platform, noPerm, setTab }) {
       ]
     : [
         // R100e — buyer quick actions sorted by trade lifecycle
-        ['Inquiry', 'edit', 'var(--primary-light)', 'var(--primary)', () => push({ name: 'inquiry' })],
+        // 询价单 → 交易页签的询价单列表（ordersSeg='IQ'），与单据中心同源
+        ['Inquiry', 'edit', 'var(--primary-light)', 'var(--primary)', () => { ordersSeg = 'IQ'; ordersStatus = 'ALL'; setTab('orders'); }],
         ['Quote', 'file', 'var(--purple-light)', 'var(--purple)', () => { ordersSeg = 'QT'; ordersStatus = 'ALL'; setTab('orders'); }],
         ['To Confirm', 'checkDouble', 'var(--warning-light)', 'var(--warning)', () => { const qt = db.docs.find(d => d.type === 'QT' && d.buyer === account.tenantId && d.status === 'Sent'); qt ? openDoc(qt.id) : toast('No quotes awaiting your confirmation'); }],
         ['Receive', 'check', 'var(--success-light)', 'var(--success)', () => { const ck = db.docs.find(d => d.type === 'CK' && d.buyer === account.tenantId && d.status === 'Shipped'); ck ? push({ name: 'receive', docId: ck.id }) : toast('No shipments awaiting receipt'); }],

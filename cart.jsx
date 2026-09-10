@@ -19,6 +19,9 @@ const CART_MODULES = [
   { id: 'outbound', label: 'Outbound Staging', icon: 'truck' },
 ];
 
+// 入库暂存每行可独立设置的币种（单价 = 成本价；行金额按行币种显示）
+const CURRENCIES = ['USD', 'EUR', 'NGN', 'CNY', 'GBP'];
+
 function emptyCarts() { return { inquiry: [], inbound: [], outbound: [] }; }
 
 function cartTotalCount(carts) {
@@ -186,24 +189,53 @@ function InquiryCartEditor({ onDone, push }) {
 // ---------- inbound cart (mobile) ----------
 // Shared by the merged Scan-to-Stock-In page AND the cart sheet: the list
 // (existing products restock / new products quick-profiled), the stock-in
-// note, the REQUIRED supplier (with on-the-spot New Supplier), and the
-// one-tap confirm that records every line as an IN movement.
+// note, the REQUIRED supplier, and the one-tap confirm that records every
+// line as an IN movement.
+// 供货方设置与出库收货方同一套交互：上游租户下拉（选中显示 名称 · 电话）
+// + 手动输入（名称/手机号表单，提交时以 createSupplier 建档后选用）；
+// 每行单价可独立设置币种，行金额与合计按币种分别小计（演示不折算）。
 function InboundCartEditor({ onDone }) {
-  const { db, account, carts, cartApi, toast } = useApp();
+  const { db, account, act, carts, cartApi, toast } = useApp();
   const [note, setNote] = useState('');
-  const [supplier, setSupplier] = useState('');
-  const [supOpen, setSupOpen] = useState(false);
+  const [supId, setSupId] = useState('');
+  const [supName, setSupName] = useState('');
+  const [supPhone, setSupPhone] = useState('');
   const lines = carts.inbound || [];
   const stockOf = pid => (db.stock[account.tenantId] || {})[pid] || 0;
-  const suppliers = db.tenants.filter(x => x.status === 'Active' && x.id !== account.tenantId);
   const totalQty = lines.reduce((s, l) => s + (Number(l.qty) || 0), 0);
-  // 合计金额：Σ(物料单价 × 数量)（exist 行用暂存单内可改的 unitPrice，new 行用快速建档价）
-  const totalAmount = lines.reduce((s, l) => s + (Number(l.kind === 'exist' ? l.unitPrice : l.price) || 0) * (Number(l.qty) || 0), 0);
-  const firstExist = lines.find(l => l.kind === 'exist');
-  const totalCur = (firstExist ? (db.products.find(p => p.id === firstExist.pid) || {}).currency : 'USD') || 'USD';
+  // 供货方候选：上游租户（供应商/上级代理）+ 已建档往来供货方（Supplier 型租户，
+  // 含手动输入路径当场新建的），去重后上游优先
+  const upstream = [...upstreamTenantIds(db, account.tenantId)]
+    .map(id => db.tenants.find(x => x.id === id)).filter(x => x && x.status === 'Active');
+  const filedSuppliers = db.tenants.filter(x => x.status === 'Active' && x.type === 'Supplier'
+    && x.id !== account.tenantId && !upstream.some(u => u.id === x.id));
+  const supOptions = upstream.concat(filedSuppliers);
+  const supTenant = supOptions.find(x => x.id === supId);
+  const supTenantPhone = supTenant
+    ? ((db.accounts.find(a => a.tenantId === supTenant.id && a.main) || {}).phone || supTenant.contactPhone || '')
+    : '';
+  // 行币种：exist 行默认物料币种，new 行默认 USD，均可在行内改
+  const lineCur = (l, p) => l.currency || (p ? p.currency : 'USD') || 'USD';
+  // 合计按币种分别小计：Σ(物料单价 × 数量)，多币种不相加成一个数（演示不折算）
+  const totalsByCur = {};
+  lines.forEach(l => {
+    const p = l.kind === 'exist' ? (db.products.find(x => x.id === l.pid) || null) : null;
+    const cur = lineCur(l, p);
+    const unit = Number(l.kind === 'exist' ? l.unitPrice : l.price) || 0;
+    totalsByCur[cur] = (totalsByCur[cur] || 0) + unit * (Number(l.qty) || 0);
+  });
+  const totalsText = Object.keys(totalsByCur).map(c => money(totalsByCur[c], c).text).join(' · ');
   const confirm = () => {
-    if (!supplier) { toast('Select a supplier for the stock-in', 'error'); return; }
-    if (cartApi.submitInbound(supplier, note) && onDone) onDone();
+    let sid = supId;
+    if (supId === 'custom') {
+      const name = String(supName || '').trim();
+      if (!name) { toast('Supplier name is required', 'error'); return; }
+      // 手动输入 → 当场建档（Supplier 型租户），本次选用且后续可再选；
+      // 直接把新租户对象传给 submitInbound（同一次点击内 setDb 尚未生效）
+      const tn = act.createSupplier({ name, phone: String(supPhone || '').trim() });
+      sid = tn;
+    } else if (!supId) { toast('Select or enter a supplier for the stock-in', 'error'); return; }
+    if (cartApi.submitInbound(sid, note) && onDone) onDone();
   };
   return (
     <div>
@@ -227,15 +259,19 @@ function InboundCartEditor({ onDone }) {
                 <span className="muted" style={{ fontSize: 11.5 }}>{t('Qty')} · {p.unit}</span>
                 <CartStepper value={l.qty} onChange={q => cartApi.setQty('inbound', i, q)} />
               </div>
-              {/* 物料单价（默认参考价/渠道价，可改）→ 行金额 = 单价 × 数量 */}
+              {/* 物料单价（默认参考价/渠道价，可改）+ 独立币种 → 行金额 = 单价 × 数量 */}
               <div className="flex mt8" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
-                <span className="muted" style={{ fontSize: 11.5 }}>{t('Unit Price')} · {p.currency}</span>
-                <input className="input mono" style={{ height: 30, width: 116, textAlign: 'right' }} type="number" min="0" step="0.01"
-                  value={ifnull(l.unitPrice, 0)} aria-label={t('Unit Price')} onChange={e => cartApi.setField('inbound', i, 'unitPrice', e.target.value)} />
+                <span className="muted" style={{ fontSize: 11.5 }}>{t('Unit Price')}</span>
+                <span className="flex" style={{ alignItems: 'center', gap: 6 }}>
+                  <Select value={lineCur(l, p)} onChange={v => cartApi.setField('inbound', i, 'currency', v)}
+                    options={CURRENCIES.map(c => ({ value: c, label: c }))} style={{ height: 30, width: 82 }} />
+                  <input className="input mono" style={{ height: 30, width: 92, textAlign: 'right' }} type="number" min="0" step="0.01"
+                    value={ifnull(l.unitPrice, 0)} aria-label={t('Unit Price')} onChange={e => cartApi.setField('inbound', i, 'unitPrice', e.target.value)} />
+                </span>
               </div>
               <div className="flex mt4" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
                 <span className="muted mono" style={{ fontSize: 11 }}>{onHand} → {onHand + qty} {p.unit}</span>
-                <span className="mono" style={{ fontSize: 11.5 }}>{t('Amount')}: <b style={{ color: '#D35400' }}>{money(qty * (Number(l.unitPrice) || 0), p.currency).text}</b></span>
+                <span className="mono" style={{ fontSize: 11.5 }}>{t('Amount')}: <b style={{ color: '#D35400' }}>{money(qty * (Number(l.unitPrice) || 0), lineCur(l, p)).text}</b></span>
               </div>
             </div>
           );
@@ -252,31 +288,56 @@ function InboundCartEditor({ onDone }) {
             </div>
             <div className="h5-form-row mt8" style={{ marginBottom: 0 }}><span className="k">{t('Name')} *</span><div style={{ flex: 1 }}><input className="input" style={{ height: 32, width: '100%' }} value={l.name} onChange={e => cartApi.setField('inbound', i, 'name', e.target.value)} placeholder={t('e.g. Solar Inverter 5kW')} /></div></div>
             <div className="h5-form-row" style={{ marginBottom: 0 }}><span className="k">{t('Unit')}</span><div style={{ flex: 1 }}><Select value={l.unit} onChange={v => cartApi.setField('inbound', i, 'unit', v)} options={['pcs', 'set', 'box', 'kg'].map(u => ({ value: u, label: u }))} style={{ height: 32 }} /></div></div>
-            <div className="h5-form-row" style={{ marginBottom: 0 }}><span className="k">{t('Price')}</span><div style={{ flex: 1 }}><input className="input" style={{ height: 32, width: '100%' }} type="number" value={l.price} onChange={e => cartApi.setField('inbound', i, 'price', e.target.value)} placeholder="0.00 (editable later)" /></div></div>
+            <div className="h5-form-row" style={{ marginBottom: 0 }}><span className="k">{t('Price')}</span>
+              <div style={{ flex: 1, display: 'flex', gap: 8 }}>
+                <Select value={l.currency || 'USD'} onChange={v => cartApi.setField('inbound', i, 'currency', v)}
+                  options={CURRENCIES.map(c => ({ value: c, label: c }))} style={{ height: 32, width: 84 }} />
+                <input className="input" style={{ height: 32, flex: 1, minWidth: 0 }} type="number" value={l.price} onChange={e => cartApi.setField('inbound', i, 'price', e.target.value)} placeholder="0.00 (editable later)" />
+              </div>
+            </div>
             <div className="flex mt8" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
               <span className="muted" style={{ fontSize: 11.5 }}>{t('Qty')} · {l.unit}</span>
               <CartStepper value={l.qty} onChange={q => cartApi.setQty('inbound', i, q)} />
             </div>
-            <div className="mono" style={{ fontSize: 11.5, marginTop: 4, textAlign: 'right' }}>{t('Amount')}: <b style={{ color: '#D35400' }}>{money((Number(l.qty) || 0) * (Number(l.price) || 0), 'USD').text}</b></div>
+            <div className="mono" style={{ fontSize: 11.5, marginTop: 4, textAlign: 'right' }}>{t('Amount')}: <b style={{ color: '#D35400' }}>{money((Number(l.qty) || 0) * (Number(l.price) || 0), l.currency || 'USD').text}</b></div>
           </div>
         );
       })}
       {lines.length > 0 && (
         <React.Fragment>
-          {/* 合计金额 = Σ(物料单价 × 数量) */}
-          <div className="h5-card" style={{ padding: '10px 12px', marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          {/* 合计金额 = Σ(物料单价 × 数量)；多币种按币种分别小计 */}
+          <div className="h5-card" style={{ padding: '10px 12px', marginBottom: Object.keys(totalsByCur).length > 1 ? 4 : 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span className="muted" style={{ fontSize: 12 }}>{`${lines.length} items · ${totalQty} units`}</span>
-            <span style={{ fontSize: 13, fontWeight: 700 }}>{t('Total')} <span className="mono" style={{ color: '#D35400' }}>{money(totalAmount, totalCur).text}</span></span>
+            <span style={{ fontSize: 13, fontWeight: 700 }}>{t('Total')} <span className="mono" style={{ color: '#D35400' }}>{totalsText}</span></span>
           </div>
+          {Object.keys(totalsByCur).length > 1 && (
+            <div className="muted" style={{ fontSize: 11, margin: '0 4px 8px', lineHeight: 1.5 }}><Icon name="info" size={11} /> {t('Multi-currency lines are subtotaled per currency — demo, no FX conversion')}</div>
+          )}
           <div className="h5-card" style={{ padding: 12 }}>
             <div className="h5-form-row">
               <span className="k">{t('Supplier')} *</span>
-              <div style={{ flex: 1, display: 'flex', gap: 8, alignItems: 'center' }}>
-                <Select value={supplier} onChange={v => setSupplier(v)} placeholder={t('Select supplier')}
-                  options={suppliers.map(x => ({ value: x.id, label: x.name + (x.type === 'Supplier' ? '' : ' (' + x.type + ')') }))} style={{ height: 32, flex: 1, minWidth: 0 }} />
-                <button type="button" className="btn" style={{ height: 32, flexShrink: 0 }} onClick={() => setSupOpen(true)}><Icon name="plus" size={13} />{t('New Supplier')}</button>
+              <div style={{ flex: 1 }}>
+                <Select value={supId} onChange={v => { setSupId(v); if (v !== 'custom') { setSupName(''); setSupPhone(''); } }} placeholder={t('Select supplier')}
+                  options={supOptions.map(x => ({ value: x.id, label: x.name + (x.type === 'Supplier' ? '' : ' (' + x.type + ')') }))
+                    .concat([{ value: 'custom', label: t('Custom supplier…') }])} style={{ height: 32 }} />
               </div>
             </div>
+            {supId === 'custom' && (
+              <React.Fragment>
+                <div className="h5-form-row">
+                  <span className="k">{t('Supplier name')} *</span>
+                  <div style={{ flex: 1 }}><input className="input" style={{ height: 32, width: '100%' }} value={supName} onChange={e => setSupName(e.target.value)} placeholder={t('e.g. Sunrise Trading Co.')} /></div>
+                </div>
+                <div className="h5-form-row" style={{ marginBottom: 0 }}>
+                  <span className="k">{t('Supplier phone')}</span>
+                  <div style={{ flex: 1 }}><input className="input" style={{ height: 32, width: '100%' }} value={supPhone} onChange={e => setSupPhone(e.target.value)} placeholder="+234 …" /></div>
+                </div>
+                <div className="muted" style={{ fontSize: 11, marginTop: 6, lineHeight: 1.5 }}><Icon name="info" size={11} /> {t('The supplier is filed as a partner record and becomes immediately selectable for this and future stock-in.')}</div>
+              </React.Fragment>
+            )}
+            {supTenant && supTenantPhone && (
+              <div className="muted mono" style={{ fontSize: 11, marginTop: 6 }}>{supTenant.name} · {supTenantPhone}</div>
+            )}
             <div className="h5-form-row" style={{ marginBottom: 0 }}>
               <span className="k">{t('Stock-in note (optional)')}</span>
               <input className="input" style={{ height: 32, flex: 1 }} value={note} onChange={e => setNote(e.target.value)} placeholder={t('e.g. purchase arrival')} />
@@ -288,9 +349,6 @@ function InboundCartEditor({ onDone }) {
             <button type="button" className="h5-btn primary" onClick={confirm}><Icon name="download" size={14} />{t('Confirm Batch Stock In')}</button>
           </div>
         </React.Fragment>
-      )}
-      {supOpen && (
-        <NewSupplierDialog onClose={() => setSupOpen(false)} onCreated={tn => { setSupOpen(false); setSupplier(tn.id); }} />
       )}
     </div>
   );
@@ -428,7 +486,7 @@ function NewSupplierDialog({ onClose, onCreated }) {
 //  三模块暂存 + 按供货方分组 + 提交后 WhatsApp 对话窗口)
 
 Object.assign(window, {
-  emptyCarts, cartTotalCount, CART_MODULES,
+  emptyCarts, cartTotalCount, CART_MODULES, CURRENCIES,
   CartStepper, H5CartFab, WebCartFab, H5CartSheet,
   InquiryCartEditor, InboundCartEditor, OutboundCartEditor,
   NewSupplierDialog,

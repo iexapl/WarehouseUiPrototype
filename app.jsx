@@ -534,11 +534,15 @@ function App() {
       // 全部流水共享一个 IN- 编号便于追溯。
       // 入库确认时必须选择供货方（supplierId）：流水带 supplier 字段并在事由中
       // 记录供货方名称；供货方可当场新建（createSupplier）后立即选用。
-      batchScanIn(lines, note, supplierId) {
+      batchScanIn(lines, note, supplier) {
         const tnow = now();
         const tid = account.tenantId;
         const stockMap = db.stock[tid] || {};
-        const sup = supplierId ? db.tenants.find(x => x.id === supplierId) : null;
+        // supplier 可为租户 id（已有供货方）或新建租户对象（手动输入路径：
+        // createSupplier 的 setDb 在同一事件内尚未生效，直接传对象避免查不到）
+        const sup = supplier && typeof supplier === 'object'
+          ? supplier
+          : (supplier ? db.tenants.find(x => x.id === supplier) : null);
         // validation pass — nothing is written unless every line checks out
         for (const ln of lines) {
           if (!(Number(ln.qty) > 0)) { toast('Enter an inbound quantity > 0 for every line', 'error'); return false; }
@@ -549,10 +553,18 @@ function App() {
         }
         if (!sup) { toast('Select a supplier for the stock-in', 'error'); return false; }
         const total = lines.reduce((s, l) => s + (Number(l.qty) || 0), 0);
-        // 入库金额 = 物料单价 × 数量；单价在入库暂存单内可改（默认参考价/渠道价）
-        const totalAmount = lines.reduce((s, ln) => s + (Number(ln.kind === 'exist' ? ln.unitPrice : ln.price) || 0) * (Number(ln.qty) || 0), 0);
-        const firstExist = lines.find(l => l.kind === 'exist');
-        const cur = (firstExist ? (db.products.find(p => p.id === firstExist.pid) || {}).currency : 'USD') || 'USD';
+        // 入库金额 = 物料单价 × 数量；单价在入库暂存单内可改（默认参考价/渠道价）。
+        // 移动端每行可独立设置币种：行金额与合计按币种分别小计（演示不折算）
+        const totalsByCur = {};
+        lines.forEach(ln => {
+          const cur = (ln.kind === 'exist'
+            ? (ln.currency || ((db.products.find(p => p.id === ln.pid) || {}).currency))
+            : ln.currency) || 'USD';
+          const unit = Number(ln.kind === 'exist' ? ln.unitPrice : ln.price) || 0;
+          totalsByCur[cur] = (totalsByCur[cur] || 0) + unit * (Number(ln.qty) || 0);
+        });
+        const amountsText = Object.keys(totalsByCur)
+          .map(c => money(Math.round(totalsByCur[c] * 100) / 100, c).text).join(' · ');
         const refNo = 'IN-' + tnow.slice(0, 10).replace(/-/g, '') + '-' + String(Math.floor(Math.random() * 900) + 100);
         const nextStock = { ...stockMap };
         const newProducts = [];
@@ -561,10 +573,13 @@ function App() {
           if (ln.kind === 'new') {
             // quick profile: model = scanned code; details (spec/brand/price…) editable later
             pid = 'p-' + Date.now() + Math.random().toString(36).slice(2, 5);
-            newProducts.push({ id: pid, ownerId: tid, name: String(ln.name).trim(), spec: '', model: String(ln.code || '').trim(), brand: '', unit: ln.unit || 'pcs', price: Number(ln.price) || 0, currency: 'USD', image: '', images: [], categories: [], onSale: true });
+            newProducts.push({ id: pid, ownerId: tid, name: String(ln.name).trim(), spec: '', model: String(ln.code || '').trim(), brand: '', unit: ln.unit || 'pcs', price: Number(ln.price) || 0, currency: ln.currency || 'USD', image: '', images: [], categories: [], onSale: true });
           }
           const up = Number(ln.kind === 'exist' ? ln.unitPrice : ln.price) || 0;
           const amt = Math.round(up * (Number(ln.qty) || 0) * 100) / 100;
+          const lnCur = (ln.kind === 'exist'
+            ? (ln.currency || ((db.products.find(p => p.id === ln.pid) || {}).currency))
+            : ln.currency) || 'USD';
           const before = nextStock[pid] || 0;
           const after = before + (Number(ln.qty) || 0);
           nextStock[pid] = after;
@@ -572,7 +587,7 @@ function App() {
           if ((note || '').trim()) reasonParts.push(note.trim());
           if (sup) reasonParts.push(`Supplier: ${sup.name}`);
           reasonParts.push('Batch scan stock-in (scan)');
-          return { id: 'm-' + Date.now() + Math.random().toString(36).slice(2, 5), tenantId: tid, productId: pid, type: 'IN', qty: Number(ln.qty) || 0, before, after, refNo, by: account.name, ts: tnow, supplierId: sup ? sup.id : null, price: up, amount: amt, currency: cur, reason: reasonParts.join(' · ') };
+          return { id: 'm-' + Date.now() + Math.random().toString(36).slice(2, 5), tenantId: tid, productId: pid, type: 'IN', qty: Number(ln.qty) || 0, before, after, refNo, by: account.name, ts: tnow, supplierId: sup ? sup.id : null, price: up, amount: amt, currency: lnCur, reason: reasonParts.join(' · ') };
         });
         setDb(prev => ({
           ...prev,
@@ -580,7 +595,7 @@ function App() {
           stock: { ...prev.stock, [tid]: nextStock },
           movements: [...prev.movements, ...newMoves],
         }));
-        toast(`Batch stock-in complete — ${lines.length} items, ${total} units, ${money(totalAmount, cur).full} in (${refNo})`, 'success');
+        toast(`Batch stock-in complete — ${lines.length} items, ${total} units, ${amountsText} in (${refNo})`, 'success');
         return true;
       },
 
@@ -847,10 +862,10 @@ function App() {
       // docs：按供货方生成的询价单（一张/供货方），调用方据此进入对应 WhatsApp 对话
       return { ok: count > 0, count, docs };
     }
-    function submitInbound(supplierId, note) {
+    function submitInbound(supplier, note) {
       const lines = carts.inbound || [];
       if (!lines.length) { toast('No items yet — scan to add', 'error'); return false; }
-      const ok = act.batchScanIn(lines, note, supplierId);
+      const ok = act.batchScanIn(lines, note, supplier);
       if (ok) update('inbound', () => []);
       return ok;
     }
