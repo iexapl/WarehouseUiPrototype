@@ -1220,5 +1220,202 @@ button { font-family: inherit; }
   border-top: 1px solid #E7EAF0;
   margin: 0 -12px;
   padding: 8px 12px 12px;
-  min-height: 52px; box-sizing: border-box;
+  min-height: 52px; box-sizing: content-box;
+}
+
+/* ============================================================
+   R101 — Mobile visual refresh (移动端视觉升级层)
+   方向：物流台账 / 贸易终端 —— 深钴蓝主色 + 冷灰画布 + 白卡细边框
+   双层柔影；钱款一律琥珀色 #D35400；克制动效 160–200ms。
+   全部以 .h5-app 作用域覆盖，Web 控制台不受影响；
+   所有布局硬约束（页签高度/面板测高/吸底 padding/行序）均不改动。
+   ============================================================ */
+
+/* ---------- 1. 设计令牌（仅移动端生效，内联 var() 引用随之级联） ---------- */
+.h5-app {
+  --primary: #2554D8;
+  --primary-dark: #1B40AE;
+  --primary-light: #E8EEFB;
+  --bg: #EFF2F8;
+  --border: #D9DFEA;
+  --border-light: #E8ECF4;
+  --radius: 10px;
+  --h5-e1: 0 1px 2px rgba(16, 24, 40, 0.04), 0 4px 14px rgba(16, 24, 40, 0.05);
+  --h5-e2: 0 2px 6px rgba(16, 24, 40, 0.07), 0 10px 28px rgba(16, 24, 40, 0.09);
+  --h5-press: cubic-bezier(0.2, 0, 0, 1);
+  background: linear-gradient(180deg, #F2F4F9 0%, #EDF1F7 100%);
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ---------- 2. 顶栏 / 底部页签 / 画布 ---------- */
+.h5-app .h5-header { border-bottom: 1px solid #E9EDF4; }
+.h5-app .h5-title { letter-spacing: 0.2px; font-weight: 650; }
+.h5-app .h5-back, .h5-app .h5-headtool { transition: background 0.16s var(--h5-press), color 0.16s; border-radius: 8px; }
+.h5-app .h5-back:active { background: var(--primary-light); color: var(--primary); }
+.h5-app .h5-headtool:active { background: var(--primary-light); color: var(--primary); }
+.h5-app .h5-page { background: transparent; }
+.h5-app .h5-tabhead { background: transparent; }
+.h5-app .h5-tabbody { background: transparent; }
+.h5-app .h5-tabs { border-top: 1px solid #E9EDF4; }
+.h5-app .h5-tab { position: relative; transition: color 0.18s var(--h5-press); }
+.h5-app .h5-tab.active::before {
+  content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+  width: 18px; height: 3px; border-radius: 0 0 3px 3px; background: var(--primary);
+}
+.h5-app .h5-tab.active { font-weight: 600; }
+
+/* ---------- 3. 卡片 / 列表单元 / 单据卡 ---------- */
+.h5-app .h5-card {
+  border-radius: 14px; border: 1px solid #EBEFF5;
+  box-shadow: var(--h5-e1);
+}
+.h5-app .h5-cell {
+  border-radius: 14px; border: 1px solid #E9EDF4; box-shadow: var(--h5-e1);
+  transition: transform 0.16s var(--h5-press), background 0.16s, box-shadow 0.16s, border-color 0.16s;
+}
+.h5-app .h5-cell:active { transform: scale(0.985); background: #FAFBFE; border-color: #D9E1F0; opacity: 1; }
+.h5-app .h5-cell .cell-icon { border-radius: 12px; }
+.h5-app .h5-doc {
+  border-radius: 14px; border: 1px solid #E9EDF4; box-shadow: var(--h5-e1);
+  transition: transform 0.16s var(--h5-press), border-color 0.16s;
+}
+.h5-app .h5-doc:active { transform: scale(0.985); opacity: 1; border-color: #D9E1F0; }
+.h5-app .h5-doc .d-act {
+  border-radius: 999px; border-color: #DCE1EC;
+  transition: transform 0.15s var(--h5-press), background 0.15s, color 0.15s, border-color 0.15s;
+}
+.h5-app .h5-doc .d-act:active { transform: scale(0.94); opacity: 1; }
+.h5-app .h5-doc .d-act.primary { box-shadow: 0 2px 8px rgba(37, 84, 216, 0.24); }
+.h5-app .h5-product {
+  border-radius: 14px; border-color: #E9EDF4; box-shadow: var(--h5-e1);
+  transition: transform 0.16s var(--h5-press), border-color 0.16s, box-shadow 0.16s;
+}
+.h5-app .h5-product:active { transform: scale(0.985); opacity: 1; border-color: #D9E1F0; }
+.h5-app .h5-product img { border-radius: 12px; }
+.h5-app .h5-product .p-foot { border-top-color: #E3E8F0; }
+.h5-app .h5-section-title { letter-spacing: 0.4px; color: #78828F; }
+
+/* ---------- 4. 统计卡 / 快捷入口 ---------- */
+.h5-app .h5-stat {
+  border: 1px solid #E8ECF4; border-radius: 12px; box-shadow: var(--h5-e1);
+}
+.h5-app .h5-stat .v { font-size: 22px; letter-spacing: -0.3px; font-variant-numeric: tabular-nums; }
+.h5-app .h5-stat .l { letter-spacing: 0.3px; }
+.h5-app .h5-action {
+  border-radius: 12px; border: 1px solid #EBEFF5; box-shadow: var(--h5-e1);
+  transition: transform 0.16s var(--h5-press), background 0.16s;
+}
+.h5-app .h5-action:active { transform: scale(0.96); opacity: 1; background: #FAFBFE; }
+.h5-app .h5-action .a-icon { border-radius: 13px; transition: transform 0.16s var(--h5-press); }
+
+/* ---------- 5. 分段控件 / 筛选 chips（iOS 白滑块风） ---------- */
+.h5-app .h5-segments { background: #E6EAF3; border-radius: 11px; padding: 3px; }
+.h5-app .h5-segment {
+  border-radius: 8px; color: #5A6473;
+  transition: background 0.18s var(--h5-press), color 0.18s, box-shadow 0.18s;
+}
+.h5-app .h5-segment.active {
+  background: #fff; color: var(--primary);
+  box-shadow: 0 1px 3px rgba(16, 24, 40, 0.12);
+}
+.h5-app .h5-chip {
+  border-radius: 999px; padding: 4px 12px; border-color: #DCE1EC;
+  transition: background 0.18s var(--h5-press), color 0.18s, border-color 0.18s, box-shadow 0.18s;
+}
+.h5-app .h5-chip.on { box-shadow: 0 2px 8px rgba(37, 84, 216, 0.2); }
+.h5-app .h5-filter-panel { border-radius: 14px; border-color: #E7EBF3; box-shadow: var(--h5-e1); }
+.h5-app .h5-filter-toggle { border-radius: 999px; }
+.h5-app .mini-chip { border-radius: 6px; padding: 2px 7px; font-variant-numeric: tabular-nums; }
+
+/* ---------- 6. 表单 / 输入 / 步进器 ---------- */
+.h5-app .input, .h5-app .select, .h5-app .textarea { border-radius: 10px; border-color: #D8DEE9; }
+.h5-app .input:focus, .h5-app .select:focus, .h5-app .textarea:focus {
+  border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37, 84, 216, 0.13);
+}
+.h5-app .h5-form-row { border-bottom-color: #EFF2F7; }
+.h5-app .h5-desc { border: 1px solid #E9EDF4; box-shadow: var(--h5-e1); }
+.h5-app .h5-desc-row .k { background: #F7F9FD; }
+.h5-app .h5-stepper { border-color: #D8DEE9; border-radius: 16px; }
+.h5-app .h5-stepper button { transition: background 0.15s, color 0.15s; }
+.h5-app .h5-stepper button:active { background: var(--primary-light); color: var(--primary); }
+.h5-app .h5-stepper input { background: #F7F9FC; }
+.h5-app .h5-input-suffix { border-radius: 999px; box-shadow: 0 2px 8px rgba(37, 84, 216, 0.25); }
+
+/* ---------- 7. 按钮 / 吸底操作栏（毛玻璃） ---------- */
+.h5-app .h5-btn {
+  border-color: #D9DFEA; color: #414B5A; font-weight: 600;
+  transition: transform 0.16s var(--h5-press), box-shadow 0.16s, background 0.16s;
+}
+.h5-app .h5-btn:active { transform: scale(0.97); opacity: 1; }
+.h5-app .h5-btn.primary {
+  background: linear-gradient(180deg, #3565E2 0%, #2456C7 100%);
+  border-color: transparent;
+  box-shadow: 0 4px 12px rgba(36, 86, 199, 0.28);
+}
+.h5-app .h5-btn.primary:active { box-shadow: 0 2px 6px rgba(36, 86, 199, 0.2); }
+.h5-app .btn { border-radius: 10px; }
+.h5-app .h5-main .h5-act-row,
+.h5-app .h5-main .h5-actionbar {
+  background: rgba(240, 243, 249, 0.88);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+}
+
+/* ---------- 8. 首页 hero（签名元素：深钴蓝 + 运输胶带斜纹） ---------- */
+.h5-app .h5-hero {
+  position: relative; overflow: hidden;
+  background: linear-gradient(135deg, #2E5EE4 0%, #1E46C2 58%, #17389C 100%);
+  border: none; border-radius: 16px;
+  padding: 15px 16px; color: #fff;
+  box-shadow: 0 10px 24px -10px rgba(29, 68, 192, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.16);
+}
+.h5-app .h5-hero::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: repeating-linear-gradient(-55deg, rgba(255, 255, 255, 0.06) 0 9px, transparent 9px 22px);
+  -webkit-mask-image: linear-gradient(100deg, transparent 60%, #000 100%);
+  mask-image: linear-gradient(100deg, transparent 60%, #000 100%);
+}
+.h5-app .h5-hero .avatar { box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.38), 0 4px 10px rgba(16, 24, 40, 0.2); }
+
+/* ---------- 9. 暂存单：FAB / 面板 / 页签指示器 ---------- */
+.h5-app .h5-cart-fab {
+  background: linear-gradient(140deg, #3565E2 0%, #1B40AE 100%);
+  box-shadow: 0 6px 18px rgba(37, 84, 216, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.28);
+}
+.h5-app .cart-fab-badge { border-color: #EFF2F8; box-shadow: 0 2px 6px rgba(16, 24, 40, 0.18); }
+.h5-app .h5-cart-mask { background: rgba(15, 22, 35, 0.55); }
+.h5-app .h5-cart-sheet {
+  border-radius: 18px 18px 0 0; background: #F3F5FA;
+  box-shadow: 0 -12px 44px rgba(16, 24, 40, 0.2);
+}
+.h5-app .h5-cart-grip { background: #D3DAE6; border-radius: 3px; }
+.h5-app .h5-cart-head, .h5-app .h5-cart-segs { background: transparent; }
+.h5-app .h5-cart-title { letter-spacing: 0.2px; }
+.h5-app .h5-cart-seg { transition: color 0.18s var(--h5-press), border-color 0.18s; }
+.h5-app .h5-cart-seg-n { border-radius: 999px; font-variant-numeric: tabular-nums; }
+.h5-app .h5-cart-body { background: #F3F5FA; }
+.h5-app .h5-cart-pane .h5-act-row { box-shadow: 0 -6px 16px -12px rgba(16, 24, 40, 0.2); }
+
+/* ---------- 10. Toast / 扫码取景器 ---------- */
+/* 注：移动端实际 toast 是 App 层全局 .toast（在 .h5-app 外），用 :has 按舞台区分；
+   .h5-toast 为历史遗留无消费者，仅保留基样式 */
+body:has(.mobile-stage) .toast {
+  border-radius: 12px; border-left-width: 3px;
+  box-shadow: 0 8px 28px rgba(16, 24, 40, 0.16), 0 1px 2px rgba(16, 24, 40, 0.08);
+  font-weight: 500;
+}
+.h5-app .h5-scan-corner { border-width: 2.5px; }
+.h5-app .h5-scan-line { box-shadow: 0 0 12px rgba(53, 199, 89, 0.5); }
+.h5-app .h5-scan-frame.out .h5-scan-line { box-shadow: 0 0 12px rgba(245, 166, 35, 0.5); }
+.h5-app .h5-scan-mode {
+  backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+  background: rgba(16, 26, 42, 0.4);
+}
+
+/* ---------- 11. 页面过渡 / 可达性 ---------- */
+.h5-app .h5-page { animation-timing-function: cubic-bezier(0.25, 0.1, 0, 1); }
+.h5-app :focus-visible { outline: 2px solid rgba(37, 84, 216, 0.5); outline-offset: 1px; }
+@media (prefers-reduced-motion: reduce) {
+  .h5-app *, .h5-app *::before, .h5-app *::after {
+    animation-duration: 0.01ms !important; transition-duration: 0.01ms !important;
+  }
 }

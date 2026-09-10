@@ -430,7 +430,8 @@ function H5Home({ openDoc, push, platform, noPerm, setTab }) {
       {/* R99e — account banner (+ platform notice) pinned; everything below scrolls */}
       <div className="h5-tabhead">
         {platform && <Banner tone="warning" icon="lock">Platform account — the H5 app is read-only for business data. Quick actions are disabled.</Banner>}
-        <div className="h5-card" style={{ background: 'linear-gradient(135deg, var(--primary), var(--primary-dark))', color: '#fff', border: 'none' }}>
+        {/* R101 — 视觉升级：账户横幅改 .h5-hero（深钴蓝渐变 + 运输胶带斜纹），样式全部在 styles.css */}
+        <div className="h5-card h5-hero">
           <div className="flex gap10">
             <span className="avatar" style={{ background: 'rgba(255,255,255,0.25)', width: 44, height: 44, fontSize: 15 }}>{account.name.split(' ').map(w => w[0]).slice(0, 2).join('')}</span>
             <div>
