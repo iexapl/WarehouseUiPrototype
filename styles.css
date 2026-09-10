@@ -1197,7 +1197,10 @@ button { font-family: inherit; }
 .h5-cart-pane {
   position: absolute; top: 0; left: 0; right: 0; box-sizing: border-box;
   padding: 4px 12px calc(10px + var(--ios-safe-bottom, 0px));
-  overflow-y: auto; -webkit-overflow-scrolling: touch;
+  /* 滚动全部发生在 .h5-cart-scroll 内；pane 自身 overflow:hidden ——
+     注意 overflow-y:auto 会把 overflow-x 连带计算为 auto，内容横向溢出
+     几像素就预留 15px 横向滚动条，把吸底操作行抬高 15px（实测踩坑） */
+  overflow: hidden;
   visibility: hidden; pointer-events: none;
 }
 .h5-cart-pane.on { position: static; visibility: visible; pointer-events: auto; }
@@ -1207,7 +1210,7 @@ button { font-family: inherit; }
    按钮位置恒定（不再依赖 sticky/margin-top:auto，消除浏览器差异） */
 .h5-cart-pane.on { min-height: 100%; display: flex; flex-direction: column; }
 .h5-cart-pane.on > * { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; }
-.h5-cart-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding-bottom: 8px; }
+.h5-cart-scroll { flex: 1 1 auto; min-height: 0; overflow-x: hidden; overflow-y: auto; -webkit-overflow-scrolling: touch; padding-bottom: 8px; }
 .h5-cart-pane:has(.h5-act-row) { padding-bottom: 0; }
 .h5-cart-pane .h5-act-row {
   position: static; flex-shrink: 0; background: #fff;
