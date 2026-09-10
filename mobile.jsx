@@ -30,7 +30,7 @@ const SK_VARIANT = {
   stock: 'list', movements: 'list', members: 'list', channelStock: 'list',
   inquiry: 'form', order: 'form', quote: 'form', accept: 'form', pay: 'form',
   replenish: 'form', receive: 'form', ship: 'form', rereceive: 'form',
-  import: 'form', scan: 'form', scanOut: 'form', productNew: 'form',
+  import: 'form', scan: 'form', productNew: 'form',
   adjustPrice: 'form', adjustStock: 'form', bindwa: 'form',
 };
 
@@ -181,7 +181,7 @@ function MobileApp() {
   const TITLES = {
     doc: 'Document Detail', inquiry: 'New Inquiry', order: 'New Order', receive: 'Confirm Receipt',
     ship: 'Ship Order', product: 'Product Detail', guide: 'Permission Guide', notes: 'Data Notes', wa: 'WhatsApp Link',
-    productNew: 'New Product', scan: 'Scan to Stock In', scanOut: 'Scan Batch Outbound', import: 'Batch Import', categories: 'Categories', stock: 'My Stock',
+    productNew: 'New Product', scan: 'Scan', import: 'Batch Import', categories: 'Categories', stock: 'My Stock',
     movements: 'Stock Movements', quote: 'Send Quote', print: 'Print Preview', admin: 'Platform Admin',
     members: 'Team Members', bindwa: 'Bind WhatsApp', adjustPrice: 'Adjust Price', adjustStock: 'Adjust Stock',
     channelStock: 'Downstream Stock', waChat: 'WhatsApp Chat', waInbox: 'WhatsApp', rereceive: 'Re-receive',
@@ -225,8 +225,7 @@ function MobileApp() {
             {page.name === 'productNew' && <H5ProductFormPage onDone={back} />}
             {/* 扫码入库（合并版）：单入口支持连续识别/手动添加多条物料，
                 形成待入库清单（共享入库车），一次确认提交多条 IN 流水 */}
-            {page.name === 'scan' && <H5ScanInBatchPage onDone={back} />}
-            {page.name === 'scanOut' && <H5ScanOutPage onDone={back} />}
+            {page.name === 'scan' && <H5ScanPage onDone={back} />}
             {page.name === 'import' && <H5ImportPage onDone={back} />}
             {page.name === 'categories' && <H5CategoriesPage />}
             {page.name === 'stock' && <H5StockPage push={push} />}
@@ -255,14 +254,10 @@ function MobileApp() {
               {tab === 'products' && !platform && (
                 <button type="button" className="h5-headtool" title={t('Batch Import')} aria-label={t('Batch Import')} onClick={() => push({ name: 'import' })}><Icon name="upload" size={18} /></button>
               )}
-              {/* 扫码入库（合并版，仅租户账号）：原「扫码入库」与「扫码批量入库」
-                  合并为单入口，支持连续多次识别/添加后一次确认提交 */}
+              {/* 统一扫码入口（仅租户账号）：进入后切换 入库/出库 模式，
+                  扫码结果按模式加入入库暂存/出库暂存（平台账号只读无入口） */}
               {tab === 'products' && !platform && (
-                <button type="button" className="h5-headtool" title={t('Scan to Stock In')} aria-label={t('Scan to Stock In')} onClick={() => push({ name: 'scan' })}><Icon name="scan" size={18} /></button>
-              )}
-              {/* R100h — 扫码批量出库入口（仅租户账号；平台账号对物料数据只读） */}
-              {tab === 'products' && !platform && (
-                <button type="button" className="h5-headtool" title={t('Scan Batch Outbound')} aria-label={t('Scan Batch Outbound')} onClick={() => push({ name: 'scanOut' })}><Icon name="truck" size={18} /></button>
+                <button type="button" className="h5-headtool" title={t('Scan')} aria-label={t('Scan')} onClick={() => push({ name: 'scan' })}><Icon name="scan" size={18} /></button>
               )}
             </div>
           </div>

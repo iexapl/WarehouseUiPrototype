@@ -3,5 +3,10 @@
     "path": "/",
     "file": "index.html",
     "name": "TierLink Warehouse — MVP Permission Prototype"
+  },
+  {
+    "path": "/source_package/creative",
+    "file": "source_package/creative/index.html",
+    "name": "TierLink Warehouse — MVP Permission Prototype"
   }
 ]

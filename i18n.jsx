@@ -520,6 +520,9 @@ const ZH = {
   'Confirm Batch Outbound': '确认批量出库',
   'Outbound note (optional)': '出库备注（可选）',
   'Demo: scan an item': '演示：识别一个物料',
+  'Stock-in mode': '入库模式',
+  'Stock-out mode': '出库模式',
+  'Scanned items go to the staging of the current mode': '扫码结果加入当前模式的暂存单',
   'No products in stock to outbound': '仓库中没有可出库的物料',
   'No match in your warehouse': '您的仓库中未匹配到该物料',
   'Multiple matches — pick one to add': '匹配到多条物料——请点选加入',
@@ -1871,9 +1874,9 @@ const PATTERNS = [
   [/^Only (\d+) on hand$/, '仅库存 $1 件'],
   [/^(\d+) products? added · qty defaults to 1$/, '已添加 $1 个物料 · 数量默认为 1'],
   // ---- R100h 扫码批量出库 dynamic strings ----
-  [/^Scanned (.+) — added to outbound list$/, '已识别 $1——已加入出库清单'],
+  [/^Scanned (.+) — added to outbound staging$/, '已识别 $1——已加入出库暂存'],
   // ---- R100q 扫码批量入库 ----
-  [/^Scanned (.+) — added to inbound list$/, '已识别 $1——已加入入库清单'],
+  [/^Scanned (.+) — added to inbound staging$/, '已识别 $1——已加入入库暂存'],
   [/^Unknown code (.+) — stock in as a new product$/, '未知编码 $1——将作为新物料入库'],
   [/^Batch stock-in complete — (\d+) items, (\d+) units in \((.+)\)$/, '批量入库完成——$1 个物料 · $2 件入库（$3）'],
   [/^(\d+) items · (\d+) units$/, '$1 个物料 · $2 件'],

@@ -75,9 +75,30 @@ function WebCartFab({ count, onClick }) {
 function H5CartSheet({ onClose, push }) {
   const { carts } = useApp();
   const [seg, setSeg] = useState(() => (carts.inquiry.length ? 'inquiry' : carts.inbound.length ? 'inbound' : 'outbound'));
+  const sheetRef = useRef(null);
+  const bodyRef = useRef(null);
+  // 面板高度规则：三个页签内容都常驻渲染（未激活 pane 隐藏但仍参与测高，
+  // 含空态文案），body 高度 = 三页签内容自然高度的最大值，且总面板不超过
+  // 手机屏高 2/3（超出则封顶，各 pane 内部滚动）。内容变化时重算，
+  // 切换页签不再改变面板高度。
+  const [bodyH, setBodyH] = useState(null);
+  useEffect(() => {
+    const sheet = sheetRef.current;
+    const body = bodyRef.current;
+    if (!sheet || !body) return;
+    const panes = [...body.querySelectorAll('.h5-cart-pane')];
+    if (!panes.length) return;
+    let max = 0;
+    panes.forEach(p => { max = Math.max(max, p.scrollHeight); });
+    // 面板顶部非内容区（grip + 标题行 + 页签栏 + sheet 自身 padding）
+    const chrome = sheet.offsetHeight - body.offsetHeight;
+    const screenH = sheet.parentElement ? sheet.parentElement.clientHeight : window.innerHeight;
+    const cap = Math.max(180, Math.round(screenH * 2 / 3) - chrome);
+    setBodyH(Math.min(max, cap));
+  }, [carts]);
   return (
     <div className="h5-cart-mask" onClick={onClose}>
-      <div className="h5-cart-sheet" onClick={e => e.stopPropagation()}>
+      <div className="h5-cart-sheet" ref={sheetRef} onClick={e => e.stopPropagation()}>
         <div className="h5-cart-grip" />
         <div className="h5-cart-head">
           <div className="h5-cart-title"><Icon name="cart" size={16} /><span>{t('Staging')}</span></div>
@@ -92,10 +113,18 @@ function H5CartSheet({ onClose, push }) {
             </button>
           ))}
         </div>
-        <div className="h5-cart-body">
-          {seg === 'inquiry' && <InquiryCartEditor onDone={onClose} push={push} />}
-          {seg === 'inbound' && <InboundCartEditor onDone={onClose} />}
-          {seg === 'outbound' && <OutboundCartEditor onDone={onClose} />}
+        <div className="h5-cart-body" ref={bodyRef} style={bodyH ? { height: bodyH } : null}>
+          {/* 三个页签全部常驻渲染：隐藏 pane 绝对定位（宽度一致、高度自然），
+              供 useEffect 测量真实内容高度；未激活不可交互 */}
+          <div className={`h5-cart-pane${seg === 'inquiry' ? ' on' : ''}`} style={bodyH ? { maxHeight: bodyH } : null}>
+            <InquiryCartEditor onDone={onClose} push={push} />
+          </div>
+          <div className={`h5-cart-pane${seg === 'inbound' ? ' on' : ''}`} style={bodyH ? { maxHeight: bodyH } : null}>
+            <InboundCartEditor onDone={onClose} />
+          </div>
+          <div className={`h5-cart-pane${seg === 'outbound' ? ' on' : ''}`} style={bodyH ? { maxHeight: bodyH } : null}>
+            <OutboundCartEditor onDone={onClose} />
+          </div>
         </div>
       </div>
     </div>

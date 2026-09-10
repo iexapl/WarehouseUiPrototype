@@ -53,79 +53,50 @@ function H5ProductFormPage({ onDone }) {
   );
 }
 
-// ---------- R100h — 扫码批量出库（仓库 tab 头部入口） ----------
-// Scan items one by one to build an outbound list, adjust quantities, then
-// confirm once — every line records an OUT movement sharing one OUT- ref.
-// 购物车化：清单存入共享出库车（跨页面保留，可去别的页面再回来继续），
-// 确认提交或清空后出库车清空。
-// R100l — manual entry removed: items join the list via scanning only.
-function H5ScanOutPage({ onDone }) {
+// ---------- 统一扫码入口（入库/出库模式切换） ----------
+// 原「扫码入库」（H5ScanInBatchPage）与「扫码批量出库」（H5ScanOutPage）
+// 两个头部工具合并为单一「扫码」入口：进入后顶部切换 入库 / 出库 模式
+// （默认入库，可随时切换继续扫），扫码/手动录入的结果按当前模式加入
+// 对应暂存单（入库暂存 / 出库暂存，跨页面保留），遵循既有 +1 规则与
+// 表单能力（入库含单价/币种/供货方，出库含收货方）。模式反馈：
+// segment 高亮 + 扫码框取景器随模式变色 + 每次扫码 toast 提示去向。
+function H5ScanPage({ onDone }) {
   const { db, account, toast, cartApi, carts } = useApp();
+  const [mode, setMode] = useState('inbound'); // 'inbound' | 'outbound'
+  const [manual, setManual] = useState('');
   const own = db.products.filter(p => p.ownerId === account.tenantId);
   const stockOf = pid => (db.stock[account.tenantId] || {})[pid] || 0;
 
-  const add = (pid, label) => {
-    cartApi.add('outbound', { pid, qty: 1 });
-    if (label) toast(`Scanned ${label} — added to outbound list`, 'success');
-  };
-
-  // demo scan — picks a random own product that still has stock
-  const pool = own.filter(p => stockOf(p.id) > 0);
-  const scanDemo = () => {
-    if (!pool.length) { toast('No products in stock to outbound', 'error'); return; }
-    const p = pool[Math.floor(Math.random() * pool.length)];
-    add(p.id, p.model || p.name);
-  };
-
-  return (
-    <div className="h5-pad">
-      <div className="h5-scan-frame">
-        <span className="h5-scan-corner tl" /><span className="h5-scan-corner tr" />
-        <span className="h5-scan-corner bl" /><span className="h5-scan-corner br" />
-        <span className="h5-scan-line" />
-        <Icon name="scan" size={34} style={{ color: 'rgba(255,255,255,0.85)' }} />
-        <div style={{ color: 'rgba(255,255,255,0.75)', fontSize: 12.5, textAlign: 'center', padding: '0 40px' }}>{t('Align the product barcode with the viewfinder')}</div>
-      </div>
-      <button className="h5-btn mt12" style={{ width: '100%' }} onClick={scanDemo} disabled={!pool.length}><Icon name="scan" size={14} />{t('Demo: scan an item')}</button>
-
-      <div className="h5-section-title mt12">{t('Outbound List')} · {(carts.outbound || []).length}</div>
-      <OutboundCartEditor onDone={onDone} />
-    </div>
-  );
-}
-
-// ---------- 扫码入库（合并版） ----------
-// 原「扫码入库」（单件识别→跳转库存表单）与「扫码批量入库」合并为单入口：
-// 进入扫码页后可连续多次识别 / 手动添加物料，形成待入库清单（存入共享
-// 入库车，跨页面保留），一次确认提交多条 IN 流水。确认时必须选择供货方，
-// 支持当场「新建供货方」建档后选用。An item may ALREADY exist in this
-// tenant's warehouse (matched → stock accumulates) or NOT exist
-// (quick-profiled as a new product, then stocked in). Every line records an
-// IN movement sharing one IN- ref.
-function H5ScanInBatchPage({ onDone }) {
-  const { db, account, toast, cartApi, carts } = useApp();
-  const own = db.products.filter(p => p.ownerId === account.tenantId);
-  const [manual, setManual] = useState('');
-
   const addExisting = (pid, label) => {
     cartApi.add('inbound', { kind: 'exist', pid, qty: 1 });
-    if (label) toast(`Scanned ${label} — added to inbound list`, 'success');
+    if (label) toast(`Scanned ${label} — added to inbound staging`, 'success');
   };
   const addNew = (code) => {
     const c = String(code || '').trim();
     cartApi.add('inbound', { kind: 'new', code: c, name: '', unit: 'pcs', price: '', qty: 1 });
     toast(`Unknown code ${c || '(blank)'} — stock in as a new product`, 'info');
   };
+  const addOut = (pid, label) => {
+    cartApi.add('outbound', { pid, qty: 1 });
+    if (label) toast(`Scanned ${label} — added to outbound staging`, 'success');
+  };
 
-  // demo scan — picks a random own product (existing path)
+  // demo scans — inbound: any own product (existing) or an unknown barcode
+  // (new-product path); outbound: a random own product that still has stock
+  const outPool = own.filter(p => stockOf(p.id) > 0);
   const scanDemoExist = () => {
     if (!own.length) { toast('No products in your warehouse yet', 'error'); return; }
     const p = own[Math.floor(Math.random() * own.length)];
     addExisting(p.id, p.model || p.name);
   };
-  // demo scan — an unrecognized barcode (new-product path)
   const scanDemoNew = () => addNew('SKU-NEW-' + String(1000 + Math.floor(Math.random() * 9000)));
-  // manual entry: exact/substring match against own products (model first, then name)
+  const scanDemoOut = () => {
+    if (!outPool.length) { toast('No products in stock to outbound', 'error'); return; }
+    const p = outPool[Math.floor(Math.random() * outPool.length)];
+    addOut(p.id, p.model || p.name);
+  };
+  // manual entry (inbound): exact/substring match against own products
+  // (model first, then name); unknown code joins as a new-product line
   const addManual = () => {
     const key = String(manual || '').trim().toLowerCase();
     if (!key) { toast('Enter a barcode / product code / name first', 'error'); return; }
@@ -137,35 +108,48 @@ function H5ScanInBatchPage({ onDone }) {
 
   return (
     <div className="h5-pad">
-      <div className="h5-scan-frame">
+      {/* 模式切换：扫码结果加入当前模式的暂存单 */}
+      <div className="h5-segments mb8">
+        <button className={`h5-segment${mode === 'inbound' ? ' active' : ''}`} onClick={() => setMode('inbound')}><Icon name="download" size={13} />{t('Stock In')}</button>
+        <button className={`h5-segment${mode === 'outbound' ? ' active' : ''}`} onClick={() => setMode('outbound')}><Icon name="truck" size={13} />{t('Stock Out')}</button>
+      </div>
+      <div className="muted" style={{ fontSize: 11.5, margin: '0 2px 8px' }}><Icon name="info" size={11} /> {t('Scanned items go to the staging of the current mode')}</div>
+      <div className={`h5-scan-frame${mode === 'outbound' ? ' out' : ''}`}>
         <span className="h5-scan-corner tl" /><span className="h5-scan-corner tr" />
         <span className="h5-scan-corner bl" /><span className="h5-scan-corner br" />
         <span className="h5-scan-line" />
+        <span className="h5-scan-mode">{mode === 'inbound' ? t('Stock-in mode') : t('Stock-out mode')}</span>
         <Icon name="scan" size={34} style={{ color: 'rgba(255,255,255,0.85)' }} />
         <div style={{ color: 'rgba(255,255,255,0.75)', fontSize: 12.5, textAlign: 'center', padding: '0 40px' }}>{t('Align the product barcode with the viewfinder')}</div>
       </div>
-      <div className="flex gap10 mt12">
-        <button className="h5-btn" style={{ flex: 1 }} onClick={scanDemoExist} disabled={!own.length}><Icon name="check" size={14} />{t('Demo: recognize an existing product')}</button>
-        <button className="h5-btn" style={{ flex: 1 }} onClick={scanDemoNew}><Icon name="plus" size={14} />{t('Demo: scan a new barcode')}</button>
-      </div>
-      {/* manual entry: a known code restocks the matched product, an unknown
-          one joins the list as a new-product line */}
-      <div className="h5-card mt12">
-        <div className="h5-form-row" style={{ marginBottom: 0 }}>
-          <span className="k">{t('Manual Entry')}</span>
-          <div className="h5-input-affix">
-            <input className="input" style={{ height: 34, paddingRight: 64 }} value={manual}
-              onChange={e => setManual(e.target.value)}
-              placeholder={t('Barcode / product code / name')}
-              onKeyDown={e => { if (e.key === 'Enter') addManual(); }} />
-            <button type="button" className="h5-input-suffix" title={t('Add')} aria-label={t('Add')} onClick={addManual}><Icon name="plus" size={14} />{t('Add')}</button>
+      {mode === 'inbound' ? (
+        <React.Fragment>
+          <div className="flex gap10 mt12">
+            <button className="h5-btn" style={{ flex: 1 }} onClick={scanDemoExist} disabled={!own.length}><Icon name="check" size={14} />{t('Demo: recognize an existing product')}</button>
+            <button className="h5-btn" style={{ flex: 1 }} onClick={scanDemoNew}><Icon name="plus" size={14} />{t('Demo: scan a new barcode')}</button>
           </div>
-        </div>
-      </div>
-      <div className="h5-card mt12 muted" style={{ fontSize: 11.5, lineHeight: 1.6 }}><Icon name="info" size={12} /> {t('An inbound item may already be in your warehouse (matched automatically — stock accumulates) or brand new (quick-profiled below, then stocked in)')}</div>
+          {/* manual entry: a known code restocks the matched product, an unknown
+              one joins the list as a new-product line */}
+          <div className="h5-card mt12">
+            <div className="h5-form-row" style={{ marginBottom: 0 }}>
+              <span className="k">{t('Manual Entry')}</span>
+              <div className="h5-input-affix">
+                <input className="input" style={{ height: 34, paddingRight: 64 }} value={manual}
+                  onChange={e => setManual(e.target.value)}
+                  placeholder={t('Barcode / product code / name')}
+                  onKeyDown={e => { if (e.key === 'Enter') addManual(); }} />
+                <button type="button" className="h5-input-suffix" title={t('Add')} aria-label={t('Add')} onClick={addManual}><Icon name="plus" size={14} />{t('Add')}</button>
+              </div>
+            </div>
+          </div>
+          <div className="h5-card mt12 muted" style={{ fontSize: 11.5, lineHeight: 1.6 }}><Icon name="info" size={12} /> {t('An inbound item may already be in your warehouse (matched automatically — stock accumulates) or brand new (quick-profiled below, then stocked in)')}</div>
+        </React.Fragment>
+      ) : (
+        <button className="h5-btn mt12" style={{ width: '100%' }} onClick={scanDemoOut} disabled={!outPool.length}><Icon name="scan" size={14} />{t('Demo: scan an item')}</button>
+      )}
 
-      <div className="h5-section-title mt12">{t('Inbound List')} · {(carts.inbound || []).length}</div>
-      <InboundCartEditor onDone={onDone} />
+      <div className="h5-section-title mt12">{t(mode === 'inbound' ? 'Inbound Staging' : 'Outbound Staging')} · {(mode === 'inbound' ? (carts.inbound || []) : (carts.outbound || [])).length}</div>
+      {mode === 'inbound' ? <InboundCartEditor onDone={onDone} /> : <OutboundCartEditor onDone={onDone} />}
     </div>
   );
 }
@@ -1303,7 +1287,7 @@ function H5ReplenishPage({ poId, onDone }) {
 }
 
 Object.assign(window, {
-  H5ProductFormPage, H5ScanOutPage, H5ScanInBatchPage, H5ImportPage, H5CategoriesPage, H5StockPage, H5MovementsPage,
+  H5ProductFormPage, H5ScanPage, H5ImportPage, H5CategoriesPage, H5StockPage, H5MovementsPage,
   H5QuoteFormPage, H5PrintPage, H5ExportSheet, H5AdminPage, H5MembersPage, H5BindWaPage,
   GuestDocStage, H5GuestDocPage, H5PriceFormPage, H5AdjustStockPage, H5ReReceivePage,
   H5AcceptPage, H5PayPage, H5ReplenishPage,

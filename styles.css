@@ -1059,6 +1059,15 @@ button { font-family: inherit; }
 .h5-scan-corner.bl { bottom: 18px; left: 18px; border-right: none; border-top: none; border-radius: 0 0 0 8px; }
 .h5-scan-corner.br { bottom: 18px; right: 18px; border-left: none; border-top: none; border-radius: 0 0 8px 0; }
 .h5-scan-line { position: absolute; left: 34px; right: 34px; height: 2px; border-radius: 2px; background: linear-gradient(90deg, transparent, #35C759, transparent); animation: h5scanline 1.6s ease-in-out infinite; }
+/* 统一扫码页：出库模式取景器转暖色（四角 + 扫描线），与入库模式区分 */
+.h5-scan-frame.out .h5-scan-corner { border-color: #E67E22; }
+.h5-scan-frame.out .h5-scan-line { background: linear-gradient(90deg, transparent, #F5A623, transparent); }
+.h5-scan-mode {
+  position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+  padding: 3px 12px; border-radius: 12px; background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.28); color: #fff;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.5px; white-space: nowrap;
+}
 @keyframes h5scanline { 0%, 100% { top: 46px; } 50% { top: 182px; } }
 
 
@@ -1182,4 +1191,12 @@ button { font-family: inherit; }
   font-size: 10.5px; font-weight: 700; line-height: 16px; padding: 0 4px; flex-shrink: 0;
 }
 .h5-cart-seg.on .h5-cart-seg-n { background: var(--primary-light); color: var(--primary); }
-.h5-cart-body { overflow-y: auto; padding: 4px 12px 4px; -webkit-overflow-scrolling: touch; }
+/* 面板高度固定：三个页签内容常驻渲染，隐藏 pane 绝对定位参与测高；
+   body 高度由 JS 设为三页签内容最大值（封顶 2/3 屏），切换页签高度不变 */
+.h5-cart-body { position: relative; overflow: hidden; padding: 0; flex-shrink: 1; }
+.h5-cart-pane {
+  position: absolute; top: 0; left: 0; right: 0; box-sizing: border-box;
+  padding: 4px 12px 4px; overflow-y: auto; -webkit-overflow-scrolling: touch;
+  visibility: hidden; pointer-events: none;
+}
+.h5-cart-pane.on { position: static; visibility: visible; pointer-events: auto; }
