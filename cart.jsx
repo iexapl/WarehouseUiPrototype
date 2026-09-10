@@ -586,6 +586,21 @@ function OutboundCartEditor({ onDone }) {
       })}
       {lines.length > 0 && (
         <React.Fragment>
+          {/* 合计金额 = Σ(实际销售价 × 数量)；多币种按币种分别小计，逐币种上下堆叠（与入库一致，紧跟商品列表） */}
+          <div className="h5-card" style={{ padding: '10px 12px', marginBottom: Object.keys(totalsByCur).length > 1 ? 4 : 8 }}>
+            <div className="flex" style={{ alignItems: 'flex-start', justifyContent: 'space-between' }}>
+              <span className="muted" style={{ fontSize: 12, lineHeight: 1.6 }}>{`${lines.length} items · ${totalQty} units`}</span>
+              <div style={{ textAlign: 'right' }}>
+                <div className="muted" style={{ fontSize: 11, lineHeight: 1.6 }}>{t('Total')}</div>
+                {Object.keys(totalsByCur).map(c => (
+                  <div key={c} className="mono" style={{ fontSize: 13, fontWeight: 700, color: '#D35400', lineHeight: 1.6 }}>{money(totalsByCur[c], c).text}</div>
+                ))}
+              </div>
+            </div>
+          </div>
+          {Object.keys(totalsByCur).length > 1 && (
+            <div className="muted" style={{ fontSize: 11, margin: '0 4px 8px', lineHeight: 1.5 }}><Icon name="info" size={11} /> {t('Multi-currency lines are subtotaled per currency — demo, no FX conversion')}</div>
+          )}
           <div className="h5-card" style={{ padding: 12 }}>
             <div className="h5-form-row">
               <span className="k">{t('Receiver')} *</span>
@@ -615,21 +630,6 @@ function OutboundCartEditor({ onDone }) {
               <input className="input" style={{ height: 32, flex: 1 }} value={note} onChange={e => setNote(e.target.value)} placeholder={t('e.g. transfer to another warehouse')} />
             </div>
           </div>
-          {/* 合计金额 = Σ(实际销售价 × 数量)；多币种按币种分别小计，逐币种上下堆叠（与入库一致） */}
-          <div className="h5-card" style={{ padding: '10px 12px', marginBottom: Object.keys(totalsByCur).length > 1 ? 4 : 8 }}>
-            <div className="flex" style={{ alignItems: 'flex-start', justifyContent: 'space-between' }}>
-              <span className="muted" style={{ fontSize: 12, lineHeight: 1.6 }}>{`${lines.length} items · ${totalQty} units`}</span>
-              <div style={{ textAlign: 'right' }}>
-                <div className="muted" style={{ fontSize: 11, lineHeight: 1.6 }}>{t('Total')}</div>
-                {Object.keys(totalsByCur).map(c => (
-                  <div key={c} className="mono" style={{ fontSize: 13, fontWeight: 700, color: '#D35400', lineHeight: 1.6 }}>{money(totalsByCur[c], c).text}</div>
-                ))}
-              </div>
-            </div>
-          </div>
-          {Object.keys(totalsByCur).length > 1 && (
-            <div className="muted" style={{ fontSize: 11, margin: '0 4px 8px', lineHeight: 1.5 }}><Icon name="info" size={11} /> {t('Multi-currency lines are subtotaled per currency — demo, no FX conversion')}</div>
-          )}
         </React.Fragment>
       )}
       </div>
