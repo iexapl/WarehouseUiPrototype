@@ -568,9 +568,6 @@ function H5Products({ push, platform, skReady = true }) {
   const [supplier, setSupplier] = useState('ALL');
   const [cat, setCat] = useState('');
   const [showFilters, setShowFilters] = useState(false);
-  // inquiry multi-select mode: picked = array of product ids, qty defaults to 1 in the form
-  const [pickMode, setPickMode] = useState(false);
-  const [picked, setPicked] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
   const tenant = account.tenantId ? db.tenants.find(t => t.id === account.tenantId) : null;
   const showTabs = !platform && !!account.tenantId;
@@ -580,9 +577,7 @@ function H5Products({ push, platform, skReady = true }) {
   const upstreamIds = new Set(upstream.map(t => t.id));
   // inquiry is a tenant purchase capability — platform read-only, suppliers only answer inquiries
   const canInquire = showTabs && !(tenant && tenant.type === 'Supplier') && upstream.length > 0;
-  const togglePick = (id) => setPicked(sel => sel.includes(id) ? sel.filter(x => x !== id) : [...sel, id]);
-  const exitPick = () => { setPickMode(false); setPicked([]); };
-  const switchTab = (id) => { productsTab = id; setTabState(id); exitPick(); setQ(''); setCat(''); setSupplier('ALL'); };
+  const switchTab = (id) => { productsTab = id; setTabState(id); setQ(''); setCat(''); setSupplier('ALL'); };
   const rows = db.products.filter(p => {
     if (showTabs && (tab === 'mine' ? p.ownerId !== account.tenantId : !upstreamIds.has(p.ownerId))) return false;
     if (showTabs && tab === 'channel' && supplier !== 'ALL' && p.ownerId !== supplier) return false;
@@ -590,20 +585,10 @@ function H5Products({ push, platform, skReady = true }) {
     if (q && !(p.name + p.model + p.brand).toLowerCase().includes(q.toLowerCase())) return false;
     return true;
   });
-  // round 36 — single first header row: action buttons on the left, the filter
-  // toggle pinned to the far right (both used to occupy separate rows)
-  const hasFilterRow = !pickMode && (showTabs && tab === 'channel' ? upstream.length > 0 : true);
-  const hasActions = !!((canInquire && tab === 'channel') || (tab === 'mine' || !showTabs));
-  const actionButtons = (
-    <React.Fragment>
-      {canInquire && tab === 'channel' && (
-        <button className={`btn${pickMode ? ' primary' : ''}`} style={{ height: 30 }} title="Select products to inquire"
-          onClick={() => (pickMode ? exitPick() : setPickMode(true))}><Icon name="edit" size={14} />{pickMode ? 'Done' : 'Inquire'}</button>
-      )}
-      {/* R99w — 「入库」「导入」均已从筛选行移除：入库走页头「扫码」入口（支持手动录入），
-          导入移至页头右上角图标按钮 */}
-    </React.Fragment>
-  );
+  // round 36 — single first header row: the filter toggle pinned to the far
+  // right. (The inquiry multi-select mode was removed: per-item Inquire now
+  // adds the product to the inquiry staging directly.)
+  const hasFilterRow = showTabs && tab === 'channel' ? upstream.length > 0 : true;
   return (
     <div className="h5-tabpage">
       {/* R99e — segment tabs + action/filter row pinned; the product list below scrolls */}
@@ -618,7 +603,7 @@ function H5Products({ push, platform, skReady = true }) {
           <H5FilterBar open={showFilters} onToggle={() => setShowFilters(v => !v)}
             activeCount={(q ? 1 : 0) + (tab === 'channel' && supplier !== 'ALL' ? 1 : 0) + (cat ? 1 : 0)}
             onReset={() => { setQ(''); setSupplier('ALL'); setCat(''); }}
-            left={hasActions ? actionButtons : null}
+            left={null}
             values={{ q, supplier, cat }}
             onChange={(k, v) => { if (k === 'q') setQ(v); else if (k === 'supplier') setSupplier(v); else setCat(v); }}
             onSearch={() => setShowFilters(false)}
@@ -629,14 +614,12 @@ function H5Products({ push, platform, skReady = true }) {
                 options: db.categories.map(c => ({ value: c.id, label: t(c.name) })) },
               { type: 'search', key: 'q', placeholder: 'Search products' },
             ]} />
-        ) : (hasActions ? (
-          <div className="flex gap8" style={{ alignItems: 'center', flexWrap: 'wrap' }}>{actionButtons}</div>
-        ) : null)}
+        ) : null}
         {/* R99v — the read-only hint banner is NOT removed from the UI: it is
             moved OUT of the scrolling body into the PINNED head so only the
             product list scrolls. Channel tab shows the upstream-catalog note;
             platform accounts (single read-only list) keep their note too. */}
-        {!pickMode && (platform || (showTabs && tab === 'channel')) && (
+        {(platform || (showTabs && tab === 'channel')) && (
           <div className="h5-card" style={{ padding: '6px 10px', marginTop: 6, display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, color: 'var(--text-3)' }}>
             <Icon name="lock" size={12} />
             <span>{platform
@@ -645,12 +628,10 @@ function H5Products({ push, platform, skReady = true }) {
           </div>
         )}
       </div>
-      {/* R100d — pick mode: tabbody loses its bottom padding so the footer
-          bar's rest position touches the frame bottom (rest == pinned). */}
-      <div className="h5-tabbody tight" style={{ paddingBottom: pickMode ? 0 : undefined }}>
+      {/* R100d — tabbody keeps its bottom padding for the idle hint. */}
+      <div className="h5-tabbody tight">
       {/* R100j — 骨架屏只加在滚动内容区：固定的段选/筛选头（tabhead）不闪骨架 */}
       {!skReady ? <H5Skeleton variant="list" /> : (<React.Fragment>
-      {pickMode && <div className="h5-card muted" style={{ fontSize: 11.5, lineHeight: 1.6, marginBottom: 10 }}><Icon name="info" size={12} /> Select the products you want to inquire about, then add them to the inquiry staging — quantities default to 1 and can be adjusted in the staging before submitting. Only upstream supplier products can be picked; own and downstream products are locked.</div>}
       {refreshing ? <div className="h5-card" style={{ textAlign: 'center', color: 'var(--text-3)', fontSize: 12.5 }}>Refreshing…</div> :
         rows.map(p => {
           // tenant boundary holds naturally: the channel tab lists upstream-owned
@@ -660,13 +641,9 @@ function H5Products({ push, platform, skReady = true }) {
           // R100m — 库存数字统一带单位
           const sv = (db.stock[account.tenantId] || {})[p.id];
           return (
-          <div key={p.id} className="h5-product" style={pickMode && !inq ? { cursor: 'default' } : undefined}
-            onClick={() => (pickMode ? (inq ? togglePick(p.id) : undefined) : push({ name: 'product', productId: p.id }))}>
+          <div key={p.id} className="h5-product" onClick={() => push({ name: 'product', productId: p.id })}>
             {/* R100p — 列表项分 body/foot：p-main=body（图片/名称/编码/规格/库存/分类/价格），p-foot=操作按钮，段间虚线 */}
             <div className="p-main">
-            {pickMode && (inq
-              ? <span className={`checkbox${picked.includes(p.id) ? ' on' : ''}`} style={{ flexShrink: 0, alignSelf: 'center' }}><Icon name="check" size={11} /></span>
-              : <span className="checkbox" style={{ flexShrink: 0, alignSelf: 'center', opacity: 0.35 }}><Icon name="lock" size={11} /></span>)}
             <img src={prodImg(p)} alt={p.name} />
             {/* R100d — product info re-typeset: name + stock head line, spec,
                 prices in a soft panel, supplier / lock hints as chips. */}
@@ -680,13 +657,10 @@ function H5Products({ push, platform, skReady = true }) {
               </div>
               <div className="p-spec mono">{p.model} · {p.spec}</div>
               {/* R100p — 物料分类 chips（含渠道供应商/锁定提示），价格收尾 */}
-              {(p.categories && p.categories.length > 0) || (pickMode && !inq) || (!pickMode && tab === 'channel' && showTabs) ? (
+              {(p.categories && p.categories.length > 0) || (tab === 'channel' && showTabs) ? (
                 <div className="p-meta">
                   {(p.categories || []).map(cid => { const c = db.categories.find(x => x.id === cid); return c ? <span key={cid} className="p-chip"><Icon name="tag" size={10} />{t(c.name)}</span> : null; })}
-                  {pickMode && !inq && (
-                    <span className="p-chip"><Icon name="lock" size={10} />{p.ownerId === account.tenantId ? t('Own product — not inquirable') : t('Downstream product — not inquirable')}</span>
-                  )}
-                  {!pickMode && tab === 'channel' && showTabs && (
+                  {tab === 'channel' && showTabs && (
                     <span className="p-chip"><Icon name="building" size={10} />{productOwnerName(db, p)}</span>
                   )}
                 </div>
@@ -701,15 +675,15 @@ function H5Products({ push, platform, skReady = true }) {
               </div>
             </div>
             </div>
-            {!pickMode && tab === 'channel' && showTabs && inq && (
+            {tab === 'channel' && showTabs && inq && (
               <div className="p-foot">
                 <div className="row-actions" onClick={e => e.stopPropagation()}>
-                  {/* 询价 = 加入询价暂存：单项入口，数量默认 1，已在车中则 +1 */}
+                  {/* 询价 = 直接加入询价暂存：已在车中则数量 +1，不在则新增且数量默认 1 */}
                   <button className="h5-item-act" title={t('Inquire')} aria-label={t('Inquire')} onClick={() => { cartApi.add('inquiry', { pid: p.id, qty: 1 }); toast(`${p.name} added to the inquiry staging`, 'success'); }}><Icon name="edit" size={12} />{t('Inquire')}</button>
                 </div>
               </div>
             )}
-            {!pickMode && (tab === 'mine' || !showTabs) && !platform && mine && (
+            {(tab === 'mine' || !showTabs) && !platform && mine && (
               <div className="p-foot">
                 <div className="row-actions" onClick={e => e.stopPropagation()}>
                   <button className="h5-item-act" title={t('Adjust Price')} aria-label={t('Adjust Price')} onClick={() => push({ name: 'adjustPrice', productId: p.id })}><Icon name="tag" size={12} />{t('Adjust Price')}</button>
@@ -730,19 +704,7 @@ function H5Products({ push, platform, skReady = true }) {
           : (showTabs && tab === 'channel'
             ? <H5Empty icon="search" message="No channel products" hint="Adjust the supplier filter or search keywords." />
             : <H5Empty icon="box" message="No products yet" hint="Products you create or import appear here." />))}
-      {/* R100d — keyed branches: React otherwise reuses the same DOM node when
-          pickMode toggles and the idle hint's inline styles leak onto the bar. */}
-      {pickMode ? (
-        <div key="pickbar" className="h5-actionbar">
-          <button className="h5-btn" onClick={exitPick}><Icon name="close" size={14} />Cancel</button>
-          {/* 多选加入询价暂存：勾选的商品逐项累积，数量默认 1，去暂存单确认生成询价单 */}
-          <button className="h5-btn primary" disabled={!picked.length} onClick={() => { cartApi.addMany('inquiry', picked); toast(picked.length + (picked.length === 1 ? ' product added to the inquiry staging' : ' products added to the inquiry staging'), 'success'); exitPick(); }}>
-            <Icon name="cart" size={14} />{t('Add to Inquiry Staging')}{picked.length ? ` (${picked.length})` : ''}
-          </button>
-        </div>
-      ) : (
-        <div key="idlehint" className="muted" style={{ textAlign: 'center', fontSize: 11, marginTop: 14 }}>Pull down to refresh · pull up to load more</div>
-      )}
+      <div className="muted" style={{ textAlign: 'center', fontSize: 11, marginTop: 14 }}>Pull down to refresh · pull up to load more</div>
 
       </React.Fragment>)}
       </div>
