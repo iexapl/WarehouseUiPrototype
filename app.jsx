@@ -189,7 +189,7 @@ function App() {
         return doc;
       },
 
-      saveInquiry(f, submit) {
+      saveInquiry(f, submit, extraDocs) {
         // tenant boundary — inquiries apply to upstream-owned products only
         const upstream = upstreamTenantIds(db, account.tenantId);
         const badLine = f.items.filter(it => it.pid).some(it => {
@@ -202,8 +202,11 @@ function App() {
           return { pid: it.pid, name: p.name, spec: p.spec, unit: p.unit, qty: Number(it.qty), price: p.price };
         });
         const currency = items[0] ? items[0].price.currency || items[0].currency || 'USD' : 'USD';
-        const no = nextNo('IQ', db.docs);
-        const newDoc = { id: 'd-' + Date.now(), no, type: 'IQ', buyer: account.tenantId, seller: f.seller, createdBy: account.name, createdAt: now(), status: submit ? 'Submitted' : 'Draft', currency, deliveryDate: f.deliveryDate, deliveryWarehouse: 'Default Warehouse', items, timeline: [{ ts: now(), text: `Inquiry created ${submit ? 'and submitted' : '(Draft)'}`, by: account.name }] };
+        const no = nextNo('IQ', extraDocs && extraDocs.length ? db.docs.concat(extraDocs) : db.docs);
+        const timeline = [{ ts: now(), text: `Inquiry created ${submit ? 'and submitted' : '(Draft)'}`, by: account.name }];
+        // 提交即把询价摘要推送到供货方 WhatsApp（演示模拟），单据时间线留痕
+        if (submit) timeline.push({ ts: now(), text: `Inquiry summary sent to ${tenantName(db, f.seller)} via WhatsApp — awaiting the supplier's reply`, by: 'System' });
+        const newDoc = { id: 'd-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6), no, type: 'IQ', buyer: account.tenantId, seller: f.seller, createdBy: account.name, createdAt: now(), status: submit ? 'Submitted' : 'Draft', currency, deliveryDate: f.deliveryDate, deliveryWarehouse: 'Default Warehouse', items, timeline };
         updateDocs(prev => [...prev, newDoc]);
         if (submit) {
           // flow: inquiry pushed to the supplier — AI parsed the requirement and
@@ -223,7 +226,7 @@ function App() {
           toast(`Quote ${editQuote.no} updated`, 'success');
         } else {
           const no = nextNo('QT', db.docs);
-          const newDoc = { id: 'd-' + Date.now(), no, type: 'QT', seller: account.tenantId, buyer: inquiry.buyer, createdBy: account.name, createdAt: tnow, status: 'Sent', currency: inquiry.currency, validUntil, inquiryNo: inquiry.no, items: lines, timeline: [{ ts: tnow, text: 'Quote generated and sent', by: account.name }] };
+          const newDoc = { id: 'd-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6), no, type: 'QT', seller: account.tenantId, buyer: inquiry.buyer, createdBy: account.name, createdAt: tnow, status: 'Sent', currency: inquiry.currency, validUntil, inquiryNo: inquiry.no, items: lines, timeline: [{ ts: tnow, text: 'Quote generated and sent', by: account.name }] };
           updateDocs(prev => [...prev, newDoc]);
           // Push notification to buyer main account
           const buyerMain = db.accounts.find(a => a.tenantId === inquiry.buyer && a.main);
@@ -243,7 +246,7 @@ function App() {
         const validUntil = `${vd.getFullYear()}-${String(vd.getMonth() + 1).padStart(2, '0')}-${String(vd.getDate()).padStart(2, '0')}`;
         const lines = inquiry.items.map(it => ({ pid: it.pid, name: it.name, spec: it.spec, unit: it.unit, qty: Number(it.qty) || 0, price: Math.round(it.price * (1 - discount) * 100) / 100 }));
         const qno = nextNo('QT', db.docs);
-        const newDoc = { id: 'd-' + Date.now(), no: qno, type: 'QT', seller: inquiry.seller, buyer: inquiry.buyer, createdBy: 'AI Engine', createdAt: tnow, status: 'Draft', currency: inquiry.currency, validUntil, inquiryNo: inquiry.no, items: lines, timeline: [
+        const newDoc = { id: 'd-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6), no: qno, type: 'QT', seller: inquiry.seller, buyer: inquiry.buyer, createdBy: 'AI Engine', createdAt: tnow, status: 'Draft', currency: inquiry.currency, validUntil, inquiryNo: inquiry.no, items: lines, timeline: [
           { ts: tnow, text: 'AI generated quote draft from WhatsApp negotiation', by: 'AI Engine' },
         ] };
         updateDocs(prev => [...prev, newDoc]);
@@ -261,7 +264,7 @@ function App() {
         const currency = (db.products.find(p => p.id === (items[0] || {}).pid) || {}).currency || 'USD';
         const chainPath = [f.seller, account.tenantId];
         const no = nextNo('PO', db.docs);
-        const newDoc = { id: 'd-' + Date.now(), no, type: 'PO', buyer: account.tenantId, seller: f.seller, createdBy: account.name, createdAt: now(), status: 'Pending Acceptance', currency, deliveryDate: f.deliveryDate, quoteNo: f.quoteNo || null, chainPath, items, timeline: [{ ts: now(), text: `Purchase order created and submitted — awaiting supplier acceptance`, by: account.name }] };
+        const newDoc = { id: 'd-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6), no, type: 'PO', buyer: account.tenantId, seller: f.seller, createdBy: account.name, createdAt: now(), status: 'Pending Acceptance', currency, deliveryDate: f.deliveryDate, quoteNo: f.quoteNo || null, chainPath, items, timeline: [{ ts: now(), text: `Purchase order created and submitted — awaiting supplier acceptance`, by: account.name }] };
         updateDocs(prev => [...prev, newDoc]);
         toast(`Order ${no} submitted for supplier review`, 'success');
       },
@@ -491,7 +494,7 @@ function App() {
       },
 
       // R100h — 扫码批量出库：一次确认多条 OUT 库存流水（仅限本租户物料，逐行校验库存充足；共享一个 OUT- 编号便于追溯）
-      batchScanOut(lines, note) {
+      batchScanOut(lines, note, receiver) {
         const tnow = now();
         const tid = account.tenantId;
         const stockMap = db.stock[tid] || {};
@@ -502,6 +505,11 @@ function App() {
           if (!(ln.qty > 0)) { toast(`Invalid quantity — ${prod.name}`, 'error'); return false; }
           if (ln.qty > cur) { toast(`Insufficient stock — ${prod.name}: on hand ${cur}`, 'error'); return false; }
         }
+        // 收货方必填：可从下游租户选择，也可手动填写名称/手机号；流水携带收货方信息
+        const recv = receiver && String(receiver.name || '').trim()
+          ? { name: String(receiver.name).trim(), phone: String(receiver.phone || '').trim(), tenantId: receiver.tenantId || null }
+          : null;
+        if (!recv) { toast('Select or enter a receiver for the outbound', 'error'); return false; }
         const total = lines.reduce((s, l) => s + l.qty, 0);
         const refNo = 'OUT-' + tnow.slice(0, 10).replace(/-/g, '') + '-' + String(Math.floor(Math.random() * 900) + 100);
         const nextStock = { ...stockMap };
@@ -509,11 +517,15 @@ function App() {
           const before = nextStock[ln.pid] || 0;
           const after = before - ln.qty;
           nextStock[ln.pid] = after;
-          return { id: 'm-' + Date.now() + Math.random().toString(36).slice(2, 5), tenantId: tid, productId: ln.pid, type: 'OUT', qty: -ln.qty, before, after, refNo, by: account.name, ts: tnow, reason: (note || '').trim() ? note.trim() + ' (scan)' : 'Batch scan outbound (scan)' };
+          const reasonParts = [];
+          if ((note || '').trim()) reasonParts.push(note.trim());
+          reasonParts.push(`Receiver: ${recv.name}${recv.phone ? ` (${recv.phone})` : ''}`);
+          reasonParts.push('Batch scan outbound (scan)');
+          return { id: 'm-' + Date.now() + Math.random().toString(36).slice(2, 5), tenantId: tid, productId: ln.pid, type: 'OUT', qty: -ln.qty, before, after, refNo, by: account.name, ts: tnow, receiverName: recv.name, receiverPhone: recv.phone || null, receiverTenantId: recv.tenantId, reason: reasonParts.join(' · ') };
         });
         updateStock(prev => ({ ...prev, [tid]: nextStock }));
         updateMovements(prev => [...prev, ...newMoves]);
-        toast(`Batch outbound complete — ${lines.length} items, ${total} units out (${refNo})`, 'success');
+        toast(`Batch outbound complete — ${lines.length} items, ${total} units to ${recv.name} (${refNo})`, 'success');
         return true;
       },
 
@@ -537,6 +549,10 @@ function App() {
         }
         if (!sup) { toast('Select a supplier for the stock-in', 'error'); return false; }
         const total = lines.reduce((s, l) => s + (Number(l.qty) || 0), 0);
+        // 入库金额 = 物料单价 × 数量；单价在入库暂存单内可改（默认参考价/渠道价）
+        const totalAmount = lines.reduce((s, ln) => s + (Number(ln.kind === 'exist' ? ln.unitPrice : ln.price) || 0) * (Number(ln.qty) || 0), 0);
+        const firstExist = lines.find(l => l.kind === 'exist');
+        const cur = (firstExist ? (db.products.find(p => p.id === firstExist.pid) || {}).currency : 'USD') || 'USD';
         const refNo = 'IN-' + tnow.slice(0, 10).replace(/-/g, '') + '-' + String(Math.floor(Math.random() * 900) + 100);
         const nextStock = { ...stockMap };
         const newProducts = [];
@@ -547,6 +563,8 @@ function App() {
             pid = 'p-' + Date.now() + Math.random().toString(36).slice(2, 5);
             newProducts.push({ id: pid, ownerId: tid, name: String(ln.name).trim(), spec: '', model: String(ln.code || '').trim(), brand: '', unit: ln.unit || 'pcs', price: Number(ln.price) || 0, currency: 'USD', image: '', images: [], categories: [], onSale: true });
           }
+          const up = Number(ln.kind === 'exist' ? ln.unitPrice : ln.price) || 0;
+          const amt = Math.round(up * (Number(ln.qty) || 0) * 100) / 100;
           const before = nextStock[pid] || 0;
           const after = before + (Number(ln.qty) || 0);
           nextStock[pid] = after;
@@ -554,7 +572,7 @@ function App() {
           if ((note || '').trim()) reasonParts.push(note.trim());
           if (sup) reasonParts.push(`Supplier: ${sup.name}`);
           reasonParts.push('Batch scan stock-in (scan)');
-          return { id: 'm-' + Date.now() + Math.random().toString(36).slice(2, 5), tenantId: tid, productId: pid, type: 'IN', qty: Number(ln.qty) || 0, before, after, refNo, by: account.name, ts: tnow, supplierId: sup ? sup.id : null, reason: reasonParts.join(' · ') };
+          return { id: 'm-' + Date.now() + Math.random().toString(36).slice(2, 5), tenantId: tid, productId: pid, type: 'IN', qty: Number(ln.qty) || 0, before, after, refNo, by: account.name, ts: tnow, supplierId: sup ? sup.id : null, price: up, amount: amt, currency: cur, reason: reasonParts.join(' · ') };
         });
         setDb(prev => ({
           ...prev,
@@ -562,7 +580,7 @@ function App() {
           stock: { ...prev.stock, [tid]: nextStock },
           movements: [...prev.movements, ...newMoves],
         }));
-        toast(`Batch stock-in complete — ${lines.length} items, ${total} units in (${refNo})`, 'success');
+        toast(`Batch stock-in complete — ${lines.length} items, ${total} units, ${money(totalAmount, cur).full} in (${refNo})`, 'success');
         return true;
       },
 
@@ -782,7 +800,10 @@ function App() {
           if (line.kind === 'exist') {
             const ex = list.find(l => l.kind === 'exist' && l.pid === line.pid);
             if (ex) return list.map(l => (l.kind === 'exist' && l.pid === line.pid) ? { ...l, qty: norm(l.qty) + norm(line.qty) } : l);
-            return [...list, { kind: 'exist', pid: line.pid, qty: norm(line.qty) || 1 }];
+            // 物料单价默认取市场参考价（缺省回落渠道价），入库时可在暂存单内修改
+            const prod = db.products.find(x => x.id === line.pid);
+            const up = prod ? Number(ifnull(prod.marketPrice, prod.price)) || 0 : 0;
+            return [...list, { kind: 'exist', pid: line.pid, qty: norm(line.qty) || 1, unitPrice: up }];
           }
           return [...list, { kind: 'new', code: line.code || '', name: line.name || '', unit: line.unit || 'pcs', price: line.price || '', qty: norm(line.qty) || 1 }];
         });
@@ -811,15 +832,20 @@ function App() {
         groups[p.ownerId].push({ pid: l.pid, qty: norm(l.qty) });
       });
       let count = 0;
+      const docs = [];
+      // 同一批内连续建单时 db.docs 快照不变：把已建单据传给 saveInquiry 推进序号，
+      // 避免多供货方提交时单号重复
+      const seen = [];
       Object.keys(groups).forEach(seller => {
-        const saved = act.saveInquiry({ seller, deliveryDate: date, items: groups[seller] }, true);
-        if (saved) count++;
+        const saved = act.saveInquiry({ seller, deliveryDate: date, items: groups[seller] }, true, seen);
+        if (saved) { count++; docs.push(saved); seen.push(saved); }
       });
       if (count > 0) {
         update('inquiry', () => []);
         toast(count === 1 ? 'Inquiry staging submitted — 1 inquiry created' : `Inquiry staging submitted — ${count} inquiries created`, 'success');
       }
-      return { ok: count > 0, count };
+      // docs：按供货方生成的询价单（一张/供货方），调用方据此进入对应 WhatsApp 对话
+      return { ok: count > 0, count, docs };
     }
     function submitInbound(supplierId, note) {
       const lines = carts.inbound || [];
@@ -828,10 +854,10 @@ function App() {
       if (ok) update('inbound', () => []);
       return ok;
     }
-    function submitOutbound(note) {
+    function submitOutbound(note, receiver) {
       const lines = (carts.outbound || []).map(l => ({ pid: l.pid, qty: norm(l.qty) })).filter(l => l.qty > 0);
       if (!lines.length) { toast('No items yet — scan to add', 'error'); return false; }
-      const ok = act.batchScanOut(lines, note);
+      const ok = act.batchScanOut(lines, note, receiver);
       if (ok) update('outbound', () => []);
       return ok;
     }

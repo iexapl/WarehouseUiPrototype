@@ -69,7 +69,7 @@ function WebCartFab({ count, onClick }) {
 // Mobile cart sheet — one entry, three module carts on segments
 // ============================================================
 
-function H5CartSheet({ onClose }) {
+function H5CartSheet({ onClose, push }) {
   const { carts } = useApp();
   const [seg, setSeg] = useState(() => (carts.inquiry.length ? 'inquiry' : carts.inbound.length ? 'inbound' : 'outbound'));
   return (
@@ -90,7 +90,7 @@ function H5CartSheet({ onClose }) {
           ))}
         </div>
         <div className="h5-cart-body">
-          {seg === 'inquiry' && <InquiryCartEditor onDone={onClose} />}
+          {seg === 'inquiry' && <InquiryCartEditor onDone={onClose} push={push} />}
           {seg === 'inbound' && <InboundCartEditor onDone={onClose} />}
           {seg === 'outbound' && <OutboundCartEditor onDone={onClose} />}
         </div>
@@ -103,34 +103,62 @@ function H5CartSheet({ onClose }) {
 // Lines are upstream-owned products picked while browsing; submitting
 // creates ONE inquiry per supplier (tenant boundary enforced by
 // act.saveInquiry upstream checks).
-function InquiryCartEditor({ onDone }) {
+function InquiryCartEditor({ onDone, push }) {
   const { db, carts, cartApi, toast } = useApp();
   const [date, setDate] = useState('');
   const lines = carts.inquiry || [];
   const totalQty = lines.reduce((s, l) => s + (Number(l.qty) || 0), 0);
+  // 按供货方（商品归属租户）分组展示：提交时每个供货方生成一张询价单，
+  // 并把询价单发送到该供货方的 WhatsApp 对话界面
+  const groups = [];
+  lines.forEach((l, i) => {
+    const p = db.products.find(x => x.id === l.pid) || {};
+    let g = groups.find(x => x.ownerId === p.ownerId);
+    if (!g) { g = { ownerId: p.ownerId, lines: [] }; groups.push(g); }
+    g.lines.push({ l, i });
+  });
   const submit = () => {
     const res = cartApi.submitInquiry(date);
-    if (res && res.count > 0 && onDone) onDone();
+    if (res && res.ok) {
+      if (onDone) onDone();
+      // 单一供货方 → 直接进入 WhatsApp 对话；多个供货方 → 先进入 WhatsApp
+      // 发送列表，再逐个打开对话
+      if (push && res.docs && res.docs.length) {
+        if (res.docs.length === 1) push({ name: 'waChat', docId: res.docs[0].id });
+        else push({ name: 'waInbox', docIds: res.docs.map(d => d.id) });
+      }
+    }
   };
   return (
     <div>
       {lines.length === 0 && <H5Empty icon="cart" message="Inquiry staging is empty" hint="Add upstream products while browsing the sourcing channel" />}
-      {lines.map((l, i) => {
-        const p = db.products.find(x => x.id === l.pid) || {};
+      {groups.map(g => {
+        const tn = db.tenants.find(x => x.id === g.ownerId);
         return (
-          <div key={l.pid} className="h5-card" style={{ marginBottom: 8, padding: 12 }}>
-            <div className="flex gap10" style={{ alignItems: 'center' }}>
-              <img src={prodImg(p)} alt="" style={{ width: 40, height: 40, borderRadius: 8, objectFit: 'cover' }} />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 600 }}>{p.name}</div>
-                <div className="muted mono" style={{ fontSize: 11, marginTop: 2 }}>{p.model} · {productOwnerName(db, p)}</div>
-              </div>
-              <span className="h5-back" title={t('Remove')} onClick={() => cartApi.removeAt('inquiry', i)} style={{ color: 'var(--danger)' }}><Icon name="trash" size={16} /></span>
+          <div key={g.ownerId} className="h5-card" style={{ marginBottom: 8, padding: 12 }}>
+            <div className="flex gap8" style={{ alignItems: 'center', paddingBottom: 8, borderBottom: '1px solid #F0F2F5' }}>
+              <span className="wa-avatar" style={{ width: 26, height: 26, fontSize: 12 }}>{tn ? tn.name[0] : '?'}</span>
+              <div style={{ flex: 1, minWidth: 0, fontSize: 12.5, fontWeight: 700 }}>{tn ? tn.name : g.ownerId}</div>
+              <span className="mini-chip wa"><Icon name="whatsapp" size={11} />{t('1 inquiry / supplier')}</span>
             </div>
-            <div className="flex mt8" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
-              <span className="muted" style={{ fontSize: 11.5 }}>{t('Channel Sales Price')} <b className="mono" style={{ color: '#D35400' }}>{money(p.price, p.currency).text}</b></span>
-              <CartStepper value={l.qty} onChange={q => cartApi.setQty('inquiry', i, q)} />
-            </div>
+            {g.lines.map(({ l, i }) => {
+              const p = db.products.find(x => x.id === l.pid) || {};
+              return (
+                <div key={l.pid} style={{ paddingTop: 8 }}>
+                  <div className="flex gap10" style={{ alignItems: 'center' }}>
+                    <img src={prodImg(p)} alt="" style={{ width: 36, height: 36, borderRadius: 8, objectFit: 'cover' }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600 }}>{p.name}</div>
+                      <div className="muted mono" style={{ fontSize: 11, marginTop: 2 }}>{p.model} · {t('Channel Sales Price')} <b style={{ color: '#D35400' }}>{money(p.price, p.currency).text}</b></div>
+                    </div>
+                    <span className="h5-back" title={t('Remove')} onClick={() => cartApi.removeAt('inquiry', i)} style={{ color: 'var(--danger)' }}><Icon name="trash" size={16} /></span>
+                  </div>
+                  <div className="flex mt8" style={{ alignItems: 'center', justifyContent: 'flex-end' }}>
+                    <CartStepper value={l.qty} onChange={q => cartApi.setQty('inquiry', i, q)} />
+                  </div>
+                </div>
+              );
+            })}
           </div>
         );
       })}
@@ -142,11 +170,12 @@ function InquiryCartEditor({ onDone }) {
               <input className="input" style={{ height: 32, flex: 1 }} type="date" value={date} onChange={e => setDate(e.target.value)} />
             </div>
             <div className="muted" style={{ fontSize: 11, marginTop: 8, lineHeight: 1.5 }}><Icon name="info" size={11} /> {t('Lines are grouped by supplier — one inquiry is created per supplier.')}</div>
+            <div className="muted" style={{ fontSize: 11, marginTop: 4, lineHeight: 1.5 }}><Icon name="whatsapp" size={11} /> {t("After submitting, each inquiry is sent to the supplier's WhatsApp chat.")}</div>
           </div>
           <div className="h5-act-row" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ flex: 1, fontSize: 12.5, color: 'var(--text-2)' }}>{`${lines.length} items · ${totalQty} units`}</div>
+            <div style={{ flex: 1, fontSize: 12.5, color: 'var(--text-2)' }}>{`${lines.length} items · ${totalQty} units · ${groups.length} suppliers`}</div>
             <button type="button" className="h5-btn" onClick={() => { cartApi.clear('inquiry'); toast('Inquiry staging cleared', 'info'); }}><Icon name="trash" size={14} />{t('Clear')}</button>
-            <button type="button" className="h5-btn primary" onClick={submit}><Icon name="check" size={14} />{t('Submit Inquiry')}</button>
+            <button type="button" className="h5-btn primary" onClick={submit}><Icon name="whatsapp" size={14} />{t('Submit Inquiry')}</button>
           </div>
         </React.Fragment>
       )}
@@ -168,6 +197,10 @@ function InboundCartEditor({ onDone }) {
   const stockOf = pid => (db.stock[account.tenantId] || {})[pid] || 0;
   const suppliers = db.tenants.filter(x => x.status === 'Active' && x.id !== account.tenantId);
   const totalQty = lines.reduce((s, l) => s + (Number(l.qty) || 0), 0);
+  // 合计金额：Σ(物料单价 × 数量)（exist 行用暂存单内可改的 unitPrice，new 行用快速建档价）
+  const totalAmount = lines.reduce((s, l) => s + (Number(l.kind === 'exist' ? l.unitPrice : l.price) || 0) * (Number(l.qty) || 0), 0);
+  const firstExist = lines.find(l => l.kind === 'exist');
+  const totalCur = (firstExist ? (db.products.find(p => p.id === firstExist.pid) || {}).currency : 'USD') || 'USD';
   const confirm = () => {
     if (!supplier) { toast('Select a supplier for the stock-in', 'error'); return; }
     if (cartApi.submitInbound(supplier, note) && onDone) onDone();
@@ -194,7 +227,16 @@ function InboundCartEditor({ onDone }) {
                 <span className="muted" style={{ fontSize: 11.5 }}>{t('Qty')} · {p.unit}</span>
                 <CartStepper value={l.qty} onChange={q => cartApi.setQty('inbound', i, q)} />
               </div>
-              <div className="muted mono" style={{ fontSize: 11, marginTop: 4, textAlign: 'right' }}>{onHand} → {onHand + qty} {p.unit}</div>
+              {/* 物料单价（默认参考价/渠道价，可改）→ 行金额 = 单价 × 数量 */}
+              <div className="flex mt8" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
+                <span className="muted" style={{ fontSize: 11.5 }}>{t('Unit Price')} · {p.currency}</span>
+                <input className="input mono" style={{ height: 30, width: 116, textAlign: 'right' }} type="number" min="0" step="0.01"
+                  value={ifnull(l.unitPrice, 0)} aria-label={t('Unit Price')} onChange={e => cartApi.setField('inbound', i, 'unitPrice', e.target.value)} />
+              </div>
+              <div className="flex mt4" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
+                <span className="muted mono" style={{ fontSize: 11 }}>{onHand} → {onHand + qty} {p.unit}</span>
+                <span className="mono" style={{ fontSize: 11.5 }}>{t('Amount')}: <b style={{ color: '#D35400' }}>{money(qty * (Number(l.unitPrice) || 0), p.currency).text}</b></span>
+              </div>
             </div>
           );
         }
@@ -215,11 +257,17 @@ function InboundCartEditor({ onDone }) {
               <span className="muted" style={{ fontSize: 11.5 }}>{t('Qty')} · {l.unit}</span>
               <CartStepper value={l.qty} onChange={q => cartApi.setQty('inbound', i, q)} />
             </div>
+            <div className="mono" style={{ fontSize: 11.5, marginTop: 4, textAlign: 'right' }}>{t('Amount')}: <b style={{ color: '#D35400' }}>{money((Number(l.qty) || 0) * (Number(l.price) || 0), 'USD').text}</b></div>
           </div>
         );
       })}
       {lines.length > 0 && (
         <React.Fragment>
+          {/* 合计金额 = Σ(物料单价 × 数量) */}
+          <div className="h5-card" style={{ padding: '10px 12px', marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span className="muted" style={{ fontSize: 12 }}>{`${lines.length} items · ${totalQty} units`}</span>
+            <span style={{ fontSize: 13, fontWeight: 700 }}>{t('Total')} <span className="mono" style={{ color: '#D35400' }}>{money(totalAmount, totalCur).text}</span></span>
+          </div>
           <div className="h5-card" style={{ padding: 12 }}>
             <div className="h5-form-row">
               <span className="k">{t('Supplier')} *</span>
@@ -235,7 +283,7 @@ function InboundCartEditor({ onDone }) {
             </div>
           </div>
           <div className="h5-act-row" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ flex: 1, fontSize: 12.5, color: 'var(--text-2)' }}>{`${lines.length} items · ${totalQty} units`}</div>
+            <div style={{ flex: 1, fontSize: 12.5, color: 'var(--text-2)' }}>{t('Unit price × qty = stock-in amount')}</div>
             <button type="button" className="h5-btn" onClick={() => { cartApi.clear('inbound'); toast('Inbound staging cleared', 'info'); }}><Icon name="trash" size={14} />{t('Clear')}</button>
             <button type="button" className="h5-btn primary" onClick={confirm}><Icon name="download" size={14} />{t('Confirm Batch Stock In')}</button>
           </div>
@@ -252,11 +300,23 @@ function InboundCartEditor({ onDone }) {
 function OutboundCartEditor({ onDone }) {
   const { db, account, carts, cartApi, toast } = useApp();
   const [note, setNote] = useState('');
+  // 收货方：可从下游租户选择，也可手动输入名称（可选手机号）；提交后随出库单留痕
+  const [recvId, setRecvId] = useState('');
+  const [recvName, setRecvName] = useState('');
+  const [recvPhone, setRecvPhone] = useState('');
   const lines = carts.outbound || [];
   const stockOf = pid => (db.stock[account.tenantId] || {})[pid] || 0;
   const totalQty = lines.reduce((s, l) => s + (Number(l.qty) || 0), 0);
+  const downstream = db.relations.filter(r => r.upstream === account.tenantId)
+    .map(r => db.tenants.find(x => x.id === r.downstream)).filter(x => x && x.status === 'Active');
+  const recvTenant = downstream.find(x => x.id === recvId);
+  const recvTenantPhone = recvTenant ? ((db.accounts.find(a => a.tenantId === recvTenant.id && a.main) || {}).phone || '') : '';
   const confirm = () => {
-    if (cartApi.submitOutbound(note) && onDone) onDone();
+    const recv = recvId === 'custom'
+      ? { name: recvName.trim(), phone: recvPhone.trim() }
+      : recvTenant ? { name: recvTenant.name, phone: recvTenantPhone, tenantId: recvTenant.id } : null;
+    if (!recv || !recv.name) { toast('Select or enter a receiver for the outbound', 'error'); return; }
+    if (cartApi.submitOutbound(note, recv) && onDone) onDone();
   };
   return (
     <div>
@@ -286,6 +346,29 @@ function OutboundCartEditor({ onDone }) {
       {lines.length > 0 && (
         <React.Fragment>
           <div className="h5-card" style={{ padding: 12 }}>
+            <div className="h5-form-row">
+              <span className="k">{t('Receiver')} *</span>
+              <div style={{ flex: 1 }}>
+                <Select value={recvId} onChange={v => { setRecvId(v); if (v !== 'custom') { setRecvName(''); setRecvPhone(''); } }} placeholder={t('Select receiver')}
+                  options={downstream.map(x => ({ value: x.id, label: x.name + (x.type === 'Supplier' ? '' : ' (' + x.type + ')') }))
+                    .concat([{ value: 'custom', label: t('Custom receiver…') }])} style={{ height: 32 }} />
+              </div>
+            </div>
+            {recvId === 'custom' && (
+              <React.Fragment>
+                <div className="h5-form-row">
+                  <span className="k">{t('Receiver name')} *</span>
+                  <div style={{ flex: 1 }}><input className="input" style={{ height: 32, width: '100%' }} value={recvName} onChange={e => setRecvName(e.target.value)} placeholder={t('e.g. Sunrise Retail Store')} /></div>
+                </div>
+                <div className="h5-form-row" style={{ marginBottom: 0 }}>
+                  <span className="k">{t('Receiver phone')}</span>
+                  <div style={{ flex: 1 }}><input className="input" style={{ height: 32, width: '100%' }} value={recvPhone} onChange={e => setRecvPhone(e.target.value)} placeholder="+234 …" /></div>
+                </div>
+              </React.Fragment>
+            )}
+            {recvTenant && recvTenantPhone && (
+              <div className="muted mono" style={{ fontSize: 11, marginTop: 6 }}>{recvTenant.name} · {recvTenantPhone}</div>
+            )}
             <div className="h5-form-row" style={{ marginBottom: 0 }}>
               <span className="k">{t('Outbound note (optional)')}</span>
               <input className="input" style={{ height: 32, flex: 1 }} value={note} onChange={e => setNote(e.target.value)} placeholder={t('e.g. transfer to another warehouse')} />

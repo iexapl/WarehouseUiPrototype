@@ -184,7 +184,7 @@ function MobileApp() {
     productNew: 'New Product', scan: 'Scan to Stock In', scanOut: 'Scan Batch Outbound', import: 'Batch Import', categories: 'Categories', stock: 'My Stock',
     movements: 'Stock Movements', quote: 'Send Quote', print: 'Print Preview', admin: 'Platform Admin',
     members: 'Team Members', bindwa: 'Bind WhatsApp', adjustPrice: 'Adjust Price', adjustStock: 'Adjust Stock',
-    channelStock: 'Downstream Stock', waChat: 'WhatsApp Chat', rereceive: 'Re-receive',
+    channelStock: 'Downstream Stock', waChat: 'WhatsApp Chat', waInbox: 'WhatsApp', rereceive: 'Re-receive',
     accept: 'Accept Order', pay: 'Record Payment', replenish: 'Replenish',
   };
   // R96 — the doc detail title shows the DOCUMENT TYPE; R97 — 入库记录/出库单/
@@ -209,6 +209,8 @@ function MobileApp() {
             {page.name === 'doc' && <H5DocPage docId={page.docId} push={push} setConfirm={setConfirm} platform={platform} noPerm={noPerm} />}
             {page.name === 'wa' && <H5WhatsAppPage docId={page.docId} push={push} setConfirm={setConfirm} platform={platform} noPerm={noPerm} />}
             {page.name === 'waChat' && <H5WhatsAppChatPage docId={page.docId} push={push} />}
+            {/* 询价暂存按供货方分组提交后：多个供货方时先落到这个 WhatsApp 发送列表，再逐个进入对话 */}
+            {page.name === 'waInbox' && <H5WaInboxPage docIds={page.docIds} push={push} />}
             {page.name === 'inquiry' && <H5DocFormPage mode="IQ" initialItems={page.items} onDone={back} push={push} />}
             {page.name === 'order' && <H5DocFormPage mode="PO" onDone={back} />}
             {page.name === 'receive' && <H5ReceivePage ckId={page.docId} onDone={back} />}
@@ -288,7 +290,7 @@ function MobileApp() {
       {/* 购物车悬浮入口（角标 = 已加物料行数）：三车任一非空即显示；
           页面态抬高避开底部操作区，页签态抬到页签栏上方 */}
       <H5CartFab count={cartCount} bottom={page ? 22 : 84} onClick={() => setCartOpen(true)} />
-      {cartOpen && <H5CartSheet onClose={() => setCartOpen(false)} />}
+      {cartOpen && <H5CartSheet onClose={() => setCartOpen(false)} push={push} />}
     </div>
   );
 }
@@ -1369,7 +1371,7 @@ function H5WhatsAppChatPage({ docId, push }) {
   const [msgs, setMsgs] = useState(() => doc ? [{ me: true, ts: hhmm(), lines: [
     'Hello! We would like to request a quotation for the following items:',
     `Inquiry ${doc.no} — ${doc.items.length} items`,
-    ...doc.items.map(it => `• ${it.name} × ${it.qty} ${it.unit}`),
+    ...doc.items.map(it => `• ${it.name} × ${it.qty} ${it.unit} @ ${money(it.price, doc.currency).text} / ${it.unit}`),
     `Est. total ${money(docAmount(doc), doc.currency).full} · Delivery by ${doc.deliveryDate || 'TBC'}`,
     'Please share your best price. Thank you!',
   ] }] : []);
@@ -1488,6 +1490,41 @@ function H5WhatsAppChatPage({ docId, push }) {
           placeholder="Type a message" onKeyDown={e => { if (e.key === 'Enter') send(); }} />
         <button className="wa-send" onClick={send} title="Send"><Icon name="whatsapp" size={16} color="#fff" />Send</button>
       </div>
+    </div>
+  );
+}
+
+// ---------- WhatsApp 发送列表（询价暂存按供货方分组提交后） ----------
+// 多个供货方时，一次提交生成多张询价单；本页列出各张单据的 WhatsApp
+// 发送状态（已送达），点击进入对应供货方的对话界面进行询价沟通。
+function H5WaInboxPage({ docIds, push }) {
+  const { db } = useApp();
+  const docs = (docIds || []).map(id => db.docs.find(d => d.id === id)).filter(d => d);
+  return (
+    <div className="h5-pad">
+      <div className="h5-card" style={{ background: '#E8F6EF', border: '1px solid #C6E7D4', padding: '8px 12px', fontSize: 11.5, color: '#14603C', display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+        <Icon name="whatsapp" size={13} />
+        <span>{docs.length > 1 ? t(`${docs.length} inquiries sent via WhatsApp — tap a supplier to open the chat`) : t('Inquiry sent via WhatsApp — tap the supplier to open the chat')}</span>
+      </div>
+      {docs.map(d => {
+        const sup = db.tenants.find(x => x.id === d.seller);
+        const mainAcc = db.accounts.find(a => a.tenantId === d.seller && a.main);
+        return (
+          <div key={d.id} className="h5-card" style={{ marginBottom: 8, padding: 12, display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}
+            onClick={() => push({ name: 'waChat', docId: d.id })}>
+            <span className="wa-avatar">{sup ? sup.name[0] : '?'}</span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 13, fontWeight: 600 }}>{sup ? sup.name : d.seller}</div>
+              <div className="muted" style={{ fontSize: 11.5, marginTop: 2 }}>{t('Inquiry')} {d.no} · {d.items.length} items · {money(docAmount(d), d.currency).full}</div>
+              <div className="muted" style={{ fontSize: 11, marginTop: 3, display: 'flex', alignItems: 'center', gap: 4 }}>
+                <Icon name="checkDouble" size={11} color="#53BDEB" />{t('Sent via WhatsApp · Delivered')}
+                {mainAcc && mainAcc.whatsapp ? <span className="mono">· {mainAcc.whatsapp}</span> : null}
+              </div>
+            </div>
+            <Icon name="chevronRight" size={14} color="var(--text-3)" />
+          </div>
+        );
+      })}
     </div>
   );
 }

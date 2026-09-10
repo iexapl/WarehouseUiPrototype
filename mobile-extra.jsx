@@ -390,6 +390,8 @@ function H5MovementsPage() {
             </div>
             <div className="muted" style={{ fontSize: 11.5, marginTop: 4 }}>Ref <span className="mono">{m.refNo}</span> · by {m.by}</div>
             {m.supplierId && <div style={{ fontSize: 11.5, marginTop: 2 }}><span className="muted">{t('Supplier')}: </span><span style={{ color: 'var(--text-1)' }}>{tenantName(db, m.supplierId)}</span></div>}
+            {m.receiverName && <div style={{ fontSize: 11.5, marginTop: 2 }}><span className="muted">{t('Receiver')}: </span><span style={{ color: 'var(--text-1)' }}>{m.receiverName}{m.receiverPhone ? <span className="mono"> · {m.receiverPhone}</span> : null}</span></div>}
+            {m.amount != null && m.type === 'IN' && <div style={{ fontSize: 11.5, marginTop: 2 }}><span className="muted">{t('Amount')}: </span><span className="mono" style={{ color: 'var(--text-1)' }}>{money(m.price, m.currency).text} × {Math.abs(m.qty)} = <b style={{ color: '#D35400' }}>{money(m.amount, m.currency).text}</b></span></div>}}
             <div className="muted" style={{ fontSize: 11.5, marginTop: 2 }}>{m.reason}</div>
           </div>
         );
