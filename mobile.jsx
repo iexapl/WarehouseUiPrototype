@@ -208,9 +208,9 @@ function MobileApp() {
             {!skReady ? <H5Skeleton variant={skVariant} /> : (<React.Fragment>
             {page.name === 'doc' && <H5DocPage docId={page.docId} push={push} setConfirm={setConfirm} platform={platform} noPerm={noPerm} />}
             {page.name === 'wa' && <H5WhatsAppPage docId={page.docId} push={push} setConfirm={setConfirm} platform={platform} noPerm={noPerm} />}
-            {page.name === 'waChat' && <H5WhatsAppChatPage docId={page.docId} push={push} />}
+            {page.name === 'waChat' && <H5WhatsAppChatPage docId={page.docId} push={push} back={back} />}
             {/* 询价暂存按供货方分组提交后：多个供货方时先落到这个 WhatsApp 发送列表，再逐个进入对话 */}
-            {page.name === 'waInbox' && <H5WaInboxPage docIds={page.docIds} push={push} />}
+            {page.name === 'waInbox' && <H5WaInboxPage docIds={page.docIds} push={push} back={back} />}
             {page.name === 'inquiry' && <H5DocFormPage mode="IQ" initialItems={page.items} onDone={back} push={push} />}
             {page.name === 'order' && <H5DocFormPage mode="PO" onDone={back} />}
             {page.name === 'receive' && <H5ReceivePage ckId={page.docId} onDone={back} />}
@@ -1349,7 +1349,7 @@ function H5WhatsAppPage({ docId, push, setConfirm, platform, noPerm }) {
 // The supplier proposes prices, the buyer negotiates (quick-reply chips or
 // free text), then the supplier confirms and pushes the quotation link back
 // here. All replies are simulated — no real message leaves the prototype.
-function H5WhatsAppChatPage({ docId, push }) {
+function H5WhatsAppChatPage({ docId, push, back }) {
   const { db, act } = useApp();
   const doc = db.docs.find(d => d.id === docId);
   const supplier = doc ? db.tenants.find(t => t.id === doc.seller) : null;
@@ -1450,6 +1450,11 @@ function H5WhatsAppChatPage({ docId, push }) {
   return (
     <div className="wa-chat">
       <div className="wa-chat-head">
+        {/* 返回按钮：演示舞台里手机框常高于视口，标准页头会被外层滚动裁掉，
+            在绿色对话头内再放一个 ‹，保证随时可见可返回 */}
+        {back && (
+          <button type="button" className="wa-back" aria-label={t('Back')} title={t('Back')} onClick={back}><Icon name="arrowLeft" size={18} color="#fff" /></button>
+        )}
         <span className="wa-avatar">{supplier.name[0]}</span>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ color: '#fff', fontWeight: 700, fontSize: 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{supplier.name}</div>
@@ -1497,11 +1502,23 @@ function H5WhatsAppChatPage({ docId, push }) {
 // ---------- WhatsApp 发送列表（询价暂存按供货方分组提交后） ----------
 // 多个供货方时，一次提交生成多张询价单；本页列出各张单据的 WhatsApp
 // 发送状态（已送达），点击进入对应供货方的对话界面进行询价沟通。
-function H5WaInboxPage({ docIds, push }) {
+function H5WaInboxPage({ docIds, push, back }) {
   const { db } = useApp();
   const docs = (docIds || []).map(id => db.docs.find(d => d.id === id)).filter(d => d);
   return (
-    <div className="h5-pad">
+    <div className="wa-chat">
+      <div className="wa-chat-head">
+        {/* 与对话页同款返回按钮：列表页同样不依赖可能被裁掉的标准页头 */}
+        {back && (
+          <button type="button" className="wa-back" aria-label={t('Back')} title={t('Back')} onClick={back}><Icon name="arrowLeft" size={18} color="#fff" /></button>
+        )}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ color: '#fff', fontWeight: 700, fontSize: 14 }}>WhatsApp</div>
+          <div style={{ color: '#B8D8D0', fontSize: 11 }}>{docs.length} inquiries sent</div>
+        </div>
+        <Icon name="whatsapp" size={18} color="#fff" />
+      </div>
+      <div className="h5-pad" style={{ flex: 1, overflowY: 'auto' }}>
       <div className="h5-card" style={{ background: '#E8F6EF', border: '1px solid #C6E7D4', padding: '8px 12px', fontSize: 11.5, color: '#14603C', display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
         <Icon name="whatsapp" size={13} />
         <span>{docs.length > 1 ? t(`${docs.length} inquiries sent via WhatsApp — tap a supplier to open the chat`) : t('Inquiry sent via WhatsApp — tap the supplier to open the chat')}</span>
@@ -1525,6 +1542,7 @@ function H5WaInboxPage({ docIds, push }) {
           </div>
         );
       })}
+      </div>
     </div>
   );
 }

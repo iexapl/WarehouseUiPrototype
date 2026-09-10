@@ -649,6 +649,10 @@ button { font-family: inherit; }
 /* simulated WhatsApp conversation (inquiry submission demo) */
 .wa-chat { display: flex; flex-direction: column; height: 100%; background: #ECE5DD; overflow: hidden; }
 .wa-chat-head { display: flex; align-items: center; gap: 10px; padding: 9px 12px; background: #075E54; flex-shrink: 0; }
+/* WhatsApp 页头部内返回按钮（‹）：演示舞台里手机框常高于视口，标准页头会被
+   外层滚动裁掉，对话/发送列表页在绿色头部内自带返回，保证随时可见 */
+.wa-back { width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; background: none; border: none; padding: 0; cursor: pointer; flex-shrink: 0; border-radius: 50%; -webkit-tap-highlight-color: transparent; }
+.wa-back:active { background: rgba(255, 255, 255, .18); }
 .wa-avatar { width: 34px; height: 34px; border-radius: 50%; background: #128C7E; color: #fff; font-weight: 700; font-size: 16px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .wa-online-dot { width: 7px; height: 7px; border-radius: 50%; background: #4AD66D; display: inline-block; }
 .wa-typing-text { color: #B8D8D0; font-style: italic; }
