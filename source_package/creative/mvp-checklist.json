@@ -1,0 +1,370 @@
+[
+  {
+    "module": "商品管理中心",
+    "submodule": "商品录入",
+    "feature": "单表单录入平铺字段商品（名称/规格/型号/品牌/单位/价格/库存，保存即上架可售）",
+    "terminal": "租户端",
+    "server_hours": 16,
+    "mobile_hours": 24
+  },
+  {
+    "module": "商品管理中心",
+    "submodule": "商品录入",
+    "feature": "MVP 英文界面（界面文案英文，不做多语言切换）",
+    "terminal": null,
+    "server_hours": 2,
+    "mobile_hours": 22
+  },
+  {
+    "module": "商品管理中心",
+    "submodule": "商品批量导入",
+    "feature": "下载 Excel 商品导入模板",
+    "terminal": null,
+    "server_hours": 3,
+    "mobile_hours": 3
+  },
+  {
+    "module": "商品管理中心",
+    "submodule": "商品批量导入",
+    "feature": "批量导入商品（逐行校验必填/格式/重复）",
+    "terminal": null,
+    "server_hours": 16,
+    "mobile_hours": 6
+  },
+  {
+    "module": "商品管理中心",
+    "submodule": "商品批量导入",
+    "feature": "校验失败行导出回执修正后重导",
+    "terminal": null,
+    "server_hours": 8,
+    "mobile_hours": 4
+  },
+  {
+    "module": "商品管理中心",
+    "submodule": "商品分类管理",
+    "feature": "平台统一平级分类归属（一商品可属多分类）",
+    "terminal": null,
+    "server_hours": 8,
+    "mobile_hours": 8
+  },
+  {
+    "module": "采购与交易",
+    "submodule": "WhatsApp 集成与 AI 助手",
+    "feature": "单据变更触发推送 WhatsApp 链接",
+    "terminal": null,
+    "server_hours": 26,
+    "mobile_hours": 6
+  },
+  {
+    "module": "采购与交易",
+    "submodule": "WhatsApp 集成与 AI 助手",
+    "feature": "点击链接跳转 H5 对应单据详情",
+    "terminal": null,
+    "server_hours": 10,
+    "mobile_hours": 22
+  },
+  {
+    "module": "采购与交易",
+    "submodule": "WhatsApp 集成与 AI 助手",
+    "feature": "AI 基于询价明细生成报价草稿",
+    "terminal": null,
+    "server_hours": 30,
+    "mobile_hours": 2
+  },
+  {
+    "module": "采购与交易",
+    "submodule": "WhatsApp 集成与 AI 助手",
+    "feature": "AI 生成订单摘要供确认",
+    "terminal": null,
+    "server_hours": 24,
+    "mobile_hours": 8
+  },
+  {
+    "module": "采购与交易",
+    "submodule": "询价管理",
+    "feature": "提交询价单",
+    "terminal": null,
+    "server_hours": 6,
+    "mobile_hours": 4
+  },
+  {
+    "module": "采购与交易",
+    "submodule": "询价管理",
+    "feature": "接收报价后生成采购订单",
+    "terminal": null,
+    "server_hours": 12,
+    "mobile_hours": 4
+  },
+  {
+    "module": "采购与交易",
+    "submodule": "询价管理",
+    "feature": "跟踪订单状态",
+    "terminal": null,
+    "server_hours": 6,
+    "mobile_hours": 8
+  },
+  {
+    "module": "采购与交易",
+    "submodule": "询价管理",
+    "feature": "填写商品明细/收货仓/交货日期生成询价单",
+    "terminal": null,
+    "server_hours": 4,
+    "mobile_hours": 6
+  },
+  {
+    "module": "采购与交易",
+    "submodule": "询价管理",
+    "feature": "跟踪询价状态",
+    "terminal": null,
+    "server_hours": 2,
+    "mobile_hours": 2
+  },
+  {
+    "module": "采购与交易",
+    "submodule": "报价管理",
+    "feature": "查看询价单",
+    "terminal": null,
+    "server_hours": 6,
+    "mobile_hours": 6
+  },
+  {
+    "module": "采购与交易",
+    "submodule": "报价管理",
+    "feature": "提交报价单",
+    "terminal": null,
+    "server_hours": 10,
+    "mobile_hours": 10
+  },
+  {
+    "module": "采购与交易",
+    "submodule": "报价管理",
+    "feature": "报价自动通知采购方",
+    "terminal": null,
+    "server_hours": 6,
+    "mobile_hours": 2
+  },
+  {
+    "module": "采购与交易",
+    "submodule": "采购订单管理",
+    "feature": "在线创建采购订单（校验可用库存与价格合规、记录代理链路）",
+    "terminal": null,
+    "server_hours": 22,
+    "mobile_hours": 12
+  },
+  {
+    "module": "仓库管理",
+    "submodule": "默认仓库与库存台账",
+    "feature": "查看库存列表",
+    "terminal": null,
+    "server_hours": 6,
+    "mobile_hours": 10
+  },
+  {
+    "module": "仓库管理",
+    "submodule": "默认仓库与库存台账",
+    "feature": "调整库存数量",
+    "terminal": null,
+    "server_hours": 8,
+    "mobile_hours": 8
+  },
+  {
+    "module": "仓库管理",
+    "submodule": "默认仓库与库存台账",
+    "feature": "每次变更生成库存流水记录",
+    "terminal": null,
+    "server_hours": 8,
+    "mobile_hours": 0
+  },
+  {
+    "module": "仓库管理",
+    "submodule": "订单出库",
+    "feature": "审核订单",
+    "terminal": null,
+    "server_hours": 10,
+    "mobile_hours": 6
+  },
+  {
+    "module": "仓库管理",
+    "submodule": "订单出库",
+    "feature": "办理出库（出库后自动减少库存）",
+    "terminal": null,
+    "server_hours": 32,
+    "mobile_hours": 12
+  },
+  {
+    "module": "仓库管理",
+    "submodule": "订单出库",
+    "feature": "生成出库单/发货单",
+    "terminal": null,
+    "server_hours": 8,
+    "mobile_hours": 8
+  },
+  {
+    "module": "仓库管理",
+    "submodule": "订单出库",
+    "feature": "出库确认后自动生成路单（含商品明细与物流信息）",
+    "terminal": null,
+    "server_hours": 10,
+    "mobile_hours": 2
+  },
+  {
+    "module": "仓库管理",
+    "submodule": "订单出库",
+    "feature": "推送采购方确认路单链接",
+    "terminal": null,
+    "server_hours": 6,
+    "mobile_hours": 6
+  },
+  {
+    "module": "仓库管理",
+    "submodule": "收货验收",
+    "feature": "根据发货单验收",
+    "terminal": null,
+    "server_hours": 4,
+    "mobile_hours": 6
+  },
+  {
+    "module": "仓库管理",
+    "submodule": "收货验收",
+    "feature": "确认后自动增加库存并生成入库单",
+    "terminal": null,
+    "server_hours": 16,
+    "mobile_hours": 4
+  },
+  {
+    "module": "仓库管理",
+    "submodule": "收货验收",
+    "feature": "验收上游发货单（通过/部分差异/拒收）",
+    "terminal": null,
+    "server_hours": 8,
+    "mobile_hours": 8
+  },
+  {
+    "module": "仓库管理",
+    "submodule": "收货验收",
+    "feature": "自动生成入库单并增加库存",
+    "terminal": null,
+    "server_hours": 24,
+    "mobile_hours": 8
+  },
+  {
+    "module": "仓库管理",
+    "submodule": "库存流水查看",
+    "feature": "查询库存流水（变动类型/前后库存/关联单号/操作人，按 SKU/仓库/时间筛选）",
+    "terminal": null,
+    "server_hours": 14,
+    "mobile_hours": 10
+  },
+  {
+    "module": "单据管理",
+    "submodule": "单据总览与统一编号",
+    "feature": "六类单据统一自动编号（前缀-日期-序列，并发唯一）",
+    "terminal": "平台端、租户端",
+    "server_hours": 20,
+    "mobile_hours": 4
+  },
+  {
+    "module": "单据管理",
+    "submodule": "单据列表与查询",
+    "feature": "统一单据列表多维筛选（单据号/类型/状态/日期/往来方/SKU，分页排序与自定义列）",
+    "terminal": null,
+    "server_hours": 20,
+    "mobile_hours": 30
+  },
+  {
+    "module": "单据管理",
+    "submodule": "单据详情查看",
+    "feature": "单据详情三段式展示（单据头+明细+流转时间线）",
+    "terminal": null,
+    "server_hours": 14,
+    "mobile_hours": 26
+  },
+  {
+    "module": "单据管理",
+    "submodule": "批量操作、打印与导出",
+    "feature": "按模板打印单据（防伪水印/条码）",
+    "terminal": null,
+    "server_hours": 14,
+    "mobile_hours": 8
+  },
+  {
+    "module": "单据管理",
+    "submodule": "批量操作、打印与导出",
+    "feature": "导出 PDF/Excel（记数据外发事件）",
+    "terminal": null,
+    "server_hours": 14,
+    "mobile_hours": 4
+  },
+  {
+    "module": "财务中心",
+    "submodule": "发票管理",
+    "feature": "订单履约后自动开具销售发票（FP-）",
+    "terminal": "租户端",
+    "server_hours": 36,
+    "mobile_hours": 6
+  },
+  {
+    "module": "财务中心",
+    "submodule": "发票管理",
+    "feature": "下载销售发票",
+    "terminal": null,
+    "server_hours": 14,
+    "mobile_hours": 10
+  },
+  {
+    "module": "国际化配置",
+    "submodule": "货币代码",
+    "feature": "价格字段旁带货币代码（CNY/USD/NGN），单据金额按货币代码呈现",
+    "terminal": "平台端、租户端",
+    "server_hours": 14,
+    "mobile_hours": 10
+  },
+  {
+    "module": "账号权限管理",
+    "submodule": "租户管理",
+    "feature": "创建租户（类型/国家/最大代理层级）",
+    "terminal": null,
+    "server_hours": 14,
+    "mobile_hours": 10
+  },
+  {
+    "module": "账号权限管理",
+    "submodule": "租户管理",
+    "feature": "通过 TenantRelation 建立供货关系（同类型关系唯一）",
+    "terminal": null,
+    "server_hours": 10,
+    "mobile_hours": 6
+  },
+  {
+    "module": "账号权限管理",
+    "submodule": "租户管理",
+    "feature": "停用违规租户（二次确认、停用后禁登、数据保留）",
+    "terminal": null,
+    "server_hours": 10,
+    "mobile_hours": 6
+  },
+  {
+    "module": "账号权限管理",
+    "submodule": "账号管理",
+    "feature": "仅创建账号（姓名/手机号/密码）开通访问，权限拉平",
+    "terminal": null,
+    "server_hours": 8,
+    "mobile_hours": 8
+  },
+  {
+    "module": "账号权限管理",
+    "submodule": "账号管理",
+    "feature": "创建下级代理商主账号",
+    "terminal": "租户端",
+    "server_hours": 8,
+    "mobile_hours": 8
+  },
+  {
+    "module": "账号权限管理",
+    "submodule": "账号管理",
+    "feature": "录入并绑定其 WhatsApp 账号",
+    "terminal": null,
+    "server_hours": 10,
+    "mobile_hours": 14
+  }
+]

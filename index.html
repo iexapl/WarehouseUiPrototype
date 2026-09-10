@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TierLink Warehouse — MVP Permission Prototype</title>
+  <meta name="creative-medium" content="interactive-prototype" />
+  <meta name="description" content="Tiered agent warehouse system — MVP-stage multi-endpoint permission-adaptive high-fidelity UI prototype (Web console + mobile), bilingual EN/中文 interface, demo login page with mobile-first entry." />
+  <link rel="preconnect" href="https://miaoda.feishu.cn" />
+  <link rel="stylesheet" href="https://miaoda.feishu.cn/fonts/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" />
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    /* ---- boot guard: loading placeholder + failure panel + runtime error bar.
+       Plain CSS so it works even if the app scripts never load (white-screen fix). */
+    .boot-loading { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; background: #F4F6F9; font-family: system-ui, -apple-system, sans-serif; }
+    .boot-spinner { width: 34px; height: 34px; border-radius: 50%; border: 3px solid #D6DEE8; border-top-color: #2E6FE8; animation: bootspin 0.9s linear infinite; }
+    @keyframes bootspin { to { transform: rotate(360deg); } }
+    .boot-loading-text { color: #6B7A8C; font-size: 14px; }
+    #boot-error-panel { position: fixed; inset: 0; z-index: 99999; display: flex; align-items: center; justify-content: center; background: rgba(20,28,37,0.55); padding: 20px; font-family: system-ui, -apple-system, sans-serif; }
+    .boot-card { max-width: 520px; width: 100%; background: #fff; border-radius: 12px; padding: 26px 28px; box-shadow: 0 12px 40px rgba(15,23,32,0.25); }
+    .boot-icon { width: 40px; height: 40px; border-radius: 50%; background: #FDECEC; color: #D93025; font-size: 22px; font-weight: 800; display: flex; align-items: center; justify-content: center; margin-bottom: 12px; font-family: Georgia, serif; }
+    .boot-title { font-size: 17px; font-weight: 700; color: #1F2D3D; margin-bottom: 8px; }
+    .boot-desc { font-size: 13px; color: #5A6B7E; line-height: 1.65; margin-bottom: 16px; }
+    .boot-btns { display: flex; gap: 10px; }
+    .boot-btn { border: 1px solid #C9D4E0; background: #fff; color: #2E3B4E; border-radius: 8px; padding: 9px 16px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit; }
+    .boot-btn:hover { background: #F4F7FB; }
+    .boot-btn-primary { background: #2E6FE8; border-color: #2E6FE8; color: #fff; }
+    .boot-btn-primary:hover { background: #1F5BD6; }
+    .boot-detail { display: none; margin-top: 14px; background: #F6F8FA; border: 1px solid #E3E8EF; border-radius: 8px; padding: 10px 12px; font-size: 11.5px; color: #B3261E; white-space: pre-wrap; word-break: break-all; max-height: 160px; overflow: auto; font-family: ui-monospace, Menlo, Consolas, monospace; }
+    #runtime-error-bar { position: fixed; left: 12px; right: 12px; bottom: 12px; z-index: 99998; background: #2B1B1B; color: #FFD9D9; border: 1px solid #7A2E2E; border-radius: 8px; padding: 10px 34px 10px 12px; font-size: 12px; font-family: ui-monospace, Menlo, Consolas, monospace; line-height: 1.5; box-shadow: 0 6px 24px rgba(0,0,0,0.35); }
+    #runtime-error-bar .runtime-error-x { position: absolute; right: 9px; top: 5px; cursor: pointer; color: #E8A0A0; font-size: 15px; line-height: 1; }
+    #runtime-error-bar .runtime-error-text { display: block; white-space: pre-wrap; word-break: break-all; max-height: 90px; overflow: auto; }
+  </style>
+</head>
+<body>
+  <div id="root">
+    <div class="boot-loading">
+      <div class="boot-spinner"></div>
+      <div class="boot-loading-text">正在加载原型 · Loading prototype…</div>
+    </div>
+  </div>
+  <noscript>
+    <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#F4F6F9;color:#1F2D3D;font-family:system-ui,sans-serif;padding:24px;text-align:center;">
+      需要启用 JavaScript 才能运行本原型 · JavaScript is required to run this prototype.
+    </div>
+  </noscript>
+
+  <script>
+    // ---- boot guard (plain ES5 — must run before anything that can fail) ----
+    // The app is transpiled in-browser by Babel; if the CDN scripts or any
+    // .jsx fetch fails, nothing renders and the page stays blank. This guard
+    // shows a loading state, watches the boot, surfaces global errors and
+    // offers retry/keep-waiting instead of a silent white screen.
+    (function () {
+      var BOOT_TIMEOUT = 20000;    // first chance: 20s (slow phones compile JSX slowly)
+      var EXTEND_TIMEOUT = 30000;  // "keep waiting" grants another 30s
+      var errors = [];
+      var watchdog = null;
+      window.__APP_BOOTED = false;
+      window.__bootErrors = errors;
+
+      function el(tag, cls, text) {
+        var d = document.createElement(tag);
+        if (cls) { d.className = cls; }
+        if (text != null) { d.textContent = text; }
+        return d;
+      }
+      function clearWatchdog() {
+        if (watchdog) { clearTimeout(watchdog); watchdog = null; }
+      }
+      function arm(ms) {
+        clearWatchdog();
+        watchdog = setTimeout(function () {
+          if (window.__APP_BOOTED) { return; }
+          errors.push('Boot watchdog: app did not render within ' + Math.round(ms / 1000) + 's');
+          showPanel();
+        }, ms);
+      }
+      function showPanel() {
+        var p = document.getElementById('boot-error-panel');
+        if (!p) {
+          p = el('div'); p.id = 'boot-error-panel';
+          var card = el('div', 'boot-card');
+          card.appendChild(el('div', 'boot-icon', '!'));
+          card.appendChild(el('div', 'boot-title', '原型加载失败 · Failed to load the prototype'));
+          var desc = el('div', 'boot-desc');
+          desc.appendChild(document.createTextNode('长时间未见界面渲染，通常是网络受限导致核心脚本或浏览器内编译器未能加载。可重试加载，或继续等待慢速网络。'));
+          desc.appendChild(el('br'));
+          desc.appendChild(document.createTextNode('The page did not render in time — most likely the core scripts or the in-browser compiler could not load over this network. Retry, or keep waiting on a slow connection.'));
+          card.appendChild(desc);
+          var btns = el('div', 'boot-btns');
+          var retry = el('button', 'boot-btn boot-btn-primary', '重试 · Reload');
+          retry.type = 'button';
+          retry.onclick = function () { try { window.location.reload(); } catch (e) { /* noop */ } };
+          var wait = el('button', 'boot-btn', '继续等待 · Keep waiting');
+          wait.type = 'button';
+          wait.onclick = function () {
+            var panel = document.getElementById('boot-error-panel');
+            if (panel && panel.parentNode) { panel.parentNode.removeChild(panel); }
+            arm(EXTEND_TIMEOUT);
+          };
+          btns.appendChild(retry);
+          btns.appendChild(wait);
+          card.appendChild(btns);
+          card.appendChild(el('pre', 'boot-detail'));
+          card.lastChild.id = 'boot-error-detail';
+          p.appendChild(card);
+          document.body.appendChild(p);
+        }
+        var d = document.getElementById('boot-error-detail');
+        d.style.display = errors.length ? 'block' : 'none';
+        d.textContent = errors.slice(0, 5).join('\n');
+      }
+      window.__showBootError = function (msg) {
+        if (typeof msg === 'string' && msg) { errors.push(msg); }
+        clearWatchdog();
+        showPanel();
+      };
+      window.__clearBootWatchdog = clearWatchdog;
+      window.__cdnFailed = function (name) {
+        errors.push('Failed to load ' + name + ' from CDN (network blocked or CORS rejected)');
+        clearWatchdog();
+        showPanel();
+      };
+      arm(BOOT_TIMEOUT);
+
+      // ---- global error visibility (prototype stage: never fail silently) ----
+      var barTimer = null;
+      function runtimeBar(msg) {
+        var b = document.getElementById('runtime-error-bar');
+        if (!b) {
+          b = el('div'); b.id = 'runtime-error-bar';
+          var x = el('span', 'runtime-error-x', '×');
+          x.onclick = function () { if (b.parentNode) { b.parentNode.removeChild(b); } };
+          b.appendChild(x);
+          b.appendChild(el('span', 'runtime-error-text'));
+          document.body.appendChild(b);
+        }
+        var t = b.querySelector('.runtime-error-text');
+        t.textContent = 'Runtime error: ' + msg;
+        if (barTimer) { clearTimeout(barTimer); }
+        barTimer = setTimeout(function () {
+          if (b.parentNode) { b.parentNode.removeChild(b); }
+        }, 10000);
+      }
+      window.addEventListener('error', function (ev) {
+        if (!ev) { return; }
+        if (ev.target && ev.target !== window && ev.target.nodeName) { return; } // resource errors (img etc.) — not fatal
+        var src = '';
+        try { src = ev.filename ? ' (' + String(ev.filename).split('/').pop() + ':' + ev.lineno + ')' : ''; } catch (e) { /* noop */ }
+        var msg = (ev.message || 'Unknown script error') + src;
+        if (window.__APP_BOOTED) { runtimeBar(msg); } else { errors.push(msg); }
+      }, true);
+      window.addEventListener('unhandledrejection', function (ev) {
+        var r = ev && ev.reason;
+        var msg = (r && (r.message || r.stack)) ? (r.message || r.stack) : String(r);
+        if (window.__APP_BOOTED) { runtimeBar(msg); } else { errors.push(msg); }
+      });
+    })();
+  </script>
+
+  <!-- crossorigin removed: classic scripts don't need CORS, and the attribute makes
+       some proxy/CSP environments reject the whole script (white-screen reports) -->
+  <script src="https://sf3-scmcdn-cn.feishucdn.com/obj/feishu-static/miaoda/coding-unpkg-sdk/react@18.3.1/umd/react.production.min.js" onerror="window.__cdnFailed && window.__cdnFailed('React')"></script>
+  <script src="https://sf3-scmcdn-cn.feishucdn.com/obj/feishu-static/miaoda/coding-unpkg-sdk/react-dom@18.3.1/umd/react-dom.production.min.js" onerror="window.__cdnFailed && window.__cdnFailed('ReactDOM')"></script>
+  <script src="https://sf3-scmcdn-cn.feishucdn.com/obj/feishu-static/miaoda/coding-unpkg-sdk/@babel/standalone@7.29.0/babel.min.js" onerror="window.__cdnFailed && window.__cdnFailed('Babel compiler')"></script>
+
+  <script type="text/babel" src="ios-frame.jsx"></script>
+  <script type="text/babel" src="i18n.jsx"></script>
+  <script type="text/babel" src="data.jsx"></script>
+  <script type="text/babel" src="ui.jsx"></script>
+  <script type="text/babel" src="cart.jsx"></script>
+  <script type="text/babel" src="web.jsx"></script>
+  <script type="text/babel" src="web-dialogs.jsx"></script>
+  <script type="text/babel" src="web-dialogs-extra.jsx"></script>
+  <script type="text/babel" src="mobile.jsx"></script>
+  <script type="text/babel" src="mobile-extra.jsx"></script>
+  <script type="text/babel" src="login.jsx"></script>
+  <script type="text/babel" src="app.jsx"></script>
+
+  <script type="text/babel">
+    (function () {
+      try {
+        if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
+          throw new Error('React/ReactDOM did not load from CDN (network blocked or CORS rejected).');
+        }
+        if (typeof App === 'undefined' || typeof AppErrorBoundary === 'undefined') {
+          throw new Error('App components did not compile — one of the .jsx scripts failed to load (check network / console).');
+        }
+        ReactDOM.createRoot(document.getElementById('root')).render(<AppErrorBoundary><App /></AppErrorBoundary>);
+        window.__APP_BOOTED = true;
+        if (window.__clearBootWatchdog) { window.__clearBootWatchdog(); }
+      } catch (e) {
+        var detail = (e && (e.message + '\n' + (e.stack || ''))) || String(e);
+        if (window.__showBootError) { window.__showBootError(detail); }
+        throw e;
+      }
+    })();
+  </script>
+</body>
+</html>
