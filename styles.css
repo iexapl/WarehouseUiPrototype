@@ -1419,3 +1419,90 @@ body:has(.mobile-stage) .toast {
     animation-duration: 0.01ms !important; transition-duration: 0.01ms !important;
   }
 }
+
+/* ============================================================
+   R102 — 移动端全页面统一美化（交易 / 我的 / 扫码 / WhatsApp / 详情 / 全局）
+   在 R101 体系上扩展：钱款统一琻珀色、状态徽标胶囊化、我的页账户卡
+   与首页 hero 同构、WhatsApp 对话气泡精细化、时间线/弹窗/空态统一。
+   全部 .h5-app 作用域，不动布局硬约束。
+   ============================================================ */
+
+/* ---------- 1. 状态徽标 / chips：胶囊化，全局统一 ---------- */
+.h5-app .tag {
+  height: 20px; padding: 0 9px; border-radius: 999px;
+  font-size: 11px; font-weight: 600; gap: 4px; letter-spacing: 0.2px;
+}
+.h5-app .tag.dot::before { width: 5px; height: 5px; }
+.h5-app .h5-badge-ai { border-radius: 999px; }
+
+/* ---------- 2. 交易页：单据卡金额层级与空态 ---------- */
+.h5-app .h5-doc .d-no { letter-spacing: 0.2px; }
+.h5-app .h5-doc .d-amount { color: #D35400; font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.h5-app .h5-doc .d-amount .cur-code { color: #C08549; }
+.h5-app .h5-doc .d-acts { border-top-color: #E3E8F0; }
+/* 详情页「合计」行同步琻珀色（.amount 仅 Money 组件使用，不污染单号） */
+.h5-app .h5-desc-row .v .amount { color: #D35400; font-weight: 700; }
+
+/* ---------- 3. 空态 / 加载提示 ---------- */
+.h5-app .h5-empty { border-style: dashed; border-color: #D9DFEA; background: #FAFBFD; }
+.h5-app .h5-empty .icon-svg { opacity: 0.5; }
+.h5-app .h5-loadmore { padding: 2px 0 4px; letter-spacing: 0.3px; color: #98A2B0; }
+
+/* ---------- 4. 我的页：账户卡 hero 同构（文字/标签在深色底上的适配） ---------- */
+.h5-app .h5-hero .muted { color: rgba(255, 255, 255, 0.8); }
+.h5-app .h5-hero .tag { background: rgba(255, 255, 255, 0.16); color: #fff; border: 1px solid rgba(255, 255, 255, 0.28); }
+
+/* ---------- 5. 扫码页：取景器质感 ---------- */
+.h5-app .h5-scan-frame { border-radius: 16px; }
+.h5-app .h5-scan-corner { box-shadow: 0 0 10px rgba(37, 84, 216, 0.4); }
+.h5-app .h5-scan-frame.out .h5-scan-corner { box-shadow: 0 0 10px rgba(230, 126, 34, 0.4); }
+
+/* ---------- 6. WhatsApp 对话（仅移动端，Web 弹窗不受影响） ---------- */
+.h5-app .wa-chat-head {
+  background: linear-gradient(140deg, #0F8074 0%, #075E54 72%);
+  box-shadow: 0 2px 10px rgba(7, 94, 84, 0.28);
+}
+.h5-app .wa-avatar { box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.25); }
+.h5-app .wa-day { border-radius: 999px; box-shadow: 0 1px 2px rgba(32, 44, 51, 0.08); }
+.h5-app .wa-bubble {
+  border-radius: 12px 12px 12px 4px;
+  box-shadow: 0 1px 2px rgba(32, 44, 51, 0.1);
+}
+.h5-app .wa-row.me .wa-bubble {
+  border-radius: 12px 12px 4px 12px;
+  border: 1px solid #C5EB9F;
+}
+.h5-app .wa-quote-card {
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(18, 140, 126, 0.14);
+  transition: transform 0.16s var(--h5-press), box-shadow 0.16s;
+}
+.h5-app .wa-quote-card:active { transform: scale(0.97); opacity: 1; }
+.h5-app .wa-chip {
+  border-radius: 999px;
+  transition: background 0.16s var(--h5-press), transform 0.16s;
+  box-shadow: 0 1px 3px rgba(18, 140, 126, 0.14);
+}
+.h5-app .wa-chip:active { transform: scale(0.96); opacity: 1; }
+.h5-app .wa-input {
+  border-radius: 999px;
+  transition: box-shadow 0.16s;
+}
+.h5-app .wa-input:focus { box-shadow: 0 0 0 3px rgba(18, 140, 126, 0.16); border-color: #128C7E; }
+.h5-app .wa-send {
+  border-radius: 999px;
+  background: linear-gradient(180deg, #23A887 0%, #128C7E 100%);
+  box-shadow: 0 3px 10px rgba(18, 140, 126, 0.32);
+  transition: transform 0.16s var(--h5-press), box-shadow 0.16s;
+}
+.h5-app .wa-send:active { transform: scale(0.95); opacity: 1; }
+
+/* ---------- 7. 详情页：时间线 / AI 摘要 / 弹窗 ---------- */
+.h5-app .timeline-item .t-by { border-radius: 999px; }
+.h5-app .timeline-item.done::before { box-shadow: 0 0 0 3px var(--primary-light), 0 0 10px rgba(37, 84, 216, 0.22); }
+.h5-app .tl-more { border-radius: 999px; }
+.h5-app .ai-box { border-radius: 12px; }
+.h5-app .dialog { border-radius: 16px; box-shadow: 0 16px 48px rgba(16, 24, 40, 0.24); }
+.h5-app .dialog-footer { border-radius: 0 0 16px 16px; }
+.h5-app .banner { border-radius: 12px; }
+.h5-app .h5-product .p-price { font-variant-numeric: tabular-nums; }

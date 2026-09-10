@@ -540,7 +540,7 @@ function H5Home({ openDoc, push, platform, noPerm, setTab }) {
 // ---------- empty state ----------
 function H5Empty({ icon, message, hint }) {
   return (
-    <div className="h5-card" style={{ textAlign: 'center', color: 'var(--text-3)', padding: '26px 18px' }}>
+    <div className="h5-card h5-empty" style={{ textAlign: 'center', color: 'var(--text-3)', padding: '26px 18px' }}>
       <Icon name={icon || 'file'} size={26} />
       <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-2)', marginTop: 8 }}>{message || 'No Data'}</div>
       {hint && <div style={{ fontSize: 11.5, marginTop: 6, lineHeight: 1.5 }}>{hint}</div>}
@@ -703,7 +703,7 @@ function H5Products({ push, platform, skReady = true }) {
           : (showTabs && tab === 'channel'
             ? <H5Empty icon="search" message="No channel products" hint="Adjust the supplier filter or search keywords." />
             : <H5Empty icon="box" message="No products yet" hint="Products you create or import appear here." />))}
-      <div className="muted" style={{ textAlign: 'center', fontSize: 11, marginTop: 14 }}>Pull down to refresh · pull up to load more</div>
+      <div className="muted h5-loadmore" style={{ textAlign: 'center', fontSize: 11, marginTop: 14 }}>Pull down to refresh · pull up to load more</div>
 
       </React.Fragment>)}
       </div>
@@ -838,7 +838,7 @@ function H5Orders({ openDoc, platform, push, setConfirm, skReady = true }) {
           : <H5Empty icon="lock" message="No visible data for this account" hint="Cross-tenant data is isolated by design — you only see records you created, plus those of your own tenant and linked supply partners." />)
         : <H5Empty icon="search" message="No documents in this tab" hint="Try another document tab or clear the filters." />)}
       {rows.map(d => <H5DocCard key={d.id} doc={d} showRole onClick={() => openDoc(d.id)} onVerb={!platform ? (verb, doc) => h5DocVerb(verb, doc, { db, act, toast, push, setConfirm }) : null} />)}
-      <div className="muted" style={{ textAlign: 'center', fontSize: 11, marginTop: 14 }}>Load more by pulling up</div>
+      <div className="muted h5-loadmore" style={{ textAlign: 'center', fontSize: 11, marginTop: 14 }}>Load more by pulling up</div>
       </React.Fragment>)}
       </div>
     </div>
@@ -1013,7 +1013,8 @@ function H5Mine({ push }) {
     <div className="h5-tabpage">
       {/* R99f — account card pinned at the top; the account list / settings below scroll */}
       <div className="h5-tabhead">
-        <div className="h5-card flex gap10">
+        {/* R102 — 账户卡与首页 hero 同构（深钴蓝渐变 + 胶带纹理） */}
+        <div className="h5-card h5-hero flex gap10">
           <span className={`avatar ${account.type === 'platform' ? 'plat' : 'tenant'}`} style={{ width: 48, height: 48, fontSize: 15 }}>{account.name.split(' ').map(w => w[0]).slice(0, 2).join('')}</span>
           <div>
             <div style={{ fontWeight: 700, fontSize: 15 }}>{account.name}</div>
