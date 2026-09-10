@@ -1216,6 +1216,6 @@ button { font-family: inherit; }
   position: static; flex-shrink: 0; background: #fff;
   border-top: 1px solid #E7EAF0;
   margin: 0 -12px;
-  padding: 14px 12px 0;
+  padding: 8px 12px 12px;
   min-height: 52px; box-sizing: border-box;
 }
