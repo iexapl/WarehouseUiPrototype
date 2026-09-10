@@ -14,9 +14,9 @@
 // ============================================================
 
 const CART_MODULES = [
-  { id: 'inquiry', label: 'Inquiry Staging', icon: 'edit' },
-  { id: 'inbound', label: 'Inbound Staging', icon: 'download' },
-  { id: 'outbound', label: 'Outbound Staging', icon: 'truck' },
+  { id: 'inquiry', label: 'Inquiry', icon: 'edit' },
+  { id: 'inbound', label: 'Inbound', icon: 'download' },
+  { id: 'outbound', label: 'Outbound', icon: 'truck' },
 ];
 
 // 入库暂存每行可独立设置的币种（单价 = 成本价；行金额按行币种显示）
@@ -253,7 +253,6 @@ function InboundCartEditor({ onDone }) {
     const unit = Number(l.kind === 'exist' ? l.unitPrice : l.price) || 0;
     totalsByCur[cur] = (totalsByCur[cur] || 0) + unit * (Number(l.qty) || 0);
   });
-  const totalsText = Object.keys(totalsByCur).map(c => money(totalsByCur[c], c).text).join(' · ');
   const confirm = () => {
     let sid = supId;
     if (supId === 'custom') {
@@ -284,11 +283,11 @@ function InboundCartEditor({ onDone }) {
                 </div>
                 <span className="h5-back" title={t('Remove')} onClick={() => cartApi.removeAt('inbound', i)} style={{ color: 'var(--danger)' }}><Icon name="trash" size={16} /></span>
               </div>
-              <div className="flex mt8" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
-                <span className="muted" style={{ fontSize: 11.5 }}>{t('Qty')} · {p.unit}</span>
-                <CartStepper value={l.qty} onChange={q => cartApi.setQty('inbound', i, q)} />
-              </div>
-              {/* 物料单价（默认参考价/渠道价，可改）+ 独立币种 → 行金额 = 单价 × 数量 */}
+            <div className="flex mt8" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
+              <span className="muted mono" style={{ fontSize: 11.5 }}>{p.unit} × {l.qty}</span>
+              <CartStepper value={l.qty} onChange={q => cartApi.setQty('inbound', i, q)} />
+            </div>
+            {/* 物料单价（默认参考价/渠道价，可改）+ 独立币种 → 行金额 = 单价 × 数量 */}
               <div className="flex mt8" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
                 <span className="muted" style={{ fontSize: 11.5 }}>{t('Unit Price')}</span>
                 <span className="flex" style={{ alignItems: 'center', gap: 6 }}>
@@ -325,7 +324,7 @@ function InboundCartEditor({ onDone }) {
               </div>
             </div>
             <div className="flex mt8" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
-              <span className="muted" style={{ fontSize: 11.5 }}>{t('Qty')} · {l.unit}</span>
+              <span className="muted mono" style={{ fontSize: 11.5 }}>{l.unit} × {(Number(l.qty) || 0)}</span>
               <CartStepper value={l.qty} onChange={q => cartApi.setQty('inbound', i, q)} />
             </div>
             <div className="mono" style={{ fontSize: 11.5, marginTop: 4, textAlign: 'right' }}>{t('Amount')}: <b style={{ color: '#D35400' }}>{money((Number(l.qty) || 0) * (Number(l.price) || 0), l.currency || 'USD').text}</b></div>
@@ -334,10 +333,17 @@ function InboundCartEditor({ onDone }) {
       })}
       {lines.length > 0 && (
         <React.Fragment>
-          {/* 合计金额 = Σ(物料单价 × 数量)；多币种按币种分别小计 */}
-          <div className="h5-card" style={{ padding: '10px 12px', marginBottom: Object.keys(totalsByCur).length > 1 ? 4 : 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span className="muted" style={{ fontSize: 12 }}>{`${lines.length} items · ${totalQty} units`}</span>
-            <span style={{ fontSize: 13, fontWeight: 700 }}>{t('Total')} <span className="mono" style={{ color: '#D35400' }}>{totalsText}</span></span>
+          {/* 合计金额 = Σ(物料单价 × 数量)；多币种按币种分别小计，逐币种上下堆叠 */}
+          <div className="h5-card" style={{ padding: '10px 12px', marginBottom: Object.keys(totalsByCur).length > 1 ? 4 : 8 }}>
+            <div className="flex" style={{ alignItems: 'flex-start', justifyContent: 'space-between' }}>
+              <span className="muted" style={{ fontSize: 12, lineHeight: 1.6 }}>{`${lines.length} items · ${totalQty} units`}</span>
+              <div style={{ textAlign: 'right' }}>
+                <div className="muted" style={{ fontSize: 11, lineHeight: 1.6 }}>{t('Total')}</div>
+                {Object.keys(totalsByCur).map(c => (
+                  <div key={c} className="mono" style={{ fontSize: 13, fontWeight: 700, color: '#D35400', lineHeight: 1.6 }}>{money(totalsByCur[c], c).text}</div>
+                ))}
+              </div>
+            </div>
           </div>
           {Object.keys(totalsByCur).length > 1 && (
             <div className="muted" style={{ fontSize: 11, margin: '0 4px 8px', lineHeight: 1.5 }}><Icon name="info" size={11} /> {t('Multi-currency lines are subtotaled per currency — demo, no FX conversion')}</div>
@@ -375,7 +381,7 @@ function InboundCartEditor({ onDone }) {
           <div className="h5-act-row" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{ flex: 1, fontSize: 12.5, color: 'var(--text-2)' }}>{t('Unit price × qty = stock-in amount')}</div>
             <button type="button" className="h5-btn" onClick={() => { cartApi.clear('inbound'); toast('Inbound staging cleared', 'info'); }}><Icon name="trash" size={14} />{t('Clear')}</button>
-            <button type="button" className="h5-btn primary" onClick={confirm}><Icon name="download" size={14} />{t('Confirm Batch Stock In')}</button>
+            <button type="button" className="h5-btn primary" onClick={confirm}><Icon name="download" size={14} />{t('Confirm Stock In')}</button>
           </div>
         </React.Fragment>
       )}
@@ -394,6 +400,16 @@ function OutboundCartEditor({ onDone }) {
   const lines = carts.outbound || [];
   const stockOf = pid => (db.stock[account.tenantId] || {})[pid] || 0;
   const totalQty = lines.reduce((s, l) => s + (Number(l.qty) || 0), 0);
+  // 实际销售价：默认取渠道销售价及其币种，可在行内改价/改币种；
+  // 行金额 = 实际销售价 × 数量，合计按币种分别小计（与入库一致）
+  const saleCur = (l, p) => l.saleCurrency || (p ? p.currency : 'USD') || 'USD';
+  const saleNum = (l, p) => Number(ifnull(l.salePrice, p ? p.price : 0)) || 0;
+  const totalsByCur = {};
+  lines.forEach(l => {
+    const p = db.products.find(x => x.id === l.pid) || {};
+    const cur = saleCur(l, p);
+    totalsByCur[cur] = (totalsByCur[cur] || 0) + saleNum(l, p) * (Number(l.qty) || 0);
+  });
   const downstream = db.relations.filter(r => r.upstream === account.tenantId)
     .map(r => db.tenants.find(x => x.id === r.downstream)).filter(x => x && x.status === 'Active');
   const recvTenant = downstream.find(x => x.id === recvId);
@@ -423,8 +439,26 @@ function OutboundCartEditor({ onDone }) {
               <span className="h5-back" title={t('Remove')} onClick={() => cartApi.removeAt('outbound', i)} style={{ color: 'var(--danger)' }}><Icon name="trash" size={16} /></span>
             </div>
             <div className="flex mt8" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
-              <span className="muted" style={{ fontSize: 11.5 }}>{t('Qty')} · {p.unit}</span>
+              <span className="muted mono" style={{ fontSize: 11.5 }}>{p.unit} × {l.qty}</span>
               <CartStepper value={l.qty} onChange={q => cartApi.setQty('outbound', i, q)} />
+            </div>
+            {/* 价格体系：市场指导价 / 渠道销售价只读参考；实际销售价可改（默认渠道价及其币种） */}
+            <div className="flex mt8" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
+              <span className="muted mono" style={{ fontSize: 11 }}>{t('Market Reference Price')}: <b>{money(ifnull(p.marketPrice, p.price), marketCurOf(p)).text}</b></span>
+              <span className="muted mono" style={{ fontSize: 11 }}>{t('Channel Sales Price')}: <b>{money(p.price, p.currency).text}</b></span>
+            </div>
+            <div className="flex mt8" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
+              <span className="muted" style={{ fontSize: 11.5 }}>{t('Actual Sales Price')}</span>
+              <span className="flex" style={{ alignItems: 'center', gap: 6 }}>
+                <Select value={saleCur(l, p)} onChange={v => cartApi.setField('outbound', i, 'saleCurrency', v)}
+                  options={CURRENCIES.map(c => ({ value: c, label: c }))} style={{ height: 30, width: 82 }} />
+                <input className="input mono" style={{ height: 30, width: 92, textAlign: 'right' }} type="number" min="0" step="0.01"
+                  value={ifnull(l.salePrice, ifnull(p.price, 0))} aria-label={t('Actual Sales Price')} onChange={e => cartApi.setField('outbound', i, 'salePrice', e.target.value)} />
+              </span>
+            </div>
+            <div className="flex mt4" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
+              <span className="muted mono" style={{ fontSize: 11 }}>{onHand} → {onHand - qty} {p.unit}</span>
+              <span className="mono" style={{ fontSize: 11.5 }}>{t('Amount')}: <b style={{ color: '#D35400' }}>{money(qty * saleNum(l, p), saleCur(l, p)).text}</b></span>
             </div>
             {qty > onHand && <div style={{ color: 'var(--danger)', fontSize: 11.5, marginTop: 4, textAlign: 'right' }}>{t('Exceeds on-hand quantity')}</div>}
           </div>
@@ -461,10 +495,25 @@ function OutboundCartEditor({ onDone }) {
               <input className="input" style={{ height: 32, flex: 1 }} value={note} onChange={e => setNote(e.target.value)} placeholder={t('e.g. transfer to another warehouse')} />
             </div>
           </div>
+          {/* 合计金额 = Σ(实际销售价 × 数量)；多币种按币种分别小计，逐币种上下堆叠（与入库一致） */}
+          <div className="h5-card" style={{ padding: '10px 12px', marginBottom: Object.keys(totalsByCur).length > 1 ? 4 : 8 }}>
+            <div className="flex" style={{ alignItems: 'flex-start', justifyContent: 'space-between' }}>
+              <span className="muted" style={{ fontSize: 12, lineHeight: 1.6 }}>{`${lines.length} items · ${totalQty} units`}</span>
+              <div style={{ textAlign: 'right' }}>
+                <div className="muted" style={{ fontSize: 11, lineHeight: 1.6 }}>{t('Total')}</div>
+                {Object.keys(totalsByCur).map(c => (
+                  <div key={c} className="mono" style={{ fontSize: 13, fontWeight: 700, color: '#D35400', lineHeight: 1.6 }}>{money(totalsByCur[c], c).text}</div>
+                ))}
+              </div>
+            </div>
+          </div>
+          {Object.keys(totalsByCur).length > 1 && (
+            <div className="muted" style={{ fontSize: 11, margin: '0 4px 8px', lineHeight: 1.5 }}><Icon name="info" size={11} /> {t('Multi-currency lines are subtotaled per currency — demo, no FX conversion')}</div>
+          )}
           <div className="h5-act-row" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ flex: 1, fontSize: 12.5, color: 'var(--text-2)' }}>{`${lines.length} items · ${totalQty} units`}</div>
+            <div style={{ flex: 1, fontSize: 12.5, color: 'var(--text-2)' }}>{t('Actual sales price × qty = outbound amount')}</div>
             <button type="button" className="h5-btn" onClick={() => { cartApi.clear('outbound'); toast('Outbound staging cleared', 'info'); }}><Icon name="trash" size={14} />{t('Clear')}</button>
-            <button type="button" className="h5-btn primary" onClick={confirm}><Icon name="truck" size={14} />{t('Confirm Batch Outbound')}</button>
+            <button type="button" className="h5-btn primary" onClick={confirm}><Icon name="truck" size={14} />{t('Confirm Stock Out')}</button>
           </div>
         </React.Fragment>
       )}

@@ -520,8 +520,13 @@ function App() {
           const reasonParts = [];
           if ((note || '').trim()) reasonParts.push(note.trim());
           reasonParts.push(`Receiver: ${recv.name}${recv.phone ? ` (${recv.phone})` : ''}`);
+          // 实际销售价随流水留痕：字段 + 事由里带「实际销售价 × 数量 = 金额」
+          const salePrice = Number(ln.salePrice) || 0;
+          const saleCurrency = ln.saleCurrency || 'USD';
+          const saleAmount = salePrice * ln.qty;
+          reasonParts.push(`Sale: ${saleCurrency} ${salePrice.toFixed(2)} × ${ln.qty} = ${saleCurrency} ${saleAmount.toFixed(2)}`);
           reasonParts.push('Batch scan outbound (scan)');
-          return { id: 'm-' + Date.now() + Math.random().toString(36).slice(2, 5), tenantId: tid, productId: ln.pid, type: 'OUT', qty: -ln.qty, before, after, refNo, by: account.name, ts: tnow, receiverName: recv.name, receiverPhone: recv.phone || null, receiverTenantId: recv.tenantId, reason: reasonParts.join(' · ') };
+          return { id: 'm-' + Date.now() + Math.random().toString(36).slice(2, 5), tenantId: tid, productId: ln.pid, type: 'OUT', qty: -ln.qty, before, after, refNo, by: account.name, ts: tnow, receiverName: recv.name, receiverPhone: recv.phone || null, receiverTenantId: recv.tenantId, salePrice, saleCurrency, saleAmount, reason: reasonParts.join(' · ') };
         });
         updateStock(prev => ({ ...prev, [tid]: nextStock }));
         updateMovements(prev => [...prev, ...newMoves]);
@@ -870,7 +875,17 @@ function App() {
       return ok;
     }
     function submitOutbound(note, receiver) {
-      const lines = (carts.outbound || []).map(l => ({ pid: l.pid, qty: norm(l.qty) })).filter(l => l.qty > 0);
+      // 实际销售价：未改动时默认渠道销售价及其币种，随出库流水留痕
+      const lines = (carts.outbound || []).map(l => {
+        const p = db.products.find(x => x.id === l.pid) || null;
+        const sp = (l.salePrice === undefined || l.salePrice === null || String(l.salePrice).trim() === '')
+          ? (p ? p.price : 0) : Number(l.salePrice);
+        return {
+          pid: l.pid, qty: norm(l.qty),
+          salePrice: Number(sp) || 0,
+          saleCurrency: l.saleCurrency || (p ? p.currency : 'USD') || 'USD',
+        };
+      }).filter(l => l.qty > 0);
       if (!lines.length) { toast('No items yet — scan to add', 'error'); return false; }
       const ok = act.batchScanOut(lines, note, receiver);
       if (ok) update('outbound', () => []);
