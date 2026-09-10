@@ -1151,8 +1151,11 @@ button { font-family: inherit; }
   border: none; background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: #fff;
   display: flex; align-items: center; justify-content: center; cursor: pointer;
   box-shadow: 0 6px 18px rgba(46, 111, 232, 0.42);
+  touch-action: none; -webkit-user-select: none; user-select: none;
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
 }
 .h5-cart-fab:active { transform: scale(0.94); }
+.h5-cart-fab.dragging { transform: scale(1.1); box-shadow: 0 12px 28px rgba(46, 111, 232, 0.55); cursor: grabbing; }
 /* web FAB — fixed bottom-right of the console viewport */
 .web-cart-fab {
   position: fixed; right: 28px; bottom: 28px; z-index: 800; width: 52px; height: 52px; border-radius: 27px;

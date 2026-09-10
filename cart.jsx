@@ -46,10 +46,114 @@ function CartStepper({ value, onChange }) {
 // Floating cart entries (badge = line count across the module carts)
 // ============================================================
 
+var CART_FAB_POS_KEY = 'tl-h5-cart-fab-pos';
+var CART_FAB_MARGIN = 10; // 逤手机框内边最少留白
+
+function clampFabPos(x, y, appW, appH, size) {
+  return {
+    x: Math.max(CART_FAB_MARGIN, Math.min(x, appW - size - CART_FAB_MARGIN)),
+    y: Math.max(CART_FAB_MARGIN, Math.min(y, appH - size - CART_FAB_MARGIN))
+  };
+}
+
 function H5CartFab({ count, bottom, onClick }) {
+  const [pos, setPos] = useState(null);
+  const [dragging, setDragging] = useState(false);
+  const btnRef = useRef(null);
+  const dragRef = useRef(null);
+  const suppressClickRef = useRef(false);
+  const posLoadedRef = useRef(false);
+
+  // 恢复本次会话拖放过的位置（count=0 时按钮未挂载，需等首个非零 count 再试）
+  useEffect(function () {
+    if (!count || posLoadedRef.current) return;
+    posLoadedRef.current = true;
+    try {
+      const raw = sessionStorage.getItem(CART_FAB_POS_KEY);
+      if (!raw) return;
+      const p = JSON.parse(raw);
+      const app = btnRef.current && btnRef.current.closest('.h5-app');
+      if (app && isFinite(p.x) && isFinite(p.y)) {
+        const r = app.getBoundingClientRect();
+        setPos(clampFabPos(p.x, p.y, r.width, r.height, 48));
+      }
+    } catch (e) { /* ignore corrupt storage */ }
+  }, [count]);
+
+  // 当前逻辑坐标（相对 .h5-app）；未拖拽过时用默认右下定位推算
+  function logicalPos() {
+    const btn = btnRef.current;
+    const app = btn && btn.closest('.h5-app');
+    if (app) {
+      const br = btn.getBoundingClientRect();
+      const ar = app.getBoundingClientRect();
+      return { x: br.left - ar.left, y: br.top - ar.top, w: br.width, h: br.height };
+    }
+    return null;
+  }
+
+  function onPointerDown(e) {
+    if (e.button !== undefined && e.button !== 0) return; // 忽略右/中键，触屏 button=0
+    const btn = btnRef.current;
+    if (!btn) return;
+    const p = logicalPos();
+    dragRef.current = {
+      pointerId: e.pointerId,
+      startX: e.clientX,
+      startY: e.clientY,
+      originX: p ? p.x : 0,
+      originY: p ? p.y : 0,
+      size: p ? p.w : 48,
+      moved: false
+    };
+    if (btn.setPointerCapture) {
+      try { btn.setPointerCapture(e.pointerId); } catch (err) { /* already released */ }
+    }
+  }
+
+  function onPointerMove(e) {
+    const d = dragRef.current;
+    if (!d || e.pointerId !== d.pointerId) return;
+    const dx = e.clientX - d.startX;
+    const dy = e.clientY - d.startY;
+    if (!d.moved) {
+      if (Math.sqrt(dx * dx + dy * dy) < 5) return; // 5px 拖拽阈值，未超过视为点击
+      d.moved = true;
+      setDragging(true);
+    }
+    const app = btnRef.current && btnRef.current.closest('.h5-app');
+    if (!app) return;
+    const ar = app.getBoundingClientRect();
+    const next = clampFabPos(d.originX + dx, d.originY + dy, ar.width, ar.height, d.size);
+    d.last = next;
+    setPos(next);
+  }
+
+  function endDrag(e) {
+    const d = dragRef.current;
+    if (!d || (e && e.pointerId !== undefined && e.pointerId !== d.pointerId)) return;
+    dragRef.current = null;
+    setDragging(false);
+    if (d.moved) {
+      suppressClickRef.current = true; // 拖拽结束不误触打开面板
+      setTimeout(function () { suppressClickRef.current = false; }, 300);
+      if (d.last) {
+        try { sessionStorage.setItem(CART_FAB_POS_KEY, JSON.stringify(d.last)); } catch (err) { /* storage full */ }
+      }
+    }
+  }
+
   if (!count) return null;
   return (
-    <button type="button" className="h5-cart-fab" style={{ bottom: bottom || 84 }} onClick={onClick}
+    <button type="button" ref={btnRef}
+      className={'h5-cart-fab' + (dragging ? ' dragging' : '')}
+      style={pos ? { left: pos.x, top: pos.y, right: 'auto', bottom: 'auto' } : { bottom: bottom || 84 }}
+      onClick={function () {
+        if (suppressClickRef.current) { suppressClickRef.current = false; return; }
+        onClick();
+      }}
+      onPointerDown={onPointerDown} onPointerMove={onPointerMove}
+      onPointerUp={endDrag} onPointerCancel={endDrag}
       title={t('Staging')} aria-label={t('Staging')}>
       <Icon name="cart" size={20} />
       <span className="cart-fab-badge">{count > 99 ? '99+' : count}</span>
