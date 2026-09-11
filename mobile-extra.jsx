@@ -314,7 +314,7 @@ function H5StockPage({ push }) {
       {rows.length === 0 && <H5Empty icon="box" message="No stock records" hint="Stock appears once products are imported or received." />}
       {adjust && (
         <div style={{ position: 'absolute', inset: 0, background: 'rgba(23,35,47,0.5)', zIndex: 300, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: 16, paddingBottom: 40 }} onClick={() => setAdjust(null)}>
-          <div style={{ background: '#fff', borderRadius: 14, padding: 16 }} onClick={e => e.stopPropagation()}>
+          <div style={{ background: '#f5f6f8', borderRadius: 14, padding: 16 }} onClick={e => e.stopPropagation()}>
             <div style={{ fontWeight: 700, fontSize: 15 }}>Adjust Stock — {adjust.name}</div>
             <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>Current: <b className="mono">{stock[adjust.id]}</b> {adjust.unit}</div>
             <div className="flex gap8 mt12">
@@ -508,7 +508,7 @@ function H5ExportSheet({ doc, onClose }) {
   };
   return (
     <div style={{ position: 'absolute', inset: 0, background: 'rgba(23,35,47,0.5)', zIndex: 300, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: 16, paddingBottom: 40 }} onClick={onClose}>
-      <div style={{ background: '#fff', borderRadius: 14, overflow: 'hidden', animation: 'slideIn 0.2s ease' }} onClick={e => e.stopPropagation()}>
+      <div style={{ background: '#f5f6f8', borderRadius: 14, overflow: 'hidden', animation: 'slideIn 0.2s ease' }} onClick={e => e.stopPropagation()}>
         <div style={{ padding: '16px 18px 12px', borderBottom: '1px solid #F0F2F5' }}>
           <div style={{ fontWeight: 700, fontSize: 15 }}>Export {doc.no}</div>
           <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>Exports are recorded as data-outbound events (audit trail).</div>
@@ -518,7 +518,7 @@ function H5ExportSheet({ doc, onClose }) {
             { fmt: 'PDF', label: 'Export as PDF', icon: 'file', desc: 'Print pipeline with watermark & barcode' },
             { fmt: 'Excel', label: 'Export as Excel', icon: 'grid', desc: 'Downloads the file now' },
           ].map(opt => (
-            <div key={opt.fmt} onClick={() => doExport(opt.fmt)} style={{ display: 'flex', gap: 12, alignItems: 'center', padding: '12px 14px', borderRadius: 12, border: '1px solid var(--border-light)', background: '#FAFBFC' }}>
+            <div key={opt.fmt} onClick={() => doExport(opt.fmt)} style={{ display: 'flex', gap: 12, alignItems: 'center', padding: '12px 14px', borderRadius: 12, border: '1px solid var(--border-light)', background: '#fff' }}>
               <div style={{ width: 38, height: 38, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--primary-light)', color: 'var(--primary)', flexShrink: 0 }}>
                 <Icon name={opt.icon} size={17} />
               </div>

@@ -273,7 +273,7 @@ function MobileApp() {
             </React.Fragment>)}
           </div>
           <div className="h5-tabs">
-            {[['home', 'home', 'Home'], ['products', 'warehouse', 'Warehouse'], ['orders', 'orders', 'Trade'], ['mine', 'userCircle', 'Mine']].map(([id, icon, label]) => (
+            {[['home', 'home', 'Home'], ['products', 'warehouse', 'Warehouse'], ['orders', 'swap', 'Trade'], ['mine', 'userCircle', 'Mine']].map(([id, icon, label]) => (
               <div key={id} className={`h5-tab${tab === id ? ' active' : ''}`} onClick={() => setTab(id)}>
                 <NavIcon name={icon} size={20} /><span>{label}</span>
               </div>
@@ -303,7 +303,7 @@ function H5Confirm({ confirm, onClose }) {
   const tone = ['success', 'warning', 'error'].includes(confirm.tone) ? confirm.tone : 'primary';
   return (
     <div style={{ position: 'absolute', inset: 0, background: 'rgba(23,35,47,0.5)', zIndex: 300, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: 16, paddingBottom: 40 }} onClick={onClose}>
-      <div style={{ background: '#fff', borderRadius: 14, overflow: 'hidden', animation: 'slideIn 0.2s ease' }} onClick={e => e.stopPropagation()}>
+      <div style={{ background: '#f5f6f8', borderRadius: 14, overflow: 'hidden', animation: 'slideIn 0.2s ease' }} onClick={e => e.stopPropagation()}>
         <div style={{ padding: '18px 18px 14px', borderBottom: '1px solid #F0F2F5' }}>
           <div style={{ fontWeight: 700, fontSize: 15 }}>{confirm.title}</div>
           <div style={{ fontSize: 13, color: 'var(--text-2)', marginTop: 8, lineHeight: 1.6 }}>{confirm.message}</div>
@@ -1294,11 +1294,11 @@ function H5DocPage({ docId, push, setConfirm, platform, noPerm }) {
       {exportOpen && <H5ExportSheet doc={exportOpen} onClose={() => setExportOpen(null)} />}
       {linkOpen && (
         <div style={{ position: 'absolute', inset: 0, background: 'rgba(23,35,47,0.5)', zIndex: 300, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: 16, paddingBottom: 40 }} onClick={() => setLinkOpen(null)}>
-          <div style={{ background: '#fff', borderRadius: 14, overflow: 'hidden', animation: 'slideIn 0.2s ease' }} onClick={e => e.stopPropagation()}>
+          <div style={{ background: '#f5f6f8', borderRadius: 14, overflow: 'hidden', animation: 'slideIn 0.2s ease' }} onClick={e => e.stopPropagation()}>
             <div style={{ padding: '16px 18px 12px', borderBottom: '1px solid #F0F2F5' }}>
               <div style={{ fontWeight: 700, fontSize: 15 }}>WhatsApp Document Link</div>
               <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>Copy the link below and open it in a new tab — no login required (demo).</div>
-              <div className="mono" style={{ fontSize: 11, background: 'var(--bg)', borderRadius: 8, padding: '8px 10px', marginTop: 12, wordBreak: 'break-all' }}>{demoLink}</div>
+              <div className="mono" style={{ fontSize: 11, background: '#fff', borderRadius: 8, padding: '8px 10px', marginTop: 12, wordBreak: 'break-all' }}>{demoLink}</div>
             </div>
             <div style={{ display: 'flex', gap: 10, padding: '14px 16px 16px' }}>
               <button className="h5-btn h5-dlg-btn" style={{ border: 'none', height: 48 }} onClick={() => setLinkOpen(null)}><Icon name="close" size={14} />Close</button>
