@@ -363,7 +363,7 @@ function InquiryCartEditor({ onDone, push }) {
   return (
     <div>
       <div className="h5-cart-scroll">
-      {lines.length === 0 && <H5Empty icon="cart" message="Inquiry staging is empty" hint="Add upstream products while browsing the sourcing channel" />}
+      {lines.length === 0 && <H5Empty icon="cart" message="Inquiry staging is empty" hint="Browse channel products in Inquiry and tap Inquire to add them to the inquiry staging" />}
       {groups.map(g => {
         const tn = db.tenants.find(x => x.id === g.ownerId);
         return (
@@ -470,7 +470,7 @@ function InboundCartEditor({ onDone }) {
   return (
     <div>
       <div className="h5-cart-scroll">
-      {lines.length === 0 && <H5Empty icon="warehouse" message={t('Inbound staging is empty')} hint={t('Scan barcodes, or enter a Material Barcode and tap Add, or tap Stock In on the My Warehouse list')} />}
+      {lines.length === 0 && <H5Empty icon="warehouse" message={t('Inbound staging is empty')} hint={t('Scan barcodes on Scan / Stock In, or enter a Material Barcode and tap Add, or tap Stock In on the My Warehouse list')} />}
       {lines.map((l, i) => {
         const qty = Number(l.qty) || 0;
         if (l.kind === 'exist') {
@@ -665,7 +665,7 @@ function OutboundCartEditor({ onDone }) {
   return (
     <div>
       <div className="h5-cart-scroll">
-      {lines.length === 0 && <H5Empty icon="truck" message={t('Outbound staging is empty')} hint={t('Scan items, or tap Stock Out on the My Warehouse list')} />}
+      {lines.length === 0 && <H5Empty icon="truck" message={t('Outbound staging is empty')} hint={t('Scan items on Scan / Stock Out, or tap Stock Out on the My Warehouse list')} />}
       {lines.map((l, i) => {
         const p = db.products.find(x => x.id === l.pid) || {};
         const onHand = stockOf(l.pid);
