@@ -110,8 +110,8 @@ function H5ScanPage({ onDone, initialMode = 'inbound' }) {
     <div className="h5-pad">
       {/* 模式切换：扫码结果加入当前模式的暂存单 */}
       <div className="h5-segments mb8">
-        <button className={`h5-segment${mode === 'inbound' ? ' active' : ''}`} onClick={() => setMode('inbound')}><Icon name="download" size={13} />{t('Stock In')}</button>
-        <button className={`h5-segment${mode === 'outbound' ? ' active' : ''}`} onClick={() => setMode('outbound')}><Icon name="truck" size={13} />{t('Stock Out')}</button>
+        <button className={`h5-segment${mode === 'inbound' ? ' active' : ''}`} onClick={() => setMode('inbound')}><NavIcon name="stockIn" size={13} />{t('Stock In')}</button>
+        <button className={`h5-segment${mode === 'outbound' ? ' active' : ''}`} onClick={() => setMode('outbound')}><NavIcon name="stockOut" size={13} />{t('Stock Out')}</button>
       </div>
       <div className="muted" style={{ fontSize: 11.5, margin: '0 2px 8px' }}><Icon name="info" size={11} /> {t('Scanned items go to the staging of the current mode')}</div>
       <div className={`h5-scan-frame${mode === 'outbound' ? ' out' : ''}`}>
@@ -305,7 +305,7 @@ function H5StockPage({ push }) {
             <div className="muted" style={{ fontSize: 10.5 }}>on hand</div>
           </div>
           {canManageProduct(db, account, p) ? (
-            <button className="h5-item-act" onClick={() => { setAdjust(p); setMode('IN'); setQty(''); setReason(''); }}><Icon name="warehouse" size={12} />Adjust</button>
+            <button className="h5-item-act" onClick={() => { setAdjust(p); setMode('IN'); setQty(''); setReason(''); }}><NavIcon name="myStock" size={12} />Adjust</button>
           ) : (
             <span className="muted" title={`Owned by ${productOwnerName(db, p)}`} style={{ fontSize: 10.5, maxWidth: 96, textAlign: 'right', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{productOwnerName(db, p)}</span>
           )}
@@ -1281,7 +1281,7 @@ function H5ReplenishPage({ poId, onDone }) {
         if (!any) { toast('Enter at least one quantity to replenish', 'info'); return; }
         act.replenish(po, numQtys);
         onDone();
-      }}><Icon name="truck" size={14} />Confirm Replenishment</button>
+      }}><NavIcon name="stockOut" size={14} />Confirm Replenishment</button>
     </div>
   );
 }

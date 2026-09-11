@@ -66,6 +66,95 @@ function Icon({ name, size = 16, color, className, style }) {
   );
 }
 
+// ---------- global icon system (R118) ----------
+// 全系统统一功能图标库：同一功能操作点（导航/按钮/页签/FAB/待办/动词
+// 按钮等）一律用这里的造型；24 viewBox · 1.8 描边 · 圆角线帽 ·
+// currentColor（颜色随所在控件）。未收录的键回退通用 Icon 库（如
+// shield/scan/edit 等中性或品牌语义）。
+const NAV_ICONS = {
+  inquiry: <g>
+    <path d="M21 11.6a8.6 8.6 0 01-12.4 7.7L3.5 20.5l1.3-4.9A8.6 8.6 0 1121 11.6z" />
+    <path d="M10 9.7a2.3 2.3 0 014.5.7c0 1.5-1.9 1.7-1.9 3" />
+    <circle cx="12.6" cy="16.1" r="1" fill="currentColor" stroke="none" />
+  </g>,
+  stockIn: <g>
+    <path d="M12 3v5.4" /><path d="M9.2 5.6 12 8.4l2.8-2.8" />
+    <path d="M12 9.4l-7 3v6l7 3 7-3v-6z" />
+    <path d="M5 12.4l7 3 7-3M12 15.4v6" />
+  </g>,
+  stockOut: <g>
+    <path d="M12 8.4V2.6" /><path d="M9.2 5.2 12 2.4l2.8 2.8" />
+    <path d="M12 9.4l-7 3v6l7 3 7-3v-6z" />
+    <path d="M5 12.4l7 3 7-3M12 15.4v6" />
+  </g>,
+  confirm: <g>
+    <path d="M9 3.6h6v3H9z" />
+    <path d="M9 5.1H6.8A1.3 1.3 0 005.5 6.4v13a1.3 1.3 0 001.3 1.3h10.4a1.3 1.3 0 001.3-1.3v-13a1.3 1.3 0 00-1.3-1.3H15" />
+    <path d="M9 13.6l2.3 2.3 4.2-4.4" />
+  </g>,
+  receive: <g>
+    <path d="M4.5 6.5h15v13h-15z" />
+    <path d="M12 6.5v4.3" />
+    <path d="M8.4 14.2l2.5 2.5 4.7-5" />
+  </g>,
+  warehouse: <g>
+    <path d="M3 10.6 12 4l9 6.6" />
+    <path d="M5.5 9.3V20h13V9.3" />
+    <path d="M9.7 20v-5.4h4.6V20" />
+  </g>,
+  iqList: <g>
+    <path d="M14.5 3h-8v18h11V7.5z" />
+    <path d="M14.5 3v4.5h3" />
+    <path d="M10.2 11.2a2.3 2.3 0 014.6.3c0 1.5-2.2 1.9-2.2 3.1" />
+    <circle cx="12.6" cy="17.2" r="1" fill="currentColor" stroke="none" />
+  </g>,
+  quote: <g>
+    <path d="M13.5 3h-7v18h11V7.5z" />
+    <path d="M13.5 3v3.8h3.7" />
+    <path d="M12.6 13.8h3.4l4.6 4.6a1.8 1.8 0 01-2.5 2.5l-4.6-4.6z" />
+    <circle cx="14.6" cy="15.8" r="0.85" fill="currentColor" stroke="none" />
+  </g>,
+  orders: <g>
+    <path d="M14.5 3h-8v18h11V7.5z" />
+    <path d="M14.5 3v4.5h3" />
+    <path d="M9.6 9.8h4.8" />
+    <path d="M9.2 14.6l2.4 2.4 4.4-4.6" />
+  </g>,
+  invoices: <g>
+    <path d="M6 3h12v18l-2-1.4-2 1.4-2-1.4-2 1.4-2-1.4L6 21z" />
+    <path d="M9.5 8h5M9.5 11.5h5" />
+  </g>,
+  myStock: <g>
+    <path d="M8.5 7.5h7V12h-7z" />
+    <path d="M3.5 14h7v4.5h-7z" />
+    <path d="M13.5 14h7v4.5h-7z" />
+  </g>,
+  movements: <g>
+    <path d="M3.5 8.5h13.5" /><path d="M13.8 5l4.2 3.5-4.2 3.5" />
+    <path d="M20.5 15.5H7" /><path d="M10.2 12l-4.2 3.5 4.2 3.5" />
+  </g>,
+  team: <g>
+    <circle cx="9.3" cy="7.2" r="3.2" />
+    <path d="M3.5 20.3c.4-3.2 2.9-5.6 5.8-5.6s5.4 2.4 5.8 5.6" />
+    <path d="M17 4.6a3.2 3.2 0 010 5.2" />
+    <path d="M16.3 15.2c2.6.6 4.4 2.6 4.7 5.1" />
+  </g>,
+  // 暂存单（Staging）专属：暂存箱+清单线，用于 FAB/面板标题等入口
+  staging: <g>
+    <path d="M3.5 8.5 5.5 5h13l2 3.5" />
+    <path d="M5 8.5h14V21H5z" />
+    <path d="M9 12.5h6M9 16h3.5" />
+  </g>,
+};
+function NavIcon({ name, size = 16 }) {
+  const g = NAV_ICONS[name];
+  if (!g) return <Icon name={name} size={size} />;
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{g}</svg>
+  );
+}
+
 // ---------- logo ----------
 function Logo({ size = 30, dark }) {
   return (
@@ -836,7 +925,7 @@ function H5FilterBar({ open, onToggle, activeCount, onReset, left, tools, fields
 }
 
 Object.assign(window, {
-  Icon, Logo, AppCtx, useApp, Tag, StatusTag, TenantTag, Money, Input, Textarea, Select, SearchBox, Switch,
+  Icon, NavIcon, NAV_ICONS, Logo, AppCtx, useApp, Tag, StatusTag, TenantTag, Money, Input, Textarea, Select, SearchBox, Switch,
   CropModal, ProductImagePicker,
   RadioRow, Checkbox, FormRow, Dialog, ConfirmDialog, Table, Pagination, EmptyState, Descriptions, Banner,
   Timeline, useSkeleton, Dropdown, DownstreamStockTree, H5FilterBar,

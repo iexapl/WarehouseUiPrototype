@@ -41,7 +41,7 @@ function WaybillCard({ doc }) {
       <div className="card" style={{ padding: 14 }}>
         <div className="flex gap10" style={{ justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div className="flex gap10">
-            <span className="cell-icon" style={{ background: '#EAF1FE', color: '#2E6FE8', width: 34, height: 34, borderRadius: 8, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><Icon name="truck" size={17} /></span>
+            <span className="cell-icon" style={{ background: '#EAF1FE', color: '#2E6FE8', width: 34, height: 34, borderRadius: 8, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><NavIcon name="stockOut" size={17} /></span>
             <div>
               <div className="mono bold" style={{ fontSize: 13 }}>{wb.no}</div>
               <div className="muted" style={{ fontSize: 11.5, marginTop: 1 }}>Generated automatically on shipment confirmation</div>

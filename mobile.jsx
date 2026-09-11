@@ -273,9 +273,9 @@ function MobileApp() {
             </React.Fragment>)}
           </div>
           <div className="h5-tabs">
-            {[['home', 'home', 'Home'], ['products', 'warehouse', 'Warehouse'], ['orders', 'swap', 'Trade'], ['mine', 'userCircle', 'Mine']].map(([id, icon, label]) => (
+            {[['home', 'home', 'Home'], ['products', 'warehouse', 'Warehouse'], ['orders', 'orders', 'Trade'], ['mine', 'userCircle', 'Mine']].map(([id, icon, label]) => (
               <div key={id} className={`h5-tab${tab === id ? ' active' : ''}`} onClick={() => setTab(id)}>
-                <Icon name={icon} size={20} /><span>{label}</span>
+                <NavIcon name={icon} size={20} /><span>{label}</span>
               </div>
             ))}
           </div>
@@ -333,86 +333,8 @@ function H5Confirm({ confirm, onClose }) {
 }
 
 // ---------- home ----------
-// R117 — 功能导航图标体系：13 项（+供应商/平台复用）统一重设的线性图标，
-// 24 viewBox · 1.8 描边 · 圆角线帽，currentColor 随条目配色前景色描边；
-// 未收录的键回退到通用 Icon 库（如平台管理的 shield）。
-const NAV_ICONS = {
-  inquiry: <g>
-    <path d="M21 11.6a8.6 8.6 0 01-12.4 7.7L3.5 20.5l1.3-4.9A8.6 8.6 0 1121 11.6z" />
-    <path d="M10 9.7a2.3 2.3 0 014.5.7c0 1.5-1.9 1.7-1.9 3" />
-    <circle cx="12.6" cy="16.1" r="1" fill="currentColor" stroke="none" />
-  </g>,
-  stockIn: <g>
-    <path d="M12 3v5.4" /><path d="M9.2 5.6 12 8.4l2.8-2.8" />
-    <path d="M12 9.4l-7 3v6l7 3 7-3v-6z" />
-    <path d="M5 12.4l7 3 7-3M12 15.4v6" />
-  </g>,
-  stockOut: <g>
-    <path d="M12 8.4V2.6" /><path d="M9.2 5.2 12 2.4l2.8 2.8" />
-    <path d="M12 9.4l-7 3v6l7 3 7-3v-6z" />
-    <path d="M5 12.4l7 3 7-3M12 15.4v6" />
-  </g>,
-  confirm: <g>
-    <path d="M9 3.6h6v3H9z" />
-    <path d="M9 5.1H6.8A1.3 1.3 0 005.5 6.4v13a1.3 1.3 0 001.3 1.3h10.4a1.3 1.3 0 001.3-1.3v-13a1.3 1.3 0 00-1.3-1.3H15" />
-    <path d="M9 13.6l2.3 2.3 4.2-4.4" />
-  </g>,
-  receive: <g>
-    <path d="M4.5 6.5h15v13h-15z" />
-    <path d="M12 6.5v4.3" />
-    <path d="M8.4 14.2l2.5 2.5 4.7-5" />
-  </g>,
-  warehouse: <g>
-    <path d="M3 10.6 12 4l9 6.6" />
-    <path d="M5.5 9.3V20h13V9.3" />
-    <path d="M9.7 20v-5.4h4.6V20" />
-  </g>,
-  iqList: <g>
-    <path d="M14.5 3h-8v18h11V7.5z" />
-    <path d="M14.5 3v4.5h3" />
-    <path d="M10.2 11.2a2.3 2.3 0 014.6.3c0 1.5-2.2 1.9-2.2 3.1" />
-    <circle cx="12.6" cy="17.2" r="1" fill="currentColor" stroke="none" />
-  </g>,
-  quote: <g>
-    <path d="M13.5 3h-7v18h11V7.5z" />
-    <path d="M13.5 3v3.8h3.7" />
-    <path d="M12.6 13.8h3.4l4.6 4.6a1.8 1.8 0 01-2.5 2.5l-4.6-4.6z" />
-    <circle cx="14.6" cy="15.8" r="0.85" fill="currentColor" stroke="none" />
-  </g>,
-  orders: <g>
-    <path d="M14.5 3h-8v18h11V7.5z" />
-    <path d="M14.5 3v4.5h3" />
-    <path d="M9.6 9.8h4.8" />
-    <path d="M9.2 14.6l2.4 2.4 4.4-4.6" />
-  </g>,
-  invoices: <g>
-    <path d="M6 3h12v18l-2-1.4-2 1.4-2-1.4-2 1.4-2-1.4L6 21z" />
-    <path d="M9.5 8h5M9.5 11.5h5" />
-  </g>,
-  myStock: <g>
-    <path d="M8.5 7.5h7V12h-7z" />
-    <path d="M3.5 14h7v4.5h-7z" />
-    <path d="M13.5 14h7v4.5h-7z" />
-  </g>,
-  movements: <g>
-    <path d="M3.5 8.5h13.5" /><path d="M13.8 5l4.2 3.5-4.2 3.5" />
-    <path d="M20.5 15.5H7" /><path d="M10.2 12l-4.2 3.5 4.2 3.5" />
-  </g>,
-  team: <g>
-    <circle cx="9.3" cy="7.2" r="3.2" />
-    <path d="M3.5 20.3c.4-3.2 2.9-5.6 5.8-5.6s5.4 2.4 5.8 5.6" />
-    <path d="M17 4.6a3.2 3.2 0 010 5.2" />
-    <path d="M16.3 15.2c2.6.6 4.4 2.6 4.7 5.1" />
-  </g>,
-};
-function NavIcon({ name, size = 18 }) {
-  const g = NAV_ICONS[name];
-  if (!g) return <Icon name={name} size={size} />;
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
-      strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{g}</svg>
-  );
-}
+// R118 — 图标统一：功能图标库 NAV_ICONS/NavIcon 上移到 ui.jsx（全系统
+// 唯一源），本文件各功能操作点（按钮/待办/底部导航）直接引用。
 function H5Home({ openDoc, push, platform, noPerm, setTab }) {
   const { db, account, toast } = useApp();
   const isTenant = account.type === 'tenant';
@@ -441,14 +363,14 @@ function H5Home({ openDoc, push, platform, noPerm, setTab }) {
   const isFreshTenant = isTenant && !hasPartners && !hasDocs;
   const ATT_ENTRIES = isSupplier
     ? [
-        { label: 'Inquiries to Quote', icon: 'ai', tone: 'purple', goDocs: ['IQ', 'Submitted'], match: d => d.type === 'IQ' && d.seller === ATT_TID && d.status === 'Submitted' },
-        { label: 'Orders to Ship', icon: 'truck', tone: 'primary', goDocs: ['PO', 'Pending Outbound'], match: d => d.type === 'PO' && d.seller === ATT_TID && d.status === 'Pending Outbound' && d.paid },
-        { label: 'Orders to Invoice', icon: 'receipt', tone: 'warning', goDocs: ['PO', 'ALL'], match: d => d.type === 'PO' && d.seller === ATT_TID && ['Received', 'Partially Received'].includes(d.status) },
+        { label: 'Inquiries to Quote', icon: 'quote', tone: 'purple', goDocs: ['IQ', 'Submitted'], match: d => d.type === 'IQ' && d.seller === ATT_TID && d.status === 'Submitted' },
+        { label: 'Orders to Ship', icon: 'stockOut', tone: 'primary', goDocs: ['PO', 'Pending Outbound'], match: d => d.type === 'PO' && d.seller === ATT_TID && d.status === 'Pending Outbound' && d.paid },
+        { label: 'Orders to Invoice', icon: 'invoices', tone: 'warning', goDocs: ['PO', 'ALL'], match: d => d.type === 'PO' && d.seller === ATT_TID && ['Received', 'Partially Received'].includes(d.status) },
       ]
     : [
-        { label: 'Quotes to Confirm', icon: 'checkDouble', tone: 'warning', goDocs: ['QT', 'Sent'], match: d => d.type === 'QT' && d.buyer === ATT_TID && d.status === 'Sent' },
-        { label: 'Shipments to Receive', icon: 'truck', tone: 'success', goDocs: ['PO', 'Shipped'], match: d => d.type === 'CK' && d.buyer === ATT_TID && d.status === 'Shipped' },
-        { label: 'Pending Orders', icon: 'cart', tone: 'primary', goDocs: ['PO', 'ALL'], match: d => d.type === 'PO' && d.buyer === ATT_TID && ['Pending Acceptance', 'Pending Payment', 'Pending Outbound', 'Pending Shipment', 'Pending Receipt'].includes(d.status) },
+        { label: 'Quotes to Confirm', icon: 'confirm', tone: 'warning', goDocs: ['QT', 'Sent'], match: d => d.type === 'QT' && d.buyer === ATT_TID && d.status === 'Sent' },
+        { label: 'Shipments to Receive', icon: 'receive', tone: 'success', goDocs: ['PO', 'Shipped'], match: d => d.type === 'CK' && d.buyer === ATT_TID && d.status === 'Shipped' },
+        { label: 'Pending Orders', icon: 'orders', tone: 'primary', goDocs: ['PO', 'ALL'], match: d => d.type === 'PO' && d.buyer === ATT_TID && ['Pending Acceptance', 'Pending Payment', 'Pending Outbound', 'Pending Shipment', 'Pending Receipt'].includes(d.status) },
       ];
   const attTs = d => (d.timeline && d.timeline.length ? d.timeline[d.timeline.length - 1].ts : d.createdAt);
   const attention = ATT_ENTRIES.map(e => {
@@ -559,7 +481,7 @@ function H5Home({ openDoc, push, platform, noPerm, setTab }) {
           : <div className="h5-card" style={{ textAlign: 'center', color: 'var(--text-3)', fontSize: 12.5, padding: 18 }}><Icon name="checkDouble" size={18} color="var(--success)" /><div style={{ marginTop: 8 }}>{t('All caught up — nothing needs your action')}</div></div>)
         : attention.map(x => (
           <div key={x.label} className="h5-cell" onClick={() => { if (platform) return noPerm(); ordersSeg = x.goDocs[0]; ordersStatus = x.goDocs[1]; setTab('orders'); }}>
-            <span className="cell-icon" style={{ background: ATT[x.tone][0], color: ATT[x.tone][1] }}><Icon name={x.icon} size={17} /></span>
+            <span className="cell-icon" style={{ background: ATT[x.tone][0], color: ATT[x.tone][1] }}><NavIcon name={x.icon} size={17} /></span>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 13.5 }}>{x.label}</div>
               {x.updated && <div className="muted" style={{ fontSize: 10.5, marginTop: 2, display: 'inline-flex', alignItems: 'center', gap: 4 }}><Icon name="clock" size={10} /> {t('Updated')} {fmtDateTime(x.updated)}</div>}
@@ -779,7 +701,7 @@ function H5Products({ push, platform, skReady = true }) {
               <div className="p-foot">
                 <div className="row-actions" onClick={e => e.stopPropagation()}>
                   {/* 询价 = 直接加入询价暂存：已在车中则数量 +1，不在则新增且数量默认 1 */}
-                  <button className="h5-item-act primary" title={t('Inquire')} aria-label={t('Inquire')} onClick={() => { cartApi.add('inquiry', { pid: p.id, qty: 1 }); toast(`${p.name} added to the inquiry staging`, 'success'); }}><Icon name="edit" size={12} />{t('Inquire')}</button>
+                  <button className="h5-item-act primary" title={t('Inquire')} aria-label={t('Inquire')} onClick={() => { cartApi.add('inquiry', { pid: p.id, qty: 1 }); toast(`${p.name} added to the inquiry staging`, 'success'); }}><NavIcon name="inquiry" size={12} />{t('Inquire')}</button>
                 </div>
               </div>
             )}
@@ -788,8 +710,8 @@ function H5Products({ push, platform, skReady = true }) {
                 <div className="row-actions" onClick={e => e.stopPropagation()}>
                   <button className="h5-item-act" title={t('Adjust Price')} aria-label={t('Adjust Price')} onClick={() => push({ name: 'adjustPrice', productId: p.id })}><Icon name="tag" size={12} />{t('Adjust Price')}</button>
                   {/* 调整库存拆分：入库/出库加入对应暂存（数量默认 1，已在车中则 +1） */}
-                  <button className="h5-item-act success" title={t('Stock In')} aria-label={t('Stock In')} onClick={() => { cartApi.add('inbound', { kind: 'exist', pid: p.id, qty: 1 }); toast(`${p.name} added to the inbound staging`, 'success'); }}><Icon name="download" size={12} />{t('Stock In')}</button>
-                  <button className="h5-item-act warning" title={t('Stock Out')} aria-label={t('Stock Out')} onClick={() => { cartApi.add('outbound', { pid: p.id, qty: 1 }); toast(`${p.name} added to the outbound staging`, 'success'); }}><Icon name="truck" size={12} />{t('Stock Out')}</button>
+                  <button className="h5-item-act success" title={t('Stock In')} aria-label={t('Stock In')} onClick={() => { cartApi.add('inbound', { kind: 'exist', pid: p.id, qty: 1 }); toast(`${p.name} added to the inbound staging`, 'success'); }}><NavIcon name="stockIn" size={12} />{t('Stock In')}</button>
+                  <button className="h5-item-act warning" title={t('Stock Out')} aria-label={t('Stock Out')} onClick={() => { cartApi.add('outbound', { pid: p.id, qty: 1 }); toast(`${p.name} added to the outbound staging`, 'success'); }}><NavIcon name="stockOut" size={12} />{t('Stock Out')}</button>
                   <button className="h5-item-act" title={t('View Stock')} aria-label={t('View Stock')} onClick={() => push({ name: 'channelStock', productId: p.id })}><Icon name="eye" size={12} />{t('View Stock')}</button>
                 </div>
               </div>
@@ -1162,7 +1084,7 @@ function H5Mine({ push }) {
       )}
       {isTenant && (
         <div className="h5-cell" onClick={() => push({ name: 'members' })}>
-          <span className="cell-icon" style={{ background: 'var(--primary-light)', color: 'var(--primary)' }}><Icon name="users" size={17} /></span>
+          <span className="cell-icon" style={{ background: 'var(--primary-light)', color: 'var(--primary)' }}><NavIcon name="team" size={17} /></span>
           <div style={{ flex: 1, fontSize: 13.5 }}>Team Members &amp; Sub-Agents</div><Icon name="chevronRight" size={14} color="var(--text-3)" />
         </div>
       )}
@@ -1926,7 +1848,7 @@ function H5ShipPage({ poId, onDone }) {
         if (!w.carrier || !w.driver) { toast('Carrier and driver are required', 'error'); return; }
         act.ship(po, w);
         onDone();
-      }}><Icon name="truck" size={14} />Confirm Shipment</button>
+      }}><NavIcon name="stockOut" size={14} />Confirm Shipment</button>
       <div className="muted" style={{ fontSize: 11, marginTop: 12, textAlign: 'center' }}>Shipment decrements stock, generates CK + waybill, and pushes a WhatsApp link to the buyer</div>
     </div>
   );
@@ -1978,11 +1900,11 @@ function H5ProductPage({ productId, push, platform }) {
       {hasActions && (
         <div className="h5-act-row">
           {/* 询价 = 加入询价暂存（数量默认 1，已在车中则 +1） */}
-          {inqOk && <button className="h5-btn plain primary" onClick={() => { cartApi.add('inquiry', { pid: p.id, qty: 1 }); toast(`${p.name} added to the inquiry staging`, 'success'); }}><Icon name="edit" size={14} />{t('Inquire')}</button>}
+          {inqOk && <button className="h5-btn plain primary" onClick={() => { cartApi.add('inquiry', { pid: p.id, qty: 1 }); toast(`${p.name} added to the inquiry staging`, 'success'); }}><NavIcon name="inquiry" size={14} />{t('Inquire')}</button>}
           {mgrOk && <button className="h5-btn" onClick={() => push({ name: 'adjustPrice', productId: p.id })}><Icon name="tag" size={14} />{t('Adjust Price')}</button>}
           {/* 调整库存拆分：入库/出库加入对应暂存 */}
-          {mgrOk && <button className="h5-btn plain success" onClick={() => { cartApi.add('inbound', { kind: 'exist', pid: p.id, qty: 1 }); toast(`${p.name} added to the inbound staging`, 'success'); }}><Icon name="download" size={14} />{t('Stock In')}</button>}
-          {mgrOk && <button className="h5-btn plain warning" onClick={() => { cartApi.add('outbound', { pid: p.id, qty: 1 }); toast(`${p.name} added to the outbound staging`, 'success'); }}><Icon name="truck" size={14} />{t('Stock Out')}</button>}
+          {mgrOk && <button className="h5-btn plain success" onClick={() => { cartApi.add('inbound', { kind: 'exist', pid: p.id, qty: 1 }); toast(`${p.name} added to the inbound staging`, 'success'); }}><NavIcon name="stockIn" size={14} />{t('Stock In')}</button>}
+          {mgrOk && <button className="h5-btn plain warning" onClick={() => { cartApi.add('outbound', { pid: p.id, qty: 1 }); toast(`${p.name} added to the outbound staging`, 'success'); }}><NavIcon name="stockOut" size={14} />{t('Stock Out')}</button>}
           {mgrOk && <button className="h5-btn" onClick={() => push({ name: 'channelStock', productId: p.id })}><Icon name="eye" size={14} />{t('View Stock')}</button>}
         </div>
       )}

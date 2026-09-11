@@ -5,7 +5,7 @@
 const { useState, useEffect, useMemo } = React;
 
 // round 56 — icon mapping for web document action verbs (icon+text buttons)
-const WEB_VERB_ICON = { Accept: 'check', Approve: 'check', Submit: 'check', Quote: 'edit', 'Confirm Quote': 'checkDouble', 'Place Order': 'cart', Ship: 'truck', Dispatch: 'truck', 'Confirm Receipt': 'checkDouble', 'Create Invoice': 'receipt', 'Confirm Invoice': 'checkDouble', 'Record Payment': 'receipt', Reject: 'close', Cancel: 'close', Close: 'close', Delete: 'trash', Print: 'print', Export: 'download', 'Re-receive': 'checkDouble', 'Replenish': 'truck', 'Terminate Receiving': 'close' };
+const WEB_VERB_ICON = { Accept: 'check', Approve: 'check', Submit: 'check', Quote: 'quote', 'Confirm Quote': 'confirm', 'Place Order': 'orders', Ship: 'stockOut', Dispatch: 'stockOut', 'Confirm Receipt': 'receive', 'Create Invoice': 'invoices', 'Confirm Invoice': 'confirm', 'Record Payment': 'invoices', Reject: 'close', Cancel: 'close', Close: 'close', Delete: 'trash', Print: 'print', Export: 'download', 'Re-receive': 'receive', 'Replenish': 'stockOut', 'Terminate Receiving': 'close' };
 
 // ---------- menus ----------
 const WEB_MENU = {
@@ -362,7 +362,7 @@ function ActionButtons({ doc, openDoc, size = 'sm', extraAction }) {
     <React.Fragment>
       <div className="row-actions">
         {actions.map(verb => (
-          <button key={verb} className={`btn sm text${['Confirm Receipt', 'Re-receive'].includes(verb) ? ' success-text' : ['Ship', 'Dispatch'].includes(verb) ? ' warning-text' : ['Delete', 'Cancel', 'Reject', 'Close', 'Terminate Receiving'].includes(verb) ? ' error-text' : ''}`} onClick={() => runVerb(verb)}><Icon name={WEB_VERB_ICON[verb] || 'check'} size={13} />{verb}</button>
+          <button key={verb} className={`btn sm text${['Confirm Receipt', 'Re-receive'].includes(verb) ? ' success-text' : ['Ship', 'Dispatch'].includes(verb) ? ' warning-text' : ['Delete', 'Cancel', 'Reject', 'Close', 'Terminate Receiving'].includes(verb) ? ' error-text' : ''}`} onClick={() => runVerb(verb)}><NavIcon name={WEB_VERB_ICON[verb] || 'check'} size={13} />{verb}</button>
         ))}
         {actions.length === 0 && (
           <span className="act-none" title="Read-only — platform accounts cannot operate">
@@ -512,16 +512,16 @@ function ProductListPage() {
           { key: 'act', label: 'Actions', width: isTenant && tab === 'channel' ? 200 : 360, render: p => isTenant && tab === 'channel' ? (
             <div className="row-actions">
               {/* 加入询价暂存：逐项累积（数量默认 1，可在暂存单内增减） */}
-              <button className="btn sm text" title={t('Add to Inquiry Staging')} onClick={() => { cartApi.add('inquiry', { pid: p.id, qty: 1 }); toast(`${p.name} added to the inquiry staging`, 'success'); }}><Icon name="cart" size={13} />{t('Add to Inquiry Staging')}</button>
-              <button className="btn sm text" onClick={() => setDialog('inquire:' + p.id)}><Icon name="edit" size={13} />Inquire</button>
+              <button className="btn sm text" title={t('Add to Inquiry Staging')} onClick={() => { cartApi.add('inquiry', { pid: p.id, qty: 1 }); toast(`${p.name} added to the inquiry staging`, 'success'); }}><NavIcon name="inquiry" size={13} />{t('Add to Inquiry Staging')}</button>
+              <button className="btn sm text" onClick={() => setDialog('inquire:' + p.id)}><NavIcon name="inquiry" size={13} />Inquire</button>
             </div>
           ) : canManageProduct(db, account, p) ? (
             <div className="row-actions">
               {/* 加入入库/出库暂存（与移动端同一套暂存数据） */}
-              <button className="btn sm text success-text" title={t('Add to Inbound Staging')} onClick={() => { cartApi.add('inbound', { kind: 'exist', pid: p.id, qty: 1 }); toast(`${p.name} added to the inbound staging`, 'success'); }}><Icon name="download" size={13} />{t('Stock In')}</button>
-              <button className="btn sm text warning-text" title={t('Add to Outbound Staging')} onClick={() => { cartApi.add('outbound', { pid: p.id, qty: 1 }); toast(`${p.name} added to the outbound staging`, 'success'); }}><Icon name="truck" size={13} />{t('Stock Out')}</button>
+              <button className="btn sm text success-text" title={t('Add to Inbound Staging')} onClick={() => { cartApi.add('inbound', { kind: 'exist', pid: p.id, qty: 1 }); toast(`${p.name} added to the inbound staging`, 'success'); }}><NavIcon name="stockIn" size={13} />{t('Stock In')}</button>
+              <button className="btn sm text warning-text" title={t('Add to Outbound Staging')} onClick={() => { cartApi.add('outbound', { pid: p.id, qty: 1 }); toast(`${p.name} added to the outbound staging`, 'success'); }}><NavIcon name="stockOut" size={13} />{t('Stock Out')}</button>
               <button className="btn sm text info" onClick={() => setDialog('edit:' + p.id)}><Icon name="edit" size={13} />Edit</button>
-              <button className="btn sm text info" onClick={() => setDialog('stock:' + p.id)}><Icon name="warehouse" size={13} />Adjust Stock</button>
+              <button className="btn sm text info" onClick={() => setDialog('stock:' + p.id)}><NavIcon name="myStock" size={13} />Adjust Stock</button>
               <button className="btn sm text info" onClick={() => setDialog('chain:' + p.id)}><Icon name="link" size={13} />View Stock</button>
               <button className="btn sm text error-text" onClick={() => setConfirmDel(p)}><Icon name="trash" size={13} />Delete</button>
             </div>

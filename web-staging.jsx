@@ -16,16 +16,16 @@ function WebStagingDialog({ onClose, onInquired }) {
   const { carts } = useApp();
   const [seg, setSeg] = useState(() => (carts.inquiry.length ? 'inquiry' : carts.inbound.length ? 'inbound' : 'outbound'));
   const mods = [
-    { id: 'inquiry', label: t('Inquiry Staging'), n: (carts.inquiry || []).length },
-    { id: 'inbound', label: t('Inbound Staging'), n: (carts.inbound || []).length },
-    { id: 'outbound', label: t('Outbound Staging'), n: (carts.outbound || []).length },
+    { id: 'inquiry', label: t('Inquiry Staging'), icon: 'inquiry', n: (carts.inquiry || []).length },
+    { id: 'inbound', label: t('Inbound Staging'), icon: 'stockIn', n: (carts.inbound || []).length },
+    { id: 'outbound', label: t('Outbound Staging'), icon: 'stockOut', n: (carts.outbound || []).length },
   ];
   return (
     <Dialog title={t('Staging')} width="880px" onClose={onClose}>
       <div className="segments" style={{ marginBottom: 16 }}>
         {mods.map(m => (
-          <button key={m.id} type="button" className={`segment${seg === m.id ? ' active' : ''}`} onClick={() => setSeg(m.id)}>
-            {m.label}{m.n > 0 ? ` (${m.n})` : ''}
+          <button key={m.id} type="button" className={`segment${seg === m.id ? ' active' : ''}`} onClick={() => setSeg(m.id)} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+            <NavIcon name={m.icon} size={13} />{m.label}{m.n > 0 ? ` (${m.n})` : ''}
           </button>
         ))}
       </div>
@@ -199,7 +199,7 @@ function WebInboundPanel({ onDone }) {
       <div className="flex" style={{ alignItems: 'center', gap: 12, marginTop: 4 }}>
         <div style={{ flex: 1 }} className="muted small">{t('Unit price × qty = stock-in amount')}</div>
         <button className="btn error-plain" onClick={() => { cartApi.clear('inbound'); toast('Inbound staging cleared', 'info'); }}><Icon name="trash" size={13} />{t('Clear')}</button>
-        <button className="btn success" onClick={confirm}><Icon name="download" size={13} />{t('Confirm Batch Stock In')}</button>
+        <button className="btn success" onClick={confirm}><NavIcon name="stockIn" size={13} />{t('Confirm Batch Stock In')}</button>
       </div>
       {supOpen && (
         <NewSupplierDialog onClose={() => setSupOpen(false)} onCreated={tn => { setSupOpen(false); setSupplier(tn.id); }} />
@@ -291,7 +291,7 @@ function WebOutboundPanel({ onDone }) {
       <div className="flex" style={{ alignItems: 'center', gap: 12, marginTop: 4 }}>
         <div style={{ flex: 1 }} className="muted small">{`${lines.length} items · ${totalQty} units`}</div>
         <button className="btn error-plain" onClick={() => { cartApi.clear('outbound'); toast('Outbound staging cleared', 'info'); }}><Icon name="trash" size={13} />{t('Clear')}</button>
-        <button className="btn warning" onClick={confirm}><Icon name="truck" size={13} />{t('Confirm Batch Outbound')}</button>
+        <button className="btn warning" onClick={confirm}><NavIcon name="stockOut" size={13} />{t('Confirm Batch Outbound')}</button>
       </div>
     </div>
   );

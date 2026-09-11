@@ -14,9 +14,9 @@
 // ============================================================
 
 const CART_MODULES = [
-  { id: 'inbound', label: 'Inbound', icon: 'download' },
-  { id: 'outbound', label: 'Outbound', icon: 'truck' },
-  { id: 'inquiry', label: 'Inquiry', icon: 'edit' },
+  { id: 'inbound', label: 'Inbound', icon: 'stockIn' },
+  { id: 'outbound', label: 'Outbound', icon: 'stockOut' },
+  { id: 'inquiry', label: 'Inquiry', icon: 'inquiry' },
 ];
 
 // 入库暂存每行可独立设置的币种（采购价 = 成本价；行金额按行币种显示）
@@ -241,7 +241,7 @@ function H5CartFab({ count, bottom, onClick }) {
       onPointerDown={onPointerDown} onPointerMove={onPointerMove}
       onPointerUp={endDrag} onPointerCancel={endDrag}
       title={t('Staging')} aria-label={t('Staging')}>
-      <Icon name="cart" size={20} />
+      <NavIcon name="staging" size={20} />
       <span className="cart-fab-badge">{count > 99 ? '99+' : count}</span>
     </button>
   );
@@ -252,7 +252,7 @@ function WebCartFab({ count, onClick }) {
   return (
     <button type="button" className="web-cart-fab" onClick={onClick}
       title={t('Staging')} aria-label={t('Staging')}>
-      <Icon name="cart" size={22} />
+      <NavIcon name="staging" size={22} />
       <span className="cart-fab-badge">{count > 99 ? '99+' : count}</span>
     </button>
   );
@@ -302,13 +302,13 @@ function H5CartSheet({ onClose, push }) {
       <div className="h5-cart-sheet" ref={sheetRef} onClick={e => e.stopPropagation()}>
         <div className="h5-cart-grip" />
         <div className="h5-cart-head">
-          <div className="h5-cart-title"><Icon name="cart" size={16} /><span>{t('Staging')}</span></div>
+          <div className="h5-cart-title"><NavIcon name="staging" size={16} /><span>{t('Staging')}</span></div>
           <button type="button" className="icon-btn" onClick={onClose} aria-label="Close"><Icon name="close" size={16} /></button>
         </div>
         <div className="h5-cart-segs">
           {CART_MODULES.map(m => (
             <button type="button" key={m.id} className={`h5-cart-seg${seg === m.id ? ' on' : ''}`} onClick={() => setSeg(m.id)}>
-              <Icon name={m.icon} size={13} />
+              <NavIcon name={m.icon} size={13} />
               <span>{t(m.label)}</span>
               {(carts[m.id] || []).length > 0 && <span className="h5-cart-seg-n">{carts[m.id].length}</span>}
             </button>
@@ -625,7 +625,7 @@ function InboundCartEditor({ onDone }) {
       {lines.length > 0 && (
         <div className="h5-act-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
           <button type="button" className="h5-btn plain error" onClick={() => { cartApi.clear('inbound'); toast('Inbound staging cleared', 'info'); }}><Icon name="trash" size={14} />{t('Clear')}</button>
-          <button type="button" className="h5-btn success" onClick={confirm}><Icon name="download" size={14} />{t('Confirm Stock In')}</button>
+          <button type="button" className="h5-btn success" onClick={confirm}><NavIcon name="stockIn" size={14} />{t('Confirm Stock In')}</button>
         </div>
       )}
     </div>
@@ -760,7 +760,7 @@ function OutboundCartEditor({ onDone }) {
       {lines.length > 0 && (
         <div className="h5-act-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
           <button type="button" className="h5-btn plain error" onClick={() => { cartApi.clear('outbound'); toast('Outbound staging cleared', 'info'); }}><Icon name="trash" size={14} />{t('Clear')}</button>
-          <button type="button" className="h5-btn warning" onClick={confirm}><Icon name="truck" size={14} />{t('Confirm Stock Out')}</button>
+          <button type="button" className="h5-btn warning" onClick={confirm}><NavIcon name="stockOut" size={14} />{t('Confirm Stock Out')}</button>
         </div>
       )}
     </div>

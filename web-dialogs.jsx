@@ -569,7 +569,7 @@ function ShipDialog({ po, onClose }) {
           if (Object.keys(errs).length) return;
           act.ship(po, w);
           onClose();
-        }}><Icon name="truck" size={13} />Confirm Shipment</button>
+        }}><NavIcon name="stockOut" size={13} />Confirm Shipment</button>
       </React.Fragment>}>
       <Banner tone="warning" icon="warehouse">Confirming shipment will: decrement your stock, generate outbound doc <b>CK-</b> and waybill, and push a WhatsApp confirmation link to the buyer.</Banner>
       <div className="form mt16">
@@ -735,7 +735,7 @@ function PayDialog({ po, onClose }) {
           act.docVerb('Record Payment', po, null, null, { amount, date, method, ref: ref.trim(), note: note.trim() });
           onClose();
           toast(`Payment recorded for ${po.no} — buyer notified, shipment unlocked`, 'success');
-        }}><Icon name="receipt" size={13} />Record Payment</button>
+        }}><NavIcon name="invoices" size={13} />Record Payment</button>
       </React.Fragment>}>
       <Banner tone="warning" icon="receipt">The buyer pays offline (bank transfer / cash). Recording the payment notifies the buyer and unlocks shipment arrangements.</Banner>
       <div className="form mt16">
@@ -841,7 +841,7 @@ function ReplenishDialog({ po, onClose }) {
           if (!any) { setErr('Enter at least one quantity to replenish'); return; }
           act.replenish(po, numQtys);
           onClose();
-        }}><Icon name="truck" size={13} />Confirm Replenishment</button>
+        }}><NavIcon name="stockOut" size={13} />Confirm Replenishment</button>
       </React.Fragment>}>
       <Banner tone="info" icon="truck">Append a follow-up shipment to make up the items that were not received previously.</Banner>
       <div className="section-label mt16">Shortfall Items</div>
@@ -1006,7 +1006,7 @@ function DocDetailDialog({ docId, onClose, onOpenDoc }) {
           <button className="btn" onClick={() => onOpenDoc && onOpenDoc(poFp.id)}><Icon name="eye" size={13} />View Invoice</button>
         )}
         {doc.type === 'PO' && shipCk && PO_SHIPPED_OR_LATER.includes(doc.status) && (
-          <button className="btn" onClick={() => onOpenDoc && onOpenDoc(shipCk.id)}><Icon name="truck" size={13} />View Outbound & Waybill</button>
+          <button className="btn" onClick={() => onOpenDoc && onOpenDoc(shipCk.id)}><NavIcon name="stockOut" size={13} />View Outbound &amp; Waybill</button>
         )}
         {/* R97 — outbound order detail supports print / export directly.
             R99j — when the doc ITSELF is the CK (opened directly from the
