@@ -225,7 +225,7 @@ function MobileApp() {
             {page.name === 'productNew' && <H5ProductFormPage onDone={back} />}
             {/* 扫码入库（合并版）：单入口支持连续识别/手动添加多条物料，
                 形成待入库清单（共享入库车），一次确认提交多条 IN 流水 */}
-            {page.name === 'scan' && <H5ScanPage onDone={back} />}
+            {page.name === 'scan' && <H5ScanPage onDone={back} initialMode={page.mode === 'out' ? 'outbound' : 'inbound'} />}
             {page.name === 'import' && <H5ImportPage onDone={back} />}
             {page.name === 'categories' && <H5CategoriesPage />}
             {page.name === 'stock' && <H5StockPage push={push} />}
@@ -380,44 +380,67 @@ function H5Home({ openDoc, push, platform, noPerm, setTab }) {
     };
   }).filter(x => x.n > 0);
 
-  const actions = isSupplier
-    ? [
-        ['To Quote', 'ai', 'var(--purple-light)', 'var(--purple)', () => openFirst(() => db.docs.find(d => d.type === 'IQ' && d.seller === account.tenantId && d.status === 'Submitted'), 'No inquiries awaiting your quote')],
-        ['Ship', 'warehouse', 'var(--primary-light)', 'var(--primary)', () => openFirst(() => db.docs.find(d => d.type === 'PO' && d.seller === account.tenantId && d.status === 'Pending Outbound' && d.paid), 'No orders awaiting shipment')],
-        ['Invoice', 'receipt', 'var(--warning-light)', 'var(--warning)', () => openFirst(() => db.docs.find(d => d.type === 'PO' && d.seller === account.tenantId && ['Received', 'Partially Received'].includes(d.status)), 'No received orders to invoice')],
-        ['Stock', 'box', 'var(--success-light)', 'var(--success)', () => push({ name: 'stock' })],
-      ]
-    : [
-        // R100e — buyer quick actions sorted by trade lifecycle
-        // 询价单 → 交易页签的询价单列表（ordersSeg='IQ'），与单据中心同源
-        ['Inquiry', 'edit', 'var(--primary-light)', 'var(--primary)', () => { ordersSeg = 'IQ'; ordersStatus = 'ALL'; setTab('orders'); }],
-        ['Quote', 'file', 'var(--purple-light)', 'var(--purple)', () => { ordersSeg = 'QT'; ordersStatus = 'ALL'; setTab('orders'); }],
-        ['To Confirm', 'checkDouble', 'var(--warning-light)', 'var(--warning)', () => { const qt = db.docs.find(d => d.type === 'QT' && d.buyer === account.tenantId && d.status === 'Sent'); qt ? openDoc(qt.id) : toast('No quotes awaiting your confirmation'); }],
-        ['Receive', 'check', 'var(--success-light)', 'var(--success)', () => { const ck = db.docs.find(d => d.type === 'CK' && d.buyer === account.tenantId && d.status === 'Shipped'); ck ? push({ name: 'receive', docId: ck.id }) : toast('No shipments awaiting receipt'); }],
-      ];
-
   // round 65 — quick access grid grounded in real routes (tabs + stack pages)
   const openProductsTab = (id) => { productsTab = id; setTab('products'); };
-  // R100e — Quick Access (功能导航) sorted: warehouse ops first, then trade
-  // docs in lifecycle order (Orders → Invoices), team last. New: Invoices
-  // deep-links to the Trade tab's FP segment.
+  // R115 — Quick Access (功能导航) rebuilt as a single flat nav:
+  // buyer = 13 entries in spec order (inquiry flow → warehouse ops → docs → team);
+  // supplier keeps their lifecycle actions on top of the shared tail (their old
+  // "Stock" action folds into the shared "My Stock"); platform keeps its 4 tiles.
+  // Icons share a fresh coordinated palette (light block bg + saturated fg)
+  // tuned to the #2979ff uView theme; entries flagged `true` (5th slot) are
+  // trade-lifecycle tiles hidden for fresh tenants without partners.
+  const NAV_C = {
+    inquiry: ['#EAF2FE', '#2979FF'],
+    stockIn: ['#E5F8EE', '#18A558'],
+    stockOut: ['#FFF2E2', '#EF8B00'],
+    confirm: ['#E5F6FB', '#12A5B4'],
+    receive: ['#F0F7E2', '#82B102'],
+    warehouse: ['#E9EDFF', '#5867CC'],
+    iqList: ['#EFEAFF', '#7C5CD6'],
+    quote: ['#F6EDFF', '#9C4DE0'],
+    orders: ['#E6ECFB', '#3D5AC8'],
+    invoices: ['#FFECEF', '#E5566D'],
+    myStock: ['#E3F8F4', '#0FA07E'],
+    movements: ['#EDF1F5', '#5A7296'],
+    team: ['#FFEBF3', '#D64C87'],
+    admin: ['#EDF1F5', '#5A7296'],
+  };
+  const navShared = [
+    ['Inquiry', 'edit', NAV_C.inquiry, () => openProductsTab('channel')],
+    ['Stock In', 'download', NAV_C.stockIn, () => push({ name: 'scan' })],
+    ['Stock Out', 'truck', NAV_C.stockOut, () => push({ name: 'scan', mode: 'out' })],
+    ['My Warehouse', 'warehouse', NAV_C.warehouse, () => openProductsTab('mine')],
+    ['Inquiry List', 'file', NAV_C.iqList, () => { ordersSeg = 'IQ'; ordersStatus = 'ALL'; setTab('orders'); }],
+    ['Orders', 'cart', NAV_C.orders, () => { ordersSeg = 'PO'; ordersStatus = 'ALL'; setTab('orders'); }],
+    ['Invoices', 'receipt', NAV_C.invoices, () => { ordersSeg = 'FP'; ordersStatus = 'ALL'; setTab('orders'); }],
+    ['My Stock', 'box', NAV_C.myStock, () => push({ name: 'stock' })],
+    ['Movements', 'swap', NAV_C.movements, () => push({ name: 'movements' })],
+    ['Team Members', 'users', NAV_C.team, () => push({ name: 'members' })],
+  ];
+  const tradeReady = !(isTenant && !hasPartners);
   const grid = platform
     ? [
-        ['My Warehouse', 'warehouse', 'var(--primary-light)', 'var(--primary)', () => setTab('products')],
-        // R99g — home quick access: 单据 → 订单 (with a cart icon), it lands on the Trade tab
-        ['Orders', 'cart', 'var(--purple-light)', 'var(--purple)', () => { ordersSeg = 'PO'; ordersStatus = 'ALL'; setTab('orders'); }],
-        ['Invoices', 'receipt', 'var(--warning-light)', 'var(--warning)', () => { ordersSeg = 'FP'; ordersStatus = 'ALL'; setTab('orders'); }],
-        ['Platform Admin', 'shield', 'var(--warning-light)', 'var(--warning)', () => push({ name: 'admin' })],
+        ['My Warehouse', 'warehouse', NAV_C.warehouse, () => setTab('products')],
+        ['Orders', 'cart', NAV_C.orders, () => { ordersSeg = 'PO'; ordersStatus = 'ALL'; setTab('orders'); }],
+        ['Invoices', 'receipt', NAV_C.invoices, () => { ordersSeg = 'FP'; ordersStatus = 'ALL'; setTab('orders'); }],
+        ['Platform Admin', 'shield', NAV_C.admin, () => push({ name: 'admin' })],
       ]
-    : [
-        ['My Warehouse', 'warehouse', 'var(--primary-light)', 'var(--primary)', () => openProductsTab('mine')],
-        ['Sourcing Channel', 'link', 'var(--purple-light)', 'var(--purple)', () => openProductsTab('channel')],
-        ['Stock', 'warehouse', 'var(--success-light)', 'var(--success)', () => push({ name: 'stock' })],
-        ['Movements', 'clock', 'var(--warning-light)', 'var(--warning)', () => push({ name: 'movements' })],
-        ['Orders', 'cart', 'var(--primary-light)', 'var(--primary)', () => { ordersSeg = 'PO'; ordersStatus = 'ALL'; setTab('orders'); }],
-        ['Invoices', 'receipt', 'var(--warning-light)', 'var(--warning)', () => { ordersSeg = 'FP'; ordersStatus = 'ALL'; setTab('orders'); }],
-        ['Team Members', 'users', 'var(--purple-light)', 'var(--purple)', () => push({ name: 'members' })],
-      ];
+    : (isSupplier
+      ? [
+          ['To Quote', 'ai', NAV_C.iqList, () => openFirst(() => db.docs.find(d => d.type === 'IQ' && d.seller === account.tenantId && d.status === 'Submitted'), 'No inquiries awaiting your quote'), true],
+          ['Ship', 'truck', NAV_C.stockOut, () => openFirst(() => db.docs.find(d => d.type === 'PO' && d.seller === account.tenantId && d.status === 'Pending Outbound' && d.paid), 'No orders awaiting shipment'), true],
+          ['Invoice', 'receipt', NAV_C.invoices, () => openFirst(() => db.docs.find(d => d.type === 'PO' && d.seller === account.tenantId && ['Received', 'Partially Received'].includes(d.status)), 'No received orders to invoice'), true],
+          ...navShared,
+        ]
+      : [
+          navShared[0], navShared[1], navShared[2],
+          ['To Confirm', 'checkDouble', NAV_C.confirm, () => { const qt = db.docs.find(d => d.type === 'QT' && d.buyer === account.tenantId && d.status === 'Sent'); qt ? openDoc(qt.id) : toast('No quotes awaiting your confirmation'); }, true],
+          ['Receive', 'check', NAV_C.receive, () => { const ck = db.docs.find(d => d.type === 'CK' && d.buyer === account.tenantId && d.status === 'Shipped'); ck ? push({ name: 'receive', docId: ck.id }) : toast('No shipments awaiting receipt'); }, true],
+          navShared[3], navShared[4],
+          ['Quote', 'tag', NAV_C.quote, () => { ordersSeg = 'QT'; ordersStatus = 'ALL'; setTab('orders'); }, true],
+          navShared[5], navShared[6], navShared[7], navShared[8], navShared[9],
+        ]
+      ).filter(x => tradeReady || !x[4]);
 
   // fix #22 — platform admin home: replace tenant-scoped blocks with platform-wide stats
   const platformStats = platform ? [
@@ -496,13 +519,7 @@ function H5Home({ openDoc, push, platform, noPerm, setTab }) {
         </div>
       )}
       <div className="h5-actions">
-        {!platform && !(isTenant && !hasPartners) && actions.map(([label, icon, bg, color, handler]) => (
-          <div key={'act-' + label} className="h5-action" onClick={handler}>
-            <span className="a-icon" style={{ background: bg, color }}><Icon name={icon} size={18} /></span>
-            <span className="a-label">{label}</span>
-          </div>
-        ))}
-        {grid.map(([label, icon, bg, color, handler]) => (
+        {grid.map(([label, icon, [bg, color], handler]) => (
           <div key={label} className="h5-action" onClick={handler}>
             <span className="a-icon" style={{ background: bg, color }}><Icon name={icon} size={18} /></span>
             <span className="a-label">{label}</span>

@@ -60,9 +60,9 @@ function H5ProductFormPage({ onDone }) {
 // 对应暂存单（入库暂存 / 出库暂存，跨页面保留），遵循既有 +1 规则与
 // 表单能力（入库含单价/币种/供货方，出库含收货方）。模式反馈：
 // segment 高亮 + 扫码框取景器随模式变色 + 每次扫码 toast 提示去向。
-function H5ScanPage({ onDone }) {
+function H5ScanPage({ onDone, initialMode = 'inbound' }) {
   const { db, account, toast, cartApi, carts } = useApp();
-  const [mode, setMode] = useState('inbound'); // 'inbound' | 'outbound'
+  const [mode, setMode] = useState(initialMode === 'outbound' ? 'outbound' : 'inbound'); // 'inbound' | 'outbound'
   const [manual, setManual] = useState('');
   const own = db.products.filter(p => p.ownerId === account.tenantId);
   const stockOf = pid => (db.stock[account.tenantId] || {})[pid] || 0;

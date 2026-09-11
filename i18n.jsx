@@ -884,6 +884,7 @@ const ZH = {
   'INBOUND RECORD': '入库记录',
   'SALES INVOICE': '销售发票',
   'Inquiry': '询价',
+  'Inquiry List': '询价单',
   'Quote': '报价单',
   'Loading': '加载中',
   'Invoice': '发票',
