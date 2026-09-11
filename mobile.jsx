@@ -320,10 +320,10 @@ function H5Confirm({ confirm, onClose }) {
           )}
         </div>
         <div style={{ display: 'flex' }}>
-          <button className="h5-btn" style={{ borderRadius: 0, border: 'none', borderRight: '1px solid #F0F2F5', height: 48 }} onClick={onClose}><Icon name="close" size={14} />Cancel</button>
+          <button className="h5-btn h5-dlg-btn" style={{ borderRadius: 0, border: 'none', borderRight: '1px solid #F0F2F5', height: 48 }} onClick={onClose}><Icon name="close" size={14} />Cancel</button>
           {requireText && step === 1
-            ? <button className="h5-btn" style={{ borderRadius: 0, border: 'none', height: 48, color: 'var(--danger)', fontWeight: 600 }} onClick={() => setStep(2)}><Icon name="chevronRight" size={14} />Continue</button>
-            : <button className="h5-btn primary" style={{ borderRadius: 0, border: 'none', height: 48, opacity: (requireText && typed !== requireText) || !reasonOk ? 0.5 : 1 }} disabled={(!!requireText && typed !== requireText) || !reasonOk} onClick={() => { confirm.onConfirm(needReason ? reasonText.trim() : undefined); onClose(); }}><Icon name="check" size={14} />{confirm.confirmText || 'Confirm'}</button>}
+            ? <button className="h5-btn h5-dlg-btn" style={{ borderRadius: 0, border: 'none', height: 48, color: 'var(--danger)', fontWeight: 600 }} onClick={() => setStep(2)}><Icon name="chevronRight" size={14} />Continue</button>
+            : <button className="h5-btn primary h5-dlg-btn" style={{ borderRadius: 0, border: 'none', height: 48, opacity: (requireText && typed !== requireText) || !reasonOk ? 0.5 : 1 }} disabled={(!!requireText && typed !== requireText) || !reasonOk} onClick={() => { confirm.onConfirm(needReason ? reasonText.trim() : undefined); onClose(); }}><Icon name="check" size={14} />{confirm.confirmText || 'Confirm'}</button>}
         </div>
       </div>
     </div>
@@ -1276,8 +1276,8 @@ function H5DocPage({ docId, push, setConfirm, platform, noPerm }) {
               <div className="mono" style={{ fontSize: 11, background: 'var(--bg)', borderRadius: 8, padding: '8px 10px', marginTop: 10, wordBreak: 'break-all' }}>{demoLink}</div>
             </div>
             <div style={{ display: 'flex' }}>
-              <button className="h5-btn" style={{ borderRadius: 0, border: 'none', borderRight: '1px solid #F0F2F5', height: 48 }} onClick={() => setLinkOpen(null)}><Icon name="close" size={14} />Close</button>
-              <button className="h5-btn primary" style={{ borderRadius: 0, border: 'none', height: 48 }} onClick={() => {
+              <button className="h5-btn h5-dlg-btn" style={{ borderRadius: 0, border: 'none', borderRight: '1px solid #F0F2F5', height: 48 }} onClick={() => setLinkOpen(null)}><Icon name="close" size={14} />Close</button>
+              <button className="h5-btn primary h5-dlg-btn" style={{ borderRadius: 0, border: 'none', height: 48 }} onClick={() => {
                 try { if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(demoLink).catch(function () { /* clipboard permission denied (common in embedded webviews); the URL is shown above */ }); } } catch (e) { /* clipboard API unavailable; the URL is shown above */ }
                 toast('Link copied — open in a new tab to preview the login-free view', 'success');
                 setLinkOpen(false);

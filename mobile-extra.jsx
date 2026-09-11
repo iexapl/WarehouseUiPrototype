@@ -531,7 +531,7 @@ function H5ExportSheet({ doc, onClose }) {
           ))}
         </div>
         <div style={{ padding: '0 12px 12px' }}>
-          <button className="h5-btn" style={{ width: '100%', height: 44, borderRadius: 10, justifyContent: 'center' }} onClick={onClose}><Icon name="close" size={14} />Cancel</button>
+          <button className="h5-btn h5-btn-lg" style={{ width: '100%', height: 44, borderRadius: 10, justifyContent: 'center' }} onClick={onClose}><Icon name="close" size={14} />Cancel</button>
         </div>
       </div>
     </div>

@@ -1693,3 +1693,60 @@ body:has(.mobile-stage) .toast {
 }
 .h5-app .h5-img-opt img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .h5-app .h5-img-opt.on { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(41, 121, 255, 0.15); }
+
+/* ============================================================
+   R105 — 移动端组件 uView 风格与尺寸规范化（size 档位统一）
+   尺寸档位令牌（.h5-app）：
+   - 输入 / 下拉：35px（u-input 标准高）· 4px 圆角
+   - 按钮：40px（u-button normal）· 48px 大档（h5-dlg-btn 对话框确认条 /
+     h5-btn-lg 整宽大按钮）· 30px 小档（单据卡 d-act）· 控件圆角统一 4px
+   - 步进器 32px（u-number-box）· 筛选 chips 28px · tag 22px · 表单 label 13px
+   历史内联散点高度（30/32/34/36/38/42/44/48）一律由本层 !important 归档；
+   卡片/面板 8px 圆角体系（R103）保持不变，本层只统一控件层。
+   ============================================================ */
+.h5-app {
+  --uv-ctrl: 35px;
+  --uv-btn: 40px;
+  --uv-btn-lg: 48px;
+  --uv-btn-sm: 30px;
+  --uv-radius: 4px;
+}
+
+/* ---------- 1. 输入 / 下拉：u-input 35px 档 · 4px 圆角 · 14px 字 ---------- */
+.h5-app .input, .h5-app .select {
+  height: var(--uv-ctrl) !important;
+  border-radius: var(--uv-radius) !important;
+  font-size: 14px;
+}
+.h5-app .h5-form-row .k { font-size: 13px; }
+
+/* ---------- 2. 按钮：u-button 40px 档 · 4px 圆角 · 实底主色 ---------- */
+.h5-app .h5-btn {
+  height: var(--uv-btn) !important;
+  border-radius: var(--uv-radius) !important;
+  font-size: 14px; font-weight: 500;
+  border-color: var(--border-light); color: var(--text-2);
+}
+.h5-app .h5-btn.primary { background: var(--primary) !important; border-color: var(--primary); box-shadow: none; font-weight: 600; }
+.h5-app .h5-btn.primary:active { background: var(--primary-dark) !important; box-shadow: none; }
+.h5-app .h5-btn.danger { border-color: var(--danger); color: var(--danger); }
+/* 吸底操作行（列表详情 / 暂存面板）：同 40px 档、13px 字 */
+.h5-app .h5-act-row .h5-btn { height: var(--uv-btn) !important; border-radius: var(--uv-radius) !important; font-size: 13px; }
+/* 对话框底部确认条（h5-dlg-btn，JSX 标注）：48px 大档、平角拼接 */
+.h5-app .h5-btn.h5-dlg-btn { height: var(--uv-btn-lg) !important; border-radius: 0 !important; }
+/* 整宽大按钮（h5-btn-lg，JSX 标注）：48px 大档 */
+.h5-app .h5-btn.h5-btn-lg { height: var(--uv-btn-lg) !important; }
+/* 单据卡 / 产品卡行内操作钮：30px 小档 */
+.h5-app .h5-doc .d-act { height: var(--uv-btn-sm); border-radius: var(--uv-radius); font-size: 12px; }
+.h5-app .h5-item-act { height: var(--uv-btn-sm); border-radius: var(--uv-radius); font-size: 12px; }
+
+/* ---------- 3. 移动端里复用的 Web 按钮（.btn）：并入 35px 控件档 ---------- */
+.h5-app .btn { height: var(--uv-ctrl) !important; border-radius: var(--uv-radius) !important; }
+.h5-app .btn.sm { height: var(--uv-btn-sm) !important; }
+.h5-app .btn.primary { background: var(--primary) !important; border-color: var(--primary); }
+
+/* ---------- 4. 步进器 / chips / 单选多选：uView 尺寸 ---------- */
+.h5-app .h5-stepper { border-radius: var(--uv-radius); }
+.h5-app .h5-chip { height: 28px; padding: 0 12px; border-radius: var(--uv-radius); font-size: 12px; }
+.h5-app .radio-dot { width: 16px; height: 16px; }
+.h5-app .checkbox { width: 16px; height: 16px; border-radius: 3px; }
