@@ -2133,7 +2133,7 @@ function getLang() { return _lang; }
 function LangSwitch({ mobile }) {
   const label = _lang === 'zh' ? 'EN' : '中';
   const style = mobile
-    ? { display:'inline-flex', alignItems:'center', justifyContent:'center', width:32, height:32, borderRadius:8, background:'#F0F2F5', color:'var(--text-2)', fontSize:13, fontWeight:600, cursor:'pointer', border:'1px solid var(--border)', flexShrink:0 }
+    ? { display:'inline-flex', alignItems:'center', justifyContent:'center', width:32, height:32, borderRadius:4, background:'#F0F2F5', color:'var(--text-2)', fontSize:13, fontWeight:600, cursor:'pointer', border:'1px solid var(--border)', flexShrink:0 }
     : { display:'inline-flex', alignItems:'center', justifyContent:'center', width:30, height:30, borderRadius:6, background:'#F0F2F5', color:'var(--text-2)', fontSize:12, fontWeight:600, cursor:'pointer', border:'1px solid var(--border)', flexShrink:0 };
   return (
     <span style={style} onClick={() => { const next = _lang === 'zh' ? 'en' : 'zh'; if (window.__setLang) window.__setLang(next); else { setLang(next); window.location.reload(); } }}
