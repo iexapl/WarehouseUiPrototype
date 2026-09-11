@@ -1967,3 +1967,38 @@ body:has(.mobile-stage) .toast {
 /* ---------- 6. 币种前置控件（价格表单项：币种在前） ---------- */
 .input-group .input-prefix { position: absolute; left: 10px; font-size: 12px; font-weight: 600; color: var(--text-3); pointer-events: none; }
 .input-group .input-prefix + input.input { padding-left: 38px; }
+
+/* ============================================================
+   R109 — 移动端按钮 round 圆角胶囊（全部按钮统一 height/2 胶囊）
+   覆盖：主按钮 40px→20px 圆角 · 48px 大档（h5-btn-lg / 对话框
+   确认条 h5-dlg-btn）→24px · 30px 小档（d-act / h5-item-act /
+   btn.sm）→15px · 35px 复用 Web 按钮（.btn）→17.5px · 28px
+   chips 操作块（h5-chip 类目多选/导入步骤/调库存模式）→14px ·
+   筛选切换 · 输入后缀钮 · 顶栏/工具图标钮（圆形）· 上传按钮 ·
+   wa-chip · tl-more · 折叠头。统一用 999px 胶囊实现（视觉等于
+   height/2）。R105 尺寸档位与 R108 type 语义着色保持不变。
+   不改：页签/分段控件（h5-tab / h5-segment / h5-cart-seg，
+   非按钮）· 步进器（输入控件）· Web 控制台（.console 作用域）。
+   ============================================================ */
+.h5-app .h5-btn { border-radius: 999px !important; }
+.h5-app .h5-act-row .h5-btn { border-radius: 999px !important; }
+.h5-app .h5-btn.h5-btn-lg { border-radius: 999px !important; }
+.h5-app .h5-btn.h5-dlg-btn { border-radius: 999px !important; }
+.h5-app .h5-doc .d-act, .h5-app .h5-item-act { border-radius: 999px; }
+.h5-app .btn { border-radius: 999px !important; }
+.h5-app .h5-chip { border-radius: 999px; }
+.h5-app .h5-filter-toggle { border-radius: 999px; }
+.h5-app .h5-input-suffix { border-radius: 999px; }
+.h5-app .h5-topbar-btn { border-radius: 999px; }
+.h5-app .h5-headtool { border-radius: 999px; }
+.h5-app .icon-btn { border-radius: 999px; }
+.h5-app .tl-more { border-radius: 999px; }
+.h5-app .h5-upload-add, .h5-app .h5-upload-re { border-radius: 999px; }
+.h5-app .h5-collapse-head { border-radius: 999px; }
+.h5-app .wa-chip { border-radius: 999px; }
+/* R109 补充：类目多选点选块（h5-catsel-item）胶囊；步进器恢复胶囊容器
+   （原最初版即 16px 胶囊，内 +/− 钮随容器 overflow 裁切）；
+   图片预设缩略块 h5-img-opt 为图像瓦片非按钮，保持 6px 微圆角 */
+.h5-app .h5-catsel-item { border-radius: 999px; }
+.h5-app .h5-stepper { border-radius: 999px; }
+.h5-app .h5-stepper button { border-radius: 999px; }
