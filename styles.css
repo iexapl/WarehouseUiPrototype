@@ -1901,6 +1901,9 @@ body:has(.mobile-stage) .toast {
 .h5-card + .h5-card { margin-top: var(--sp-base); }
 .h5-cell + .h5-cell { margin-top: var(--sp-base); }
 .h5-app .h5-form-row { padding: 8px 0; }
+
+/* R114 — 扫码页手动录入行标签宽度收缩为文本宽度（不占 96px 固定列） */
+.h5-app .h5-form-row .k.h5-k-fit { width: auto; flex: 0 0 auto; }
 .form-row { gap: var(--sp-compact); }
 .h5-desc-row .k, .h5-desc-row .v { padding-top: 12px; padding-bottom: 12px; }
 .h5-doc .d-acts { gap: var(--sp-compact); margin-top: var(--sp-compact); padding-top: var(--sp-compact); }

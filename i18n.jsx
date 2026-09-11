@@ -497,7 +497,7 @@ const ZH = {
   'Enter an inbound quantity > 0': '请输入大于 0 的入库数量',
   'Enter a barcode / model first': '请先输入条码 / 型号',
   // ---- R99w scan page manual entry (fuzzy search) ----
-  'Manual Entry': '手动录入',
+  'Material Barcode': '物料条码',
   'Barcode / product code / name': '条码 / 物料编码 / 物料名称',
   'Enter a barcode / product code / name first': '请先输入条码 / 物料编码 / 物料名称',
   'Multiple matches — pick one to stock in': '匹配到多条物料——请点选要入库的物料',

@@ -132,7 +132,7 @@ function H5ScanPage({ onDone }) {
               one joins the list as a new-product line */}
           <div className="h5-card mt12">
             <div className="h5-form-row" style={{ marginBottom: 0 }}>
-              <span className="k">{t('Manual Entry')}</span>
+              <span className="k h5-k-fit">{t('Material Barcode')}</span>
               <div className="h5-input-affix">
                 <input className="input" style={{ height: 34, paddingRight: 64 }} value={manual}
                   onChange={e => setManual(e.target.value)}
