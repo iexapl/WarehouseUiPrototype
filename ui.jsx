@@ -368,7 +368,7 @@ function CropModal({ src, onApply, onClose, title }) {
         </div>
         <div className="crop-foot">
           <span className="muted crop-foot-hint" style={{ fontSize: 11.5 }}>{t(lockR ? 'Ratio locked — frame keeps the selected ratio' : 'Free — drag frame or corners to crop')}</span>
-          <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+          <div style={{ display: 'flex', gap: 8, flexShrink: 0, marginLeft: 'auto' }}>
             <button type="button" className="btn" onClick={onClose}>{t('Cancel')}</button>
             <button type="button" className="btn primary" onClick={apply} disabled={!box}>{t('Apply')}</button>
           </div>
