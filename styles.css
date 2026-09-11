@@ -2051,3 +2051,18 @@ body:has(.mobile-stage) .toast {
   background: none; -webkit-mask-image: none; mask-image: none;
   pointer-events: none;
 }
+
+/* ============================================================
+   R111 — 上传图片组件恢复圆角矩形（R109 胶囊化例外）
+   ------------------------------------------------------------
+   新物料折叠区 u-upload 组件恢复 uView 方卡形态：
+   相机占位卡（.h5-upload-add）与上传后缩略图（.h5-upload-thumb
+   img）均 8px 圆角；「裁剪图片」底部遮罩随缩略图 0 0 8px 8px；
+   「重新上传」按钮（.h5-upload-re）恢复小圆角矩形；角标删除钮
+   （.h5-upload-del）保留 18px 圆形小浮钮（视觉协调）。
+   其余移动端按钮仍维持 R109 999px 胶囊，不改尺寸/布局硬约束。
+   ============================================================ */
+.h5-app .h5-upload-add { border-radius: 8px !important; }
+.h5-app .h5-upload-thumb img { border-radius: 8px; }
+.h5-app .h5-upload-edit { border-radius: 0 0 8px 8px; }
+.h5-app .h5-upload-re { border-radius: 8px !important; }
