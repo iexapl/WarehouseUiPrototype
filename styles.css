@@ -1852,7 +1852,11 @@ body:has(.mobile-stage) .toast {
 }
 .h5-app .crop-card { width: min(92vw, 400px); }
 .h5-app .crop-stage { max-height: 40vh; }
-.h5-app .crop-foot { flex-wrap: wrap; }
+/* R113 — 取消 R104 的 wrap：裁剪面板底栏文本与按钮同一水平线
+   （文本左 flex:1 可换行，按钮组右 nowrap 不挤压） */
+.h5-app .crop-foot { flex-wrap: nowrap; }
+.h5-app .crop-foot-hint { flex: 1 1 auto; min-width: 0; white-space: normal; word-break: break-word; }
+.h5-app .crop-foot > div:last-child { flex-wrap: nowrap; }
 
 /* ---------- 5. 蓝底按钮统一白字（需求兜底声明） ---------- */
 .h5-app .h5-btn.primary,
