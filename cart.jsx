@@ -19,8 +19,11 @@ const CART_MODULES = [
   { id: 'outbound', label: 'Outbound', icon: 'truck' },
 ];
 
-// 入库暂存每行可独立设置的币种（单价 = 成本价；行金额按行币种显示）
+// 入库暂存每行可独立设置的币种（采购价 = 成本价；行金额按行币种显示）
 const CURRENCIES = ['USD', 'EUR', 'NGN', 'CNY', 'GBP'];
+
+// R104 — 新物料快速档案的预设图片（演示用途：复用商品图库）
+const NEW_PROD_IMGS = ['inv', 'bat', 'led', 'pan', 'ctl', 'kit', 'pole', 'fan'].map(k => ({ key: k, src: IMG[k] }));
 
 function emptyCarts() { return { inquiry: [], inbound: [], outbound: [] }; }
 
@@ -400,14 +403,14 @@ function InboundCartEditor({ onDone }) {
                 </div>
                 <span className="h5-back" title={t('Remove')} onClick={() => cartApi.removeAt('inbound', i)} style={{ color: 'var(--danger)' }}><Icon name="trash" size={16} /></span>
               </div>
-            {/* 物料单价（默认参考价/渠道价，可改）+ 独立币种 → 行金额 = 单价 × 数量；单价在前、数量在后 */}
+            {/* 采购价（默认参考价/渠道价，可改）+ 独立币种 → 行金额 = 采购价 × 数量；采购价在前、数量在后 */}
               <div className="flex mt8" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
-                <span className="muted" style={{ fontSize: 11.5 }}>{t('Unit Price')}</span>
+                <span className="muted" style={{ fontSize: 11.5 }}>{t('Purchase Price')}</span>
                 <span className="flex" style={{ alignItems: 'center', gap: 6 }}>
                   <Select value={lineCur(l, p)} onChange={v => cartApi.setField('inbound', i, 'currency', v)}
                     options={CURRENCIES.map(c => ({ value: c, label: c }))} style={{ height: 30, width: 82 }} />
                   <input className="input mono" style={{ height: 30, width: 92, textAlign: 'right' }} type="number" min="0" step="0.01"
-                    value={ifnull(l.unitPrice, 0)} aria-label={t('Unit Price')} onChange={e => cartApi.setField('inbound', i, 'unitPrice', e.target.value)} />
+                    value={ifnull(l.unitPrice, 0)} aria-label={t('Purchase Price')} onChange={e => cartApi.setField('inbound', i, 'unitPrice', e.target.value)} />
                 </span>
               </div>
             <div className="flex mt8" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
@@ -431,9 +434,44 @@ function InboundCartEditor({ onDone }) {
               </div>
               <span className="h5-back" title={t('Remove')} onClick={() => cartApi.removeAt('inbound', i)} style={{ color: 'var(--danger)' }}><Icon name="trash" size={16} /></span>
             </div>
+            {/* R104 — 物料详情：图片/型号/品牌/规格/分类，默认折叠可展开（仅本卡），uView u-collapse 风格 */}
+            <div className={'h5-collapse' + (l.detailOpen ? ' open' : '')}>
+              <button type="button" className="h5-collapse-head" aria-expanded={!!l.detailOpen}
+                onClick={() => cartApi.setField('inbound', i, 'detailOpen', !l.detailOpen)}>
+                <span className="h5-collapse-title">{t('Material Details')}</span>
+                <span className="h5-collapse-chev"><Icon name="chevronDown" size={14} /></span>
+              </button>
+              <div className="h5-collapse-body">
+                <div className="h5-form-row" style={{ padding: '2px 0 7px' }}><span className="k">{t('Image')}</span>
+                  <div className="flex" style={{ flex: 1, gap: 6, flexWrap: 'wrap' }}>
+                    {NEW_PROD_IMGS.map(im => (
+                      <button key={im.key} type="button" className={'h5-img-opt' + (l.image === im.src ? ' on' : '')}
+                        title={t('Preset icon — click to add')} onClick={() => cartApi.setField('inbound', i, 'image', l.image === im.src ? '' : im.src)}>
+                        <img src={im.src} alt={im.key} />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="h5-form-row" style={{ marginBottom: 0 }}><span className="k">{t('Model')}</span>
+                  <div style={{ flex: 1 }}><input className="input" style={{ height: 32, width: '100%' }} value={ifnull(l.model, '')} onChange={e => cartApi.setField('inbound', i, 'model', e.target.value)} placeholder={String(l.code || '')} /></div>
+                </div>
+                <div className="h5-form-row" style={{ marginBottom: 0 }}><span className="k">{t('Brand')}</span>
+                  <div style={{ flex: 1 }}><input className="input" style={{ height: 32, width: '100%' }} value={ifnull(l.brand, '')} onChange={e => cartApi.setField('inbound', i, 'brand', e.target.value)} /></div>
+                </div>
+                <div className="h5-form-row" style={{ marginBottom: 0 }}><span className="k">{t('Spec')}</span>
+                  <div style={{ flex: 1 }}><input className="input" style={{ height: 32, width: '100%' }} value={ifnull(l.spec, '')} onChange={e => cartApi.setField('inbound', i, 'spec', e.target.value)} /></div>
+                </div>
+                <div className="h5-form-row" style={{ marginBottom: 0 }}><span className="k">{t('Category')}</span>
+                  <div style={{ flex: 1 }}>
+                    <input className="input" style={{ height: 32, width: '100%' }} list="h5-newcat-list" value={ifnull(l.category, '')} onChange={e => cartApi.setField('inbound', i, 'category', e.target.value)} placeholder={t('e.g. Solar Inverters')} />
+                    <datalist id="h5-newcat-list">{(db.categories || []).map(c => <option key={c.id} value={c.name} />)}</datalist>
+                  </div>
+                </div>
+              </div>
+            </div>
             <div className="h5-form-row mt8" style={{ marginBottom: 0 }}><span className="k">{t('Name')} *</span><div style={{ flex: 1 }}><input className="input" style={{ height: 32, width: '100%' }} value={l.name} onChange={e => cartApi.setField('inbound', i, 'name', e.target.value)} placeholder={t('e.g. Solar Inverter 5kW')} /></div></div>
             <div className="h5-form-row" style={{ marginBottom: 0 }}><span className="k">{t('Unit')}</span><div style={{ flex: 1 }}><Select value={l.unit} onChange={v => cartApi.setField('inbound', i, 'unit', v)} options={['pcs', 'set', 'box', 'kg'].map(u => ({ value: u, label: u }))} style={{ height: 32 }} /></div></div>
-            <div className="h5-form-row" style={{ marginBottom: 0 }}><span className="k">{t('Price')}</span>
+            <div className="h5-form-row" style={{ marginBottom: 0 }}><span className="k">{t('Purchase Price')}</span>
               <div style={{ flex: 1, display: 'flex', gap: 8 }}>
                 <Select value={l.currency || 'USD'} onChange={v => cartApi.setField('inbound', i, 'currency', v)}
                   options={CURRENCIES.map(c => ({ value: c, label: c }))} style={{ height: 32, width: 84 }} />

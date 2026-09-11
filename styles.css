@@ -1662,3 +1662,34 @@ body:has(.mobile-stage) .toast {
 .h5-app .banner { border-radius: 8px; }
 .h5-app .ai-box { border-radius: 8px; }
 .h5-app :focus-visible { outline: 2px solid rgba(41, 121, 255, 0.5); outline-offset: 1px; }
+
+/* ============================================================
+   R104 — 新物料属性折叠区（入库暂存 quick-profile 卡）
+   uView u-collapse 风格：折叠头文字+chevron 箭头，展开旋转 180°；
+   展开/收起 180ms 过渡；字段用 u-input 细边框风；图片缩图选中主色描边。
+   ============================================================ */
+.h5-app .h5-collapse { border: 1px solid var(--border-light); border-radius: 6px; margin-top: 8px; background: #fff; }
+.h5-app .h5-collapse-head {
+  display: flex; align-items: center; gap: 4px; width: 100%;
+  padding: 8px 10px; background: none; border: none; cursor: pointer;
+  font-family: inherit; font-size: 12px; font-weight: 600; color: var(--text-2);
+  transition: color 0.16s;
+}
+.h5-app .h5-collapse-head:active { color: var(--primary); }
+.h5-app .h5-collapse-title { flex: 1; text-align: left; }
+.h5-app .h5-collapse-chev { display: flex; align-items: center; color: var(--text-3); transition: transform 0.18s ease; }
+.h5-app .h5-collapse.open .h5-collapse-chev { transform: rotate(180deg); }
+.h5-app .h5-collapse-body {
+  max-height: 0; overflow: hidden; opacity: 0;
+  transition: max-height 0.18s ease, opacity 0.18s ease, padding-bottom 0.18s ease;
+  padding: 0 10px;
+}
+.h5-app .h5-collapse.open .h5-collapse-body { max-height: 440px; opacity: 1; padding-bottom: 8px; }
+/* 预设图片缩图（演示）：选中主色描边 + 轻焦点环 */
+.h5-app .h5-img-opt {
+  width: 38px; height: 38px; border-radius: 6px; overflow: hidden; padding: 0;
+  border: 1.5px solid var(--border-light); background: #fff; cursor: pointer;
+  transition: border-color 0.16s, box-shadow 0.16s;
+}
+.h5-app .h5-img-opt img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.h5-app .h5-img-opt.on { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(41, 121, 255, 0.15); }
