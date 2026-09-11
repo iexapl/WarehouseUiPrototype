@@ -2083,7 +2083,8 @@ body:has(.mobile-stage) .toast {
    红底白字（未处理数量语义），激活态改半透明白底白字保持可读。
    仅覆盖视觉，不触碰面板测高/632 封顶/吸底双钮结构。
    ============================================================ */
-.h5-app .h5-cart-segs { background: #fff; border-radius: 9px; padding: 3px; gap: 6px; margin: 8px 12px 6px; border-bottom: none; }
+/* R120 — 页签容器背景与面板 body/主页画布同色 #f5f6f8；普通页签透明底深字、激活 #2979ff 蓝底白字在灰底上均清晰可辨 */
+.h5-app .h5-cart-segs { background: #f5f6f8; border-radius: 9px; padding: 3px; gap: 6px; margin: 8px 12px 6px; border-bottom: none; }
 .h5-app .h5-cart-seg {
   border-radius: 7px; border-bottom: none; margin-bottom: 0; height: 30px;
   background: transparent; color: var(--text-2); font-weight: 500; padding: 0 6px; gap: 4px;
