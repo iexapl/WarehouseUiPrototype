@@ -18,6 +18,7 @@ const ICON_PATHS = {
   search: 'M11 19a8 8 0 100-16 8 8 0 000 16z M21 21l-4.35-4.35',
   plus: 'M12 5v14 M5 12h14',
   minus: 'M5 12h14',
+  camera: 'M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2v11z M12 17.5a3.5 3.5 0 100-7 3.5 3.5 0 000 7z',
   close: 'M18 6L6 18 M6 6l12 12',
   check: 'M20 6L9 17l-5-5',
   checkDouble: 'M22 11.1V12a10 10 0 11-5.9-9.1 M22 4L12 14l-3-3 M16 4l-6 6',
@@ -180,7 +181,7 @@ const CROP_RATIOS = [
   { key: '3:4', label: '3:4', r: 3 / 4 },
   { key: '16:9', label: '16:9', r: 16 / 9 },
 ];
-function CropModal({ src, onApply, onClose }) {
+function CropModal({ src, onApply, onClose, title }) {
   const [ratioKey, setRatioKey] = React.useState('free');
   const [box, setBox] = React.useState(null);        // {x,y,w,h} px in display space
   const [imgSize, setImgSize] = React.useState(null); // {w,h} displayed image size
@@ -192,6 +193,8 @@ function CropModal({ src, onApply, onClose }) {
   const [rot, setRot] = React.useState(0);            // 0 | 90 | 180 | 270 (clockwise)
   const [fx, setFx] = React.useState(false);          // flip horizontal
   const [fy, setFy] = React.useState(false);          // flip vertical
+  // R107 — zoom: baked into the working image (same quality-safe pipeline as rot/flip)
+  const [zoom, setZoom] = React.useState(1);
   const imgRef = React.useRef(null);
   const baseRef = React.useRef(null);
   React.useEffect(() => {
@@ -203,10 +206,11 @@ function CropModal({ src, onApply, onClose }) {
   const MIN = 32;
 
   // bake the full transform (from the pristine original) into a new data URL
-  const bake = (nrot, nfx, nfy) => {
+  const bake = (nrot, nfx, nfy, z) => {
     const base = baseRef.current;
     if (!base || !base.naturalWidth) return null;
-    const nw = base.naturalWidth, nh = base.naturalHeight;
+    const scale = z || 1;
+    const nw = Math.max(1, Math.round(base.naturalWidth * scale)), nh = Math.max(1, Math.round(base.naturalHeight * scale));
     const swap = nrot === 90 || nrot === 270;
     const c = document.createElement('canvas');
     c.width = swap ? nh : nw; c.height = swap ? nw : nh;
@@ -218,14 +222,23 @@ function CropModal({ src, onApply, onClose }) {
     return c.toDataURL('image/png');
   };
   const doTransform = (nrot, nfx, nfy) => {
-    const url = bake(nrot, nfx, nfy);
+    const url = bake(nrot, nfx, nfy, zoom);
     if (!url) return;
     setRot(nrot); setFx(nfx); setFy(nfy);
     setWork(url);
     setBox(null); // crop box is rebuilt with fresh geometry on image load
   };
+  const doZoom = (z) => {
+    const clamped = Math.max(1, Math.min(3, Math.round(z * 100) / 100));
+    if (clamped === zoom) return;
+    const url = bake(rot, fx, fy, clamped);
+    if (!url) return;
+    setZoom(clamped);
+    setWork(url);
+    setBox(null);
+  };
   const resetTransform = () => {
-    setRot(0); setFx(false); setFy(false);
+    setRot(0); setFx(false); setFy(false); setZoom(1);
     setWork(src);
     setBox(null);
   };
@@ -310,7 +323,7 @@ function CropModal({ src, onApply, onClose }) {
     <div className="crop-mask" onMouseDown={e => { if (e.target === e.currentTarget) onClose && onClose(); }}>
       <div className="crop-card">
         <div className="crop-body">
-          <div className="crop-title">{t('Crop Main Image')}</div>
+          <div className="crop-title">{title || t('Crop Image')}</div>
           <div className="crop-stage">
           <div className="crop-frame">
             <img ref={imgRef} src={work} alt="" draggable={false} onLoad={onImgLoad} />
@@ -339,10 +352,17 @@ function CropModal({ src, onApply, onClose }) {
           <span className="crop-chip" title={t('Rotate right')} onClick={() => doTransform((rot + 90) % 360, fx, fy)}><Icon name="rotateR" size={13} /></span>
           <span className="crop-chip" title={t('Flip horizontal')} onClick={() => doTransform(rot, !fx, fy)}><Icon name="flipH" size={13} /></span>
           <span className="crop-chip" title={t('Flip vertical')} onClick={() => doTransform(rot, fx, !fy)}><Icon name="flipV" size={13} /></span>
-          {(rot !== 0 || fx || fy) && (
+          {(rot !== 0 || fx || fy || zoom !== 1) && (
             <span className="crop-chip" title={t('Reset rotation and flip')} onClick={resetTransform}>{t('Reset')}</span>
           )}
-          <span className="muted" style={{ fontSize: 11 }}>{rot}°{fx ? ' · H' : ''}{fy ? ' · V' : ''}</span>
+          <span className="muted" style={{ fontSize: 11 }}>{rot}°{fx ? ' · H' : ''}{fy ? ' · V' : ''}{zoom !== 1 ? ' · ' + Math.round(zoom * 100) + '%' : ''}</span>
+        </div>
+        <div className="crop-ratios" style={{ marginTop: 2 }}>
+          <span className="crop-rlabel">{t('Zoom')}</span>
+          <span className="crop-chip" title="-25%" onClick={() => doZoom(zoom - 0.25)}><Icon name="minus" size={13} /></span>
+          <input className="crop-zoom" type="range" min="100" max="300" step="5" value={Math.round(zoom * 100)}
+            onChange={e => doZoom(Number(e.target.value) / 100)} aria-label={t('Zoom')} />
+          <span className="crop-chip" title="+25%" onClick={() => doZoom(zoom + 0.25)}><Icon name="plus" size={13} /></span>
         </div>
         </div>
         <div className="crop-foot">
@@ -366,7 +386,7 @@ function ProductImagePicker({ value, onChange, maxCount = 10 }) {
   const [preview, setPreview] = React.useState(-1);
   const [hint, setHint] = React.useState('');
   const [drag, setDrag] = React.useState(null); // { idx, x, y, rx, ry, src }
-  const [cropOpen, setCropOpen] = React.useState(false);
+  const [cropIdx, setCropIdx] = React.useState(-1); // R107 — every image is croppable
   const itemRefs = React.useRef([]);
   const rootRef = React.useRef(null);
   const files = Array.isArray(value) ? value : [];
@@ -433,13 +453,12 @@ function ProductImagePicker({ value, onChange, maxCount = 10 }) {
               onPointerMove={onHandleMove}
               onPointerUp={onHandleUp}
               onPointerCancel={onHandleUp}>⣿</span>
-            {i === 0 && <span className="uupload-crop" title={t('Crop main image')} onClick={() => setCropOpen(true)}>✂</span>}
+            <span className="uupload-crop" title={t('Crop image')} onClick={() => setCropIdx(i)}>✂</span>
           </div>
         ))}
         {files.length < maxCount && (
-          <div className="uupload-add" onClick={() => fileRef.current.click()}>
-            <Icon name="upload" size={18} />
-            <span>{t('Upload Image')}</span>
+          <div className="uupload-add" onClick={() => fileRef.current.click()} title={t('Upload Image')} aria-label={t('Upload Image')}>
+            <span className="uupload-plus"><Icon name="plus" size={20} /></span>
           </div>
         )}
         <input ref={fileRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={onFile} />
@@ -450,11 +469,11 @@ function ProductImagePicker({ value, onChange, maxCount = 10 }) {
           <img src={drag.src} alt="" draggable={false} />
         </div>
       )}
-      {cropOpen && files[0] && (
+      {cropIdx > -1 && files[cropIdx] && (
         <CropModal
-          src={files[0]}
-          onApply={du => { onChange([du].concat(files.slice(1))); setCropOpen(false); }}
-          onClose={() => setCropOpen(false)} />
+          src={files[cropIdx]}
+          onApply={du => { onChange(files.map((f, j) => (j === cropIdx ? du : f))); setCropIdx(-1); }}
+          onClose={() => setCropIdx(-1)} />
       )}
       <div className="pimg-presets">
         {['inv', 'bat', 'led', 'pan', 'ctl', 'kit', 'pole', 'fan'].map(k => (
@@ -817,6 +836,7 @@ function H5FilterBar({ open, onToggle, activeCount, onReset, left, tools, fields
 
 Object.assign(window, {
   Icon, Logo, AppCtx, useApp, Tag, StatusTag, TenantTag, Money, Input, Textarea, Select, SearchBox, Switch,
+  CropModal, ProductImagePicker,
   RadioRow, Checkbox, FormRow, Dialog, ConfirmDialog, Table, Pagination, EmptyState, Descriptions, Banner,
   Timeline, useSkeleton, Dropdown, DownstreamStockTree, H5FilterBar,
 });

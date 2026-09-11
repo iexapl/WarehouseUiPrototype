@@ -576,12 +576,11 @@ function App() {
         const newMoves = lines.map(ln => {
           let pid = ln.pid;
           if (ln.kind === 'new') {
-            // R104 — quick profile 物料详情（扫码页折叠区可设）：型号默认扫码码号，
-            // 分类存名字→建档时映射既有分类 id（未匹配则不归类）
+            // R104 — quick profile 物料详情（折叠区可设）：型号默认扫码码号；
+            // R107 — 类目改点选多选（ln.categories 存分类 id 数组），建档时映射既有分类
             pid = 'p-' + Date.now() + Math.random().toString(36).slice(2, 5);
-            const catName = String(ln.category || '').trim();
-            const catHit = catName ? db.categories.find(c => c.name.toLowerCase() === catName.toLowerCase()) : null;
-            newProducts.push({ id: pid, ownerId: tid, name: String(ln.name).trim(), spec: String(ln.spec || '').trim(), model: String(ln.model || '').trim() || String(ln.code || '').trim(), brand: String(ln.brand || '').trim(), unit: ln.unit || 'pcs', price: Number(ln.price) || 0, currency: ln.currency || 'USD', image: ln.image || '', images: [], categories: catHit ? [catHit.id] : [], onSale: true });
+            const cats = (Array.isArray(ln.categories) ? ln.categories : []).filter(id => db.categories.some(c => c.id === id));
+            newProducts.push({ id: pid, ownerId: tid, name: String(ln.name).trim(), spec: String(ln.spec || '').trim(), model: String(ln.model || '').trim() || String(ln.code || '').trim(), brand: String(ln.brand || '').trim(), unit: ln.unit || 'pcs', price: Number(ln.price) || 0, currency: ln.currency || 'USD', image: ln.image || '', images: [], categories: cats, onSale: true });
           }
           const up = Number(ln.kind === 'exist' ? ln.unitPrice : ln.price) || 0;
           const amt = Math.round(up * (Number(ln.qty) || 0) * 100) / 100;

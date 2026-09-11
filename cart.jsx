@@ -25,6 +25,52 @@ const CURRENCIES = ['USD', 'EUR', 'NGN', 'CNY', 'GBP'];
 // R104 — 新物料快速档案的预设图片（演示用途：复用商品图库）
 const NEW_PROD_IMGS = ['inv', 'bat', 'led', 'pan', 'ctl', 'kit', 'pole', 'fan'].map(k => ({ key: k, src: IMG[k] }));
 
+// R107 — u-upload 风格图片上传：本地 FileReader 预览 + CropModal 编辑器
+// （裁剪/比例锁/缩放/旋转/翻转），预设示例图行保留便于演示
+function H5UploadField({ value, onChange }) {
+  const fileRef = React.useRef(null);
+  const [editOpen, setEditOpen] = React.useState(false);
+  const pick = (e) => {
+    const f = (e.target.files || [])[0];
+    e.target.value = '';
+    if (!f || !/^image\//.test(f.type)) return;
+    const r = new FileReader();
+    r.onload = () => { onChange(String(r.result)); setEditOpen(true); };
+    r.readAsDataURL(f);
+  };
+  return (
+    <div className="h5-upload">
+      {value ? (
+        <React.Fragment>
+          <div className="h5-upload-thumb">
+            <img src={value} alt="" />
+            <span className="h5-upload-del" title={t('Delete')} onClick={() => onChange('')}><Icon name="close" size={9} /></span>
+            <span className="h5-upload-edit" onClick={() => setEditOpen(true)}>{t('Crop image')}</span>
+          </div>
+          <button type="button" className="h5-upload-re" onClick={() => fileRef.current.click()}><Icon name="camera" size={12} />{t('Re-upload')}</button>
+        </React.Fragment>
+      ) : (
+        <button type="button" className="h5-upload-add" onClick={() => fileRef.current.click()}>
+          <Icon name="camera" size={20} />
+          <span>{t('Upload Image')}</span>
+        </button>
+      )}
+      <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={pick} />
+      {editOpen && value ? (
+        <CropModal src={value} onApply={du => { onChange(du); setEditOpen(false); }} onClose={() => setEditOpen(false)} />
+      ) : null}
+      <div className="h5-upload-presets">
+        {NEW_PROD_IMGS.map(im => (
+          <button key={im.key} type="button" className={'h5-img-opt' + (value === im.src ? ' on' : '')}
+            title={t('Preset icon — click to add')} onClick={() => onChange(value === im.src ? '' : im.src)}>
+            <img src={im.src} alt={im.key} />
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function emptyCarts() { return { inquiry: [], inbound: [], outbound: [] }; }
 
 function cartTotalCount(carts) {
@@ -434,7 +480,17 @@ function InboundCartEditor({ onDone }) {
               </div>
               <span className="h5-back" title={t('Remove')} onClick={() => cartApi.removeAt('inbound', i)} style={{ color: 'var(--danger)' }}><Icon name="trash" size={16} /></span>
             </div>
-            {/* R104 — 物料详情：图片/型号/品牌/规格/分类，默认折叠可展开（仅本卡），uView u-collapse 风格 */}
+            <div className="h5-form-row mt8" style={{ marginBottom: 0 }}><span className="k">{t('Name')} *</span><div style={{ flex: 1 }}><input className="input" style={{ height: 32, width: '100%' }} value={l.name} onChange={e => cartApi.setField('inbound', i, 'name', e.target.value)} placeholder={t('e.g. Solar Inverter 5kW')} /></div></div>
+            <div className="h5-form-row" style={{ marginBottom: 0 }}><span className="k">{t('Unit')}</span><div style={{ flex: 1 }}><Select value={l.unit} onChange={v => cartApi.setField('inbound', i, 'unit', v)} options={['pcs', 'set', 'box', 'kg'].map(u => ({ value: u, label: u }))} style={{ height: 32 }} /></div></div>
+            <div className="h5-form-row" style={{ marginBottom: 0 }}><span className="k">{t('Purchase Price')}</span>
+              <div style={{ flex: 1, display: 'flex', gap: 8 }}>
+                <Select value={l.currency || 'USD'} onChange={v => cartApi.setField('inbound', i, 'currency', v)}
+                  options={CURRENCIES.map(c => ({ value: c, label: c }))} style={{ height: 32, width: 84 }} />
+                <input className="input" style={{ height: 32, flex: 1, minWidth: 0 }} type="number" value={l.price} onChange={e => cartApi.setField('inbound', i, 'price', e.target.value)} placeholder="0.00 (editable later)" />
+              </div>
+            </div>
+            {/* R107 — 物料详情折叠区移至采购价行后（采购价在前、数量在后）：
+                图片（u-upload 上传+裁剪编辑）/型号/品牌/规格/类目（点选多选），默认折叠可展开（仅本卡） */}
             <div className={'h5-collapse' + (l.detailOpen ? ' open' : '')}>
               <button type="button" className="h5-collapse-head" aria-expanded={!!l.detailOpen}
                 onClick={() => cartApi.setField('inbound', i, 'detailOpen', !l.detailOpen)}>
@@ -442,15 +498,8 @@ function InboundCartEditor({ onDone }) {
                 <span className="h5-collapse-chev"><Icon name="chevronDown" size={14} /></span>
               </button>
               <div className="h5-collapse-body">
-                <div className="h5-form-row" style={{ padding: '2px 0 7px' }}><span className="k">{t('Image')}</span>
-                  <div className="flex" style={{ flex: 1, gap: 6, flexWrap: 'wrap' }}>
-                    {NEW_PROD_IMGS.map(im => (
-                      <button key={im.key} type="button" className={'h5-img-opt' + (l.image === im.src ? ' on' : '')}
-                        title={t('Preset icon — click to add')} onClick={() => cartApi.setField('inbound', i, 'image', l.image === im.src ? '' : im.src)}>
-                        <img src={im.src} alt={im.key} />
-                      </button>
-                    ))}
-                  </div>
+                <div className="h5-form-row h5-form-row-top" style={{ padding: '2px 0 7px' }}><span className="k">{t('Image')}</span>
+                  <H5UploadField value={ifnull(l.image, '')} onChange={v => cartApi.setField('inbound', i, 'image', v)} />
                 </div>
                 <div className="h5-form-row" style={{ marginBottom: 0 }}><span className="k">{t('Model')}</span>
                   <div style={{ flex: 1 }}><input className="input" style={{ height: 32, width: '100%' }} value={ifnull(l.model, '')} onChange={e => cartApi.setField('inbound', i, 'model', e.target.value)} placeholder={String(l.code || '')} /></div>
@@ -461,21 +510,19 @@ function InboundCartEditor({ onDone }) {
                 <div className="h5-form-row" style={{ marginBottom: 0 }}><span className="k">{t('Spec')}</span>
                   <div style={{ flex: 1 }}><input className="input" style={{ height: 32, width: '100%' }} value={ifnull(l.spec, '')} onChange={e => cartApi.setField('inbound', i, 'spec', e.target.value)} /></div>
                 </div>
-                <div className="h5-form-row" style={{ marginBottom: 0 }}><span className="k">{t('Category')}</span>
-                  <div style={{ flex: 1 }}>
-                    <input className="input" style={{ height: 32, width: '100%' }} list="h5-newcat-list" value={ifnull(l.category, '')} onChange={e => cartApi.setField('inbound', i, 'category', e.target.value)} placeholder={t('e.g. Solar Inverters')} />
-                    <datalist id="h5-newcat-list">{(db.categories || []).map(c => <option key={c.id} value={c.name} />)}</datalist>
+                <div className="h5-form-row h5-form-row-top" style={{ marginBottom: 0 }}><span className="k">{(l.categories || []).length ? t('Category') + ' (' + (l.categories || []).length + ')' : t('Category')}</span>
+                  <div className="h5-catsel">
+                    {(db.categories || []).map(c => {
+                      const on = (l.categories || []).indexOf(c.id) > -1;
+                      return (
+                        <button key={c.id} type="button" className={'h5-catsel-item' + (on ? ' on' : '')}
+                          onClick={() => cartApi.setField('inbound', i, 'categories', on ? (l.categories || []).filter(x => x !== c.id) : (l.categories || []).concat([c.id]))}>
+                          {on ? <Icon name="check" size={10} /> : null}{c.name}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
-              </div>
-            </div>
-            <div className="h5-form-row mt8" style={{ marginBottom: 0 }}><span className="k">{t('Name')} *</span><div style={{ flex: 1 }}><input className="input" style={{ height: 32, width: '100%' }} value={l.name} onChange={e => cartApi.setField('inbound', i, 'name', e.target.value)} placeholder={t('e.g. Solar Inverter 5kW')} /></div></div>
-            <div className="h5-form-row" style={{ marginBottom: 0 }}><span className="k">{t('Unit')}</span><div style={{ flex: 1 }}><Select value={l.unit} onChange={v => cartApi.setField('inbound', i, 'unit', v)} options={['pcs', 'set', 'box', 'kg'].map(u => ({ value: u, label: u }))} style={{ height: 32 }} /></div></div>
-            <div className="h5-form-row" style={{ marginBottom: 0 }}><span className="k">{t('Purchase Price')}</span>
-              <div style={{ flex: 1, display: 'flex', gap: 8 }}>
-                <Select value={l.currency || 'USD'} onChange={v => cartApi.setField('inbound', i, 'currency', v)}
-                  options={CURRENCIES.map(c => ({ value: c, label: c }))} style={{ height: 32, width: 84 }} />
-                <input className="input" style={{ height: 32, flex: 1, minWidth: 0 }} type="number" value={l.price} onChange={e => cartApi.setField('inbound', i, 'price', e.target.value)} placeholder="0.00 (editable later)" />
               </div>
             </div>
             <div className="flex mt8" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
@@ -528,9 +575,9 @@ function InboundCartEditor({ onDone }) {
             {supTenant && supTenantPhone && (
               <div className="muted mono" style={{ fontSize: 11, marginTop: 6 }}>{supTenant.name} · {supTenantPhone}</div>
             )}
-            <div className="h5-form-row" style={{ marginBottom: 0 }}>
+            <div className="h5-form-row h5-form-row-top" style={{ marginBottom: 0 }}>
               <span className="k">{t('Stock-in note (optional)')}</span>
-              <input className="input" style={{ height: 32, flex: 1 }} value={note} onChange={e => setNote(e.target.value)} placeholder={t('e.g. purchase arrival')} />
+              <textarea className="textarea h5-note-area" rows={3} value={note} onChange={e => setNote(e.target.value)} placeholder={t('e.g. purchase arrival')}></textarea>
             </div>
           </div>
         </React.Fragment>
@@ -663,9 +710,9 @@ function OutboundCartEditor({ onDone }) {
             {recvTenant && recvTenantPhone && (
               <div className="muted mono" style={{ fontSize: 11, marginTop: 6 }}>{recvTenant.name} · {recvTenantPhone}</div>
             )}
-            <div className="h5-form-row" style={{ marginBottom: 0 }}>
+            <div className="h5-form-row h5-form-row-top" style={{ marginBottom: 0 }}>
               <span className="k">{t('Outbound note (optional)')}</span>
-              <input className="input" style={{ height: 32, flex: 1 }} value={note} onChange={e => setNote(e.target.value)} placeholder={t('e.g. transfer to another warehouse')} />
+              <textarea className="textarea h5-note-area" rows={3} value={note} onChange={e => setNote(e.target.value)} placeholder={t('e.g. transfer to another warehouse')}></textarea>
             </div>
           </div>
         </React.Fragment>

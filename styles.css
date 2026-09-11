@@ -924,12 +924,21 @@ button { font-family: inherit; }
   background: var(--danger); color: #fff; display: flex; align-items: center; justify-content: center;
   cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,0.2);
 }
+/* R107 — el-upload avatar-uploader 风：虚线方卡 + Plus 图标居中，
+   hover 主色边框 + 蒙层提示（无文件列表，缩略图即预览） */
 .uupload-add {
-  width: 80px; height: 80px; border-radius: 8px; border: 1px dashed var(--border);
-  background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 4px; color: var(--text-3); cursor: pointer; font-size: 11px; transition: border-color 0.12s, color 0.12s;
+  position: relative; width: 80px; height: 80px; border-radius: 8px; border: 1px dashed var(--border);
+  background: #fafafa; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 4px; color: #8c939d; cursor: pointer; font-size: 11px; transition: border-color 0.12s, color 0.12s;
+  overflow: hidden; box-sizing: border-box;
+}
+.uupload-plus { display: flex; align-items: center; justify-content: center; }
+.uupload-add::after {
+  content: ''; position: absolute; inset: 0; background: rgba(0, 0, 0, 0.04);
+  opacity: 0; transition: opacity 0.12s;
 }
 .uupload-add:hover { border-color: var(--primary); color: var(--primary); }
+.uupload-add:hover::after { opacity: 1; }
 /* drag reorder + main-image marking (round 23) */
 .uupload-item.dragging { opacity: 0.35; }
 .uupload-item.dragging img { border-style: dashed; border-color: var(--primary); }
@@ -1684,7 +1693,8 @@ body:has(.mobile-stage) .toast {
   transition: max-height 0.18s ease, opacity 0.18s ease, padding-bottom 0.18s ease;
   padding: 0 10px;
 }
-.h5-app .h5-collapse.open .h5-collapse-body { max-height: 440px; opacity: 1; padding-bottom: 8px; }
+.h5-app .h5-collapse.open .h5-collapse-body { max-height: 640px; opacity: 1; padding-bottom: 8px; }
+/* R107 — 折叠区内容增高（上传控件 + 类目多选 chips）*/
 /* 预设图片缩图（演示）：选中主色描边 + 轻焦点环 */
 .h5-app .h5-img-opt {
   width: 38px; height: 38px; border-radius: 6px; overflow: hidden; padding: 0;
@@ -1753,6 +1763,7 @@ body:has(.mobile-stage) .toast {
 
 /* ============================================================
    R106 — 移动端组件 uView 归一化（第二轮）：分段控件 / 标签 /
+   【注：其中 1a/1b 分段控件部分已于 R107 按需求回滚为 R103 u-tabs 风】
    输入后缀按钮 / 筛选切换 / 语言 chip 收档
    - 两套分段控件（页面 .h5-segments 与暂存面板 .h5-cart-segs）
      统一 u-subsection：容器 32px 档（3px 内衬 + 26px 项）、4px 容器
@@ -1762,38 +1773,9 @@ body:has(.mobile-stage) .toast {
    - 筛选切换 .h5-filter-toggle：30px 小档、4px 圆角
    ============================================================ */
 
-/* ---------- 1a. 顶部分段控件 → u-subsection ---------- */
-.h5-app .h5-segments {
-  background: #f2f3f5; border-radius: 4px; padding: 3px;
-  border-bottom: none; gap: 2px;
-}
-.h5-app .h5-segment {
-  height: 26px; padding: 0 10px; border-radius: 2px;
-  color: #606266; background: transparent;
-  font-size: 12.5px; font-weight: 500;
-}
-.h5-app .h5-segment.active {
-  background: #fff; color: var(--primary); font-weight: 600;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-}
-.h5-app .h5-segment.active::after { content: none; }
-
-/* ---------- 1b. 暂存面板页签 → 同一 u-subsection（含计数角标） ---------- */
-.h5-app .h5-cart-segs {
-  background: #f2f3f5; border-bottom: none;
-  margin: 8px 12px; border-radius: 4px; padding: 3px; gap: 2px;
-}
-.h5-app .h5-cart-seg {
-  height: 26px; border: none; border-radius: 2px; margin-bottom: 0;
-  background: transparent; color: #606266;
-  font-size: 12.5px; font-weight: 500; padding: 0 6px;
-}
-.h5-app .h5-cart-seg.on {
-  background: #fff; color: var(--primary);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-  border-bottom-color: transparent;
-}
-.h5-app .h5-cart-seg.on .h5-cart-seg-n { background: var(--primary); color: #fff; }
+/* ---------- 1a/1b（已撤销）——R107：应需求回滚，页顶分段与面板页签
+   恢复 R103 u-tabs 风格（分段透明容器底线+主色指示条；
+   面板页签 38px 下划线），R106 其余归一保留 ---------- */
 
 /* ---------- 2. 标签类 → u-tag（22px / 4px 圆角 / 12px 字） ---------- */
 .h5-app .tag { height: 22px; padding: 0 8px; border-radius: 4px; font-size: 12px; }
@@ -1804,3 +1786,86 @@ body:has(.mobile-stage) .toast {
 
 /* ---------- 4. 筛选切换：30px 小档、4px 圆角 ---------- */
 .h5-app .h5-filter-toggle { height: 30px; border-radius: 4px; }
+
+/* ============================================================
+   R107 — uView 归一化（第三轮）：折叠区后置 + u-upload 上传 +
+   类目点选多选 + 备注文本域 + 裁剪编辑器缩放 + 蓝底白字兜底；
+   页签风格回滚：撤销 R106 分段控件 u-subsection 改造，
+   恢复 R103 u-tabs（页顶分段透明容器底线+指示条、
+   面板页签 38px 下划线）
+   ============================================================ */
+
+/* ---------- 1. u-upload 移动端图片上传（新物料卡折叠区） ---------- */
+.h5-app .h5-upload { flex: 1; min-width: 0; }
+.h5-app .h5-upload-add {
+  width: 72px; height: 72px; border-radius: 4px;
+  border: 1px dashed #c0c4cc; background: #fafafa; color: #909399;
+  display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  font-size: 10px; cursor: pointer; padding: 0; font-family: inherit;
+  transition: border-color 0.16s, color 0.16s;
+}
+.h5-app .h5-upload-add:active { border-color: var(--primary); color: var(--primary); }
+.h5-app .h5-upload-thumb { position: relative; width: 72px; height: 72px; }
+.h5-app .h5-upload-thumb img { width: 100%; height: 100%; border-radius: 4px; object-fit: cover; border: 1px solid var(--border-light); display: block; }
+.h5-app .h5-upload-del {
+  position: absolute; top: -6px; right: -6px; width: 18px; height: 18px; border-radius: 9px;
+  background: #fa3534; color: #fff; display: flex; align-items: center; justify-content: center;
+  cursor: pointer; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+.h5-app .h5-upload-edit {
+  position: absolute; left: 0; right: 0; bottom: 0; border-radius: 0 0 4px 4px;
+  background: rgba(0, 0, 0, 0.5); color: #fff; font-size: 10px; text-align: center;
+  padding: 2px 0; cursor: pointer;
+}
+.h5-app .h5-upload-re {
+  margin-top: 6px; height: 30px; padding: 0 10px; border-radius: 4px;
+  border: 1px solid var(--border-light); background: #fff; color: var(--text-2);
+  font-size: 11px; display: inline-flex; align-items: center; gap: 4px; cursor: pointer; font-family: inherit;
+}
+.h5-app .h5-upload-presets { display: flex; gap: 6px; margin-top: 7px; flex-wrap: wrap; }
+
+/* ---------- 2. 类目点选多选（uView 多选高亮，选中主色实底白字） ---------- */
+.h5-app .h5-catsel { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.h5-app .h5-catsel-item {
+  height: 28px; padding: 0 10px; border-radius: 4px;
+  border: 1px solid var(--border-light); background: #fff; color: var(--text-2);
+  font-size: 11.5px; display: inline-flex; align-items: center; gap: 3px;
+  cursor: pointer; font-family: inherit;
+  transition: background 0.14s, color 0.14s, border-color 0.14s;
+}
+.h5-app .h5-catsel-item.on { background: var(--primary); border-color: var(--primary); color: #fff; }
+
+/* ---------- 3. 备注文本域（u-input type=textarea 档，3 行） ---------- */
+.h5-app .h5-form-row-top { align-items: flex-start; }
+.h5-app .textarea {
+  flex: 1; min-width: 0; min-height: 70px; height: auto;
+  border-radius: 4px; border-color: #e4e7ed;
+  font-size: 13px; line-height: 1.5; padding: 7px 10px;
+  resize: vertical; font-family: inherit; background: #fff; color: var(--text-1);
+}
+.h5-app .textarea:focus { border-color: var(--primary); }
+
+/* ---------- 4. 裁剪编辑器：缩放滑杆 + 移动端档位适配 ---------- */
+.crop-zoom {
+  width: 140px; height: 4px; -webkit-appearance: none; appearance: none;
+  background: #e4e7ed; border-radius: 2px; outline: none; cursor: pointer; align-self: center;
+  margin: 0 4px;
+}
+.crop-zoom::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none; width: 16px; height: 16px; border-radius: 8px;
+  background: var(--primary); border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+.crop-zoom::-moz-range-thumb {
+  width: 14px; height: 14px; border-radius: 8px; background: var(--primary);
+  border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+.h5-app .crop-card { width: min(92vw, 400px); }
+.h5-app .crop-stage { max-height: 40vh; }
+.h5-app .crop-foot { flex-wrap: wrap; }
+
+/* ---------- 5. 蓝底按钮统一白字（需求兜底声明） ---------- */
+.h5-app .h5-btn.primary,
+.h5-app .btn.primary,
+.h5-app .h5-input-suffix,
+.h5-app .h5-cart-fab,
+.h5-app .h5-catsel-item.on { color: #fff; }

@@ -1434,6 +1434,10 @@ const ZH = {
   // ---- round-24 main-image crop editor with ratio lock ----
   'Crop Main Image': '裁剪主图',
   'Crop main image': '裁剪主图',
+  'Crop image': '裁剪图片',
+  'Crop Image': '裁剪图片',
+  'Zoom': '缩放',
+  'Re-upload': '重新上传',
   'Free': '自由',
   'Ratio': '比例',
   'Rotate / Flip': '旋转 / 翻转',

@@ -193,7 +193,7 @@ function WebInboundPanel({ onDone }) {
           </div>
         </FormRow>
         <FormRow label="Stock-in note (optional)">
-          <Input value={note} onChange={setNote} placeholder={t('e.g. purchase arrival')} />
+          <Textarea value={note} onChange={setNote} rows={3} placeholder={t('e.g. purchase arrival')} />
         </FormRow>
       </div>
       <div className="flex" style={{ alignItems: 'center', gap: 10, marginTop: 4 }}>
@@ -285,7 +285,7 @@ function WebOutboundPanel({ onDone }) {
           </React.Fragment>
         )}
         <FormRow label="Outbound note (optional)">
-          <Input value={note} onChange={setNote} placeholder={t('e.g. transfer to another warehouse')} />
+          <Textarea value={note} onChange={setNote} rows={3} placeholder={t('e.g. transfer to another warehouse')} />
         </FormRow>
       </div>
       <div className="flex" style={{ alignItems: 'center', gap: 10, marginTop: 4 }}>
