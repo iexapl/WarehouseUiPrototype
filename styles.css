@@ -1506,3 +1506,159 @@ body:has(.mobile-stage) .toast {
 .h5-app .dialog-footer { border-radius: 0 0 16px 16px; }
 .h5-app .banner { border-radius: 12px; }
 .h5-app .h5-product .p-price { font-variant-numeric: tabular-nums; }
+
+/* ============================================================
+   R103 — 移动端整体切换为 uView UI 2.x 设计语言
+   覆盖 R101/R102 的深钴蓝自定义风格：
+   - 令牌：主色 #2979ff，语义色/文字/边框/背景全套 uView
+   - 形态：白卡 8px 圆角细边框极轻影；主按钮实底；分段控件
+     改 u-tabs（激活主色加粗 + 底部指示条）；底部页签改
+     u-tabbar（无顶部指示条，图标+文字变色）
+   - 替换掉：渐变、运输胶带斜纹、毛玻璃、光晕、胶囊大按钮
+   - WhatsApp 对话保留品牌绿（场景化例外）；钱款琥珀保留
+   全部 .h5-app 作用域，不动布局硬约束。
+   ============================================================ */
+
+/* ---------- 1. uView 设计令牌（仅移动端，内联 var() 级联） ---------- */
+.h5-app {
+  --primary: #2979ff;
+  --primary-dark: #1B70E8;
+  --primary-light: #EAF2FF;
+  --success: #19be6b;
+  --success-light: #E8F8F0;
+  --warning: #ff9900;
+  --warning-light: #FDF6E9;
+  --danger: #fa3534;
+  --danger-light: #FEEFEF;
+  --info: #909399;
+  --info-light: #F4F4F5;
+  --text: #303133;
+  --text-2: #606266;
+  --text-3: #909399;
+  --border: #dcdfe6;
+  --border-light: #e4e7ed;
+  --bg: #f5f6f8;
+  --radius: 8px;
+  --h5-e1: 0 1px 4px rgba(0, 0, 0, 0.02);
+  --h5-e2: 0 4px 14px rgba(0, 0, 0, 0.06);
+  background: #f5f6f8;
+}
+.h5-app .input::placeholder, .h5-app .textarea::placeholder { color: #c0c4cc; }
+/* 状态徽标文字色适配 uView 浅底（对比 ≥4.5） */
+.h5-app .tag.primary { color: #1C6FE8; }
+
+/* ---------- 2. 顶栏 / u-tabbar ---------- */
+.h5-app .h5-header { border-bottom-color: var(--border-light); }
+.h5-app .h5-tabs { border-top-color: var(--border-light); }
+.h5-app .h5-tab { color: #909399; }
+.h5-app .h5-tab.active { color: #2979ff; }
+.h5-app .h5-tab.active::before { content: none; }
+
+/* ---------- 3. 卡片 / 单元：白卡 + 细边 + 8px 圆角 + 极轻影 ---------- */
+.h5-app .h5-card { border-radius: 8px; border-color: var(--border-light); box-shadow: var(--h5-e1); }
+.h5-app .h5-cell { border-radius: 8px; border-color: var(--border-light); box-shadow: none; }
+.h5-app .h5-cell:active { transform: none; background: #f5f6f8; border-color: var(--border-light); opacity: 1; }
+.h5-app .h5-cell .cell-icon { border-radius: 8px; }
+.h5-app .h5-doc { border-radius: 8px; border-color: var(--border-light); box-shadow: var(--h5-e1); }
+.h5-app .h5-doc:active { transform: none; background: #f5f6f8; opacity: 1; border-color: var(--border-light); }
+.h5-app .h5-doc .d-act { border-radius: 999px; border-color: var(--border-light); }
+.h5-app .h5-doc .d-act.primary { box-shadow: none; }
+.h5-app .h5-doc .d-acts { border-top-color: var(--border-light); }
+.h5-app .h5-product { border-radius: 8px; border-color: var(--border-light); box-shadow: var(--h5-e1); }
+.h5-app .h5-product:active { transform: none; background: #f5f6f8; opacity: 1; border-color: var(--border-light); }
+.h5-app .h5-product img { border-radius: 6px; }
+.h5-app .h5-product .p-foot { border-top-color: var(--border-light); }
+.h5-app .h5-stat { border-radius: 8px; border-color: var(--border-light); box-shadow: var(--h5-e1); }
+.h5-app .h5-action { border-radius: 8px; border-color: var(--border-light); box-shadow: none; }
+.h5-app .h5-action:active { background: #f5f6f8; transform: scale(0.97); opacity: 1; }
+.h5-app .h5-action .a-icon { border-radius: 8px; }
+.h5-app .h5-section-title { color: #909399; letter-spacing: 0.3px; }
+.h5-app .h5-empty { border: 1px solid var(--border-light); background: #fff; }
+
+/* ---------- 4. 分段控件 → u-tabs（激活主色加粗 + 底部指示条） ---------- */
+.h5-app .h5-segments { background: transparent; border-radius: 0; padding: 0 0 0 0; border-bottom: 1px solid var(--border-light); }
+.h5-app .h5-segment { border-radius: 0; color: #606266; position: relative; }
+.h5-app .h5-segment.active { background: transparent; color: var(--primary); font-weight: 600; box-shadow: none; }
+.h5-app .h5-segment.active::after {
+  content: ''; position: absolute; left: 50%; transform: translateX(-50%);
+  bottom: -1px; width: 18px; height: 3px; border-radius: 3px 3px 0 0; background: var(--primary);
+}
+/* 筛选 chips：uView 方圆角，激活主色实底 */
+.h5-app .h5-chip { border-radius: 8px; border-color: var(--border-light); }
+.h5-app .h5-chip.on { box-shadow: none; }
+.h5-app .h5-filter-panel { border-radius: 8px; border-color: var(--border-light); box-shadow: var(--h5-e2); }
+.h5-app .h5-filter-toggle { border-radius: 8px; }
+
+/* ---------- 5. 表单：u-input 细边框款 + u-number-box ---------- */
+.h5-app .input, .h5-app .select, .h5-app .textarea { border-radius: 8px; border-color: var(--border); }
+.h5-app .input:focus, .h5-app .select:focus, .h5-app .textarea:focus {
+  border-color: var(--primary); box-shadow: 0 0 0 2px rgba(41, 121, 255, 0.12);
+}
+.h5-app .h5-form-row { border-bottom-color: #f5f6f8; }
+.h5-app .h5-desc { border-radius: 8px; border-color: var(--border-light); box-shadow: var(--h5-e1); }
+.h5-app .h5-desc-row .k { background: #f5f6f8; }
+.h5-app .h5-stepper { border-radius: 4px; border-color: var(--border-light); }
+.h5-app .h5-stepper input { background: #f5f6f8; }
+.h5-app .h5-input-suffix { border-radius: 8px; box-shadow: none; }
+
+/* ---------- 6. 按钮：u-button（主按钮实底 / plain 描边，8px 圆角） ---------- */
+.h5-app .h5-btn { border-radius: 8px; border-color: var(--border-light); color: #606266; }
+.h5-app .h5-btn:active { background: #f5f6f8; transform: none; opacity: 1; }
+.h5-app .h5-btn.primary {
+  background: var(--primary); border-color: var(--primary);
+  box-shadow: none;
+}
+.h5-app .h5-btn.primary:active { background: var(--primary-dark); box-shadow: none; }
+.h5-app .h5-act-row .h5-btn { border-radius: 8px; }
+.h5-app .btn { border-radius: 8px; }
+/* 吸底操作栏：白底细线，去毛玻璃 */
+.h5-app .h5-main .h5-act-row,
+.h5-app .h5-main .h5-actionbar {
+  background: #fff; border-top: 1px solid var(--border-light);
+  backdrop-filter: none; -webkit-backdrop-filter: none;
+}
+
+/* ---------- 7. 首页 hero：uView 浅主色渐变表达（去运输胶带） ---------- */
+.h5-app .h5-hero {
+  background: linear-gradient(135deg, #48A0FF 0%, #2979FF 100%);
+  border-radius: 10px;
+  box-shadow: 0 4px 14px rgba(41, 121, 255, 0.18);
+}
+.h5-app .h5-hero::after { content: none; }
+.h5-app .h5-hero .avatar { box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.45); }
+
+/* ---------- 8. 暂存单：FAB 实底 / 白面板 ---------- */
+.h5-app .h5-cart-fab {
+  background: var(--primary);
+  box-shadow: 0 4px 12px rgba(41, 121, 255, 0.35);
+}
+.h5-app .cart-fab-badge { border-color: #fff; box-shadow: none; }
+.h5-app .h5-cart-mask { background: rgba(0, 0, 0, 0.45); }
+.h5-app .h5-cart-sheet {
+  border-radius: 16px 16px 0 0; background: #fff;
+  box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.1);
+}
+.h5-app .h5-cart-grip { background: #dcdfe6; }
+.h5-app .h5-cart-body { background: #fff; }
+.h5-app .h5-cart-pane .h5-act-row { box-shadow: none; border-top: 1px solid var(--border-light); }
+
+/* ---------- 9. 扫码页：去光晕去毛玻璃，克制表达 ---------- */
+.h5-app .h5-scan-frame { border-radius: 12px; }
+.h5-app .h5-scan-corner { border-width: 2px; box-shadow: none; }
+.h5-app .h5-scan-frame.out .h5-scan-corner { box-shadow: none; }
+.h5-app .h5-scan-mode {
+  backdrop-filter: none; -webkit-backdrop-filter: none;
+  background: rgba(0, 0, 0, 0.35);
+}
+
+/* ---------- 10. toast / 弹窗 / 时间线 / 空态 ---------- */
+body:has(.mobile-stage) .toast {
+  border-radius: 8px; border-left: none; border: 1px solid var(--border-light, #e4e7ed);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+.h5-app .timeline-item.done::before { box-shadow: 0 0 0 3px var(--primary-light); }
+.h5-app .dialog { border-radius: 10px; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12); }
+.h5-app .dialog-footer { border-radius: 0 0 10px 10px; }
+.h5-app .banner { border-radius: 8px; }
+.h5-app .ai-box { border-radius: 8px; }
+.h5-app :focus-visible { outline: 2px solid rgba(41, 121, 255, 0.5); outline-offset: 1px; }
