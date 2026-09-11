@@ -1695,14 +1695,6 @@ body:has(.mobile-stage) .toast {
 }
 .h5-app .h5-collapse.open .h5-collapse-body { max-height: 640px; opacity: 1; padding-bottom: 8px; }
 /* R107 — 折叠区内容增高（上传控件 + 类目多选 chips）*/
-/* 预设图片缩图（演示）：选中主色描边 + 轻焦点环 */
-.h5-app .h5-img-opt {
-  width: 38px; height: 38px; border-radius: 6px; overflow: hidden; padding: 0;
-  border: 1.5px solid var(--border-light); background: #fff; cursor: pointer;
-  transition: border-color 0.16s, box-shadow 0.16s;
-}
-.h5-app .h5-img-opt img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.h5-app .h5-img-opt.on { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(41, 121, 255, 0.15); }
 
 /* ============================================================
    R105 — 移动端组件 uView 风格与尺寸规范化（size 档位统一）
@@ -1822,7 +1814,6 @@ body:has(.mobile-stage) .toast {
   border: 1px solid var(--border-light); background: #fff; color: var(--text-2);
   font-size: 11px; display: inline-flex; align-items: center; gap: 4px; cursor: pointer; font-family: inherit;
 }
-.h5-app .h5-upload-presets { display: flex; gap: 6px; margin-top: 7px; flex-wrap: wrap; }
 
 /* ---------- 2. 类目点选多选（uView 多选高亮，选中主色实底白字） ---------- */
 .h5-app .h5-catsel { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; gap: 6px; }
@@ -1997,9 +1988,66 @@ body:has(.mobile-stage) .toast {
 .h5-app .h5-collapse-head { border-radius: 999px; }
 .h5-app .wa-chip { border-radius: 999px; }
 /* R109 补充：类目多选点选块（h5-catsel-item）胶囊；步进器恢复胶囊容器
-   （原最初版即 16px 胶囊，内 +/− 钮随容器 overflow 裁切）；
-   预设图片选择块 h5-img-opt（38px 图瓦点选钮）同样入按钮 round 胶囊 = 圆形缩略图 */
+   （原最初版即 16px 胶囊，内 +/− 钮随容器 overflow 裁切）。
+   （预设图选择块 h5-img-opt 已随 R110 移除备选图一并删除） */
 .h5-app .h5-catsel-item { border-radius: 999px; }
-.h5-app .h5-img-opt { border-radius: 999px; }
 .h5-app .h5-stepper { border-radius: 999px; }
 .h5-app .h5-stepper button { border-radius: 999px; }
+
+/* ============================================================
+   R110 — 悬浮滚动条 / hero 背景美化 / 预设备选图移除
+   ------------------------------------------------------------
+   1. 暂存面板 .h5-cart-scroll：隐藏原生滚动条，改由 cart.jsx 的
+      R110 脚本驱动悬浮胶囊细滚动条（4px、半透明主色、贴右内缘），
+      滚动时淡入、停止约 700ms 后淡出；上/下 overscroll 渐隐提示
+      仅在对应侧还有内容时显示（滚动到头该侧渐变消失）。
+      覆盖层绝对定位、pointer-events:none，不参与布局与面板测高。
+   2. 首页 banner / 「我的」页账户卡（同 .h5-hero）：uView 主色
+      多层渐变 + 光斑 + 双圆环装饰，两处同一设计语言。
+   3. .h5-img-opt / .h5-upload-presets 预设图样式随 JSX 移除删除。
+   ============================================================ */
+
+/* ---------- 1. 悬浮滚动条（暂存面板滚动区） ---------- */
+.h5-app .h5-cart-scroll { scrollbar-width: none; }
+.h5-app .h5-cart-scroll::-webkit-scrollbar { width: 0; height: 0; }
+.h5-fsb-host { position: relative; }
+.h5-app .h5-fsb {
+  position: absolute; top: 0; right: 2px; width: 4px; z-index: 8;
+  pointer-events: none; opacity: 0; transition: opacity 0.28s ease;
+}
+.h5-app .h5-fsb.show { opacity: 1; }
+.h5-app .h5-fsb-thumb {
+  position: absolute; left: 0; top: 0; width: 100%; border-radius: 999px;
+  background: rgba(41, 121, 255, 0.5);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.55);
+}
+.h5-app .h5-fsb-top, .h5-app .h5-fsb-bot {
+  position: absolute; left: 0; right: 0; height: 16px;
+  opacity: 0; transition: opacity 0.28s ease; pointer-events: none;
+}
+.h5-app .h5-fsb-top { top: 0; background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 255, 255, 0)); }
+.h5-app .h5-fsb-bot { bottom: 0; background: linear-gradient(0deg, rgba(255, 255, 255, 0.96), rgba(255, 255, 255, 0)); }
+.h5-app .h5-fsb.show.can-top .h5-fsb-top { opacity: 1; }
+.h5-app .h5-fsb.show.can-bot .h5-fsb-bot { opacity: 1; }
+
+/* ---------- 2. hero 背景：主色多层渐变 + 光斑 + 双圆环 ---------- */
+.h5-app .h5-hero {
+  background:
+    radial-gradient(130px 90px at 90% -25%, rgba(255, 255, 255, 0.30), rgba(255, 255, 255, 0) 70%),
+    radial-gradient(170px 120px at -8% 125%, rgba(120, 175, 255, 0.40), rgba(120, 175, 255, 0) 72%),
+    linear-gradient(133deg, #66B0FF 0%, #2F82FF 46%, #1E60E8 100%);
+  border-radius: 12px;
+  box-shadow: 0 6px 18px rgba(31, 96, 232, 0.26), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+.h5-app .h5-hero > * { position: relative; z-index: 1; }
+.h5-app .h5-hero::before {
+  content: ''; position: absolute; right: -22px; top: -30px; width: 92px; height: 92px;
+  border-radius: 50%; border: 9px solid rgba(255, 255, 255, 0.15);
+  pointer-events: none;
+}
+.h5-app .h5-hero::after {
+  content: ''; position: absolute; left: -16px; bottom: -36px; width: 76px; height: 76px;
+  border-radius: 50%; border: 7px solid rgba(255, 255, 255, 0.12);
+  background: none; -webkit-mask-image: none; mask-image: none;
+  pointer-events: none;
+}

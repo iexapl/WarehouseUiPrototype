@@ -22,11 +22,56 @@ const CART_MODULES = [
 // 入库暂存每行可独立设置的币种（采购价 = 成本价；行金额按行币种显示）
 const CURRENCIES = ['USD', 'EUR', 'NGN', 'CNY', 'GBP'];
 
-// R104 — 新物料快速档案的预设图片（演示用途：复用商品图库）
-const NEW_PROD_IMGS = ['inv', 'bat', 'led', 'pan', 'ctl', 'kit', 'pole', 'fan'].map(k => ({ key: k, src: IMG[k] }));
+// R110 — 移动端悬浮滚动条（暂存面板 .h5-cart-scroll）：原生滚动条隐藏，
+// 改为滚动时浮现的胶囊细滚动条（4px、半透明主色）+ 上/下 overscroll 渐隐
+// 提示；停止滚动约 700ms 后淡出。捕获期 scroll 委托 + 逐容器懒建覆盖层
+// 实现（覆盖层绝对定位，不参与布局与面板测高，不影响任何硬约束）。
+(function initH5FloatingScrollbar() {
+  var SEL = '.h5-cart-scroll';
+  var HIDE_MS = 700;
+  var timer = null;
+  function hostFor(sc) {
+    var parent = sc.parentNode;
+    if (!parent) return null;
+    var h = sc.__fsbHost;
+    if (h && h.parentNode === parent) return h;
+    if (h && h.parentNode) h.parentNode.removeChild(h);
+    parent.classList.add('h5-fsb-host');
+    h = document.createElement('div');
+    h.className = 'h5-fsb';
+    h.appendChild(document.createElement('div')).className = 'h5-fsb-thumb';
+    h.appendChild(document.createElement('div')).className = 'h5-fsb-top';
+    h.appendChild(document.createElement('div')).className = 'h5-fsb-bot';
+    parent.appendChild(h);
+    sc.__fsbHost = h;
+    return h;
+  }
+  function onScroll(e) {
+    var sc = e.target;
+    if (!sc || !sc.classList || !sc.closest || !sc.closest('.h5-app')) return;
+    if (!sc.matches || !sc.matches(SEL)) return;
+    var h = hostFor(sc);
+    if (!h) return;
+    var vh = sc.clientHeight, sh = sc.scrollHeight, st = sc.scrollTop;
+    if (sh - vh <= 2) { h.classList.remove('show'); return; }
+    h.style.height = vh + 'px';
+    var th = Math.max(28, Math.round(vh * vh / sh));
+    var maxTop = vh - th;
+    var ty = maxTop > 0 ? Math.round((st / (sh - vh)) * maxTop) : 0;
+    var thumb = h.firstChild;
+    thumb.style.height = th + 'px';
+    thumb.style.top = ty + 'px';
+    h.classList.toggle('can-top', st > 2);
+    h.classList.toggle('can-bot', st < sh - vh - 2);
+    h.classList.add('show');
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(function () { h.classList.remove('show'); }, HIDE_MS);
+  }
+  document.addEventListener('scroll', onScroll, true);
+})();
 
 // R107 — u-upload 风格图片上传：本地 FileReader 预览 + CropModal 编辑器
-// （裁剪/比例锁/缩放/旋转/翻转），预设示例图行保留便于演示
+// （裁剪/比例锁/缩放/旋转/翻转）；R110 起移除预设备选图，仅保留上传入口
 function H5UploadField({ value, onChange }) {
   const fileRef = React.useRef(null);
   const [editOpen, setEditOpen] = React.useState(false);
@@ -59,14 +104,6 @@ function H5UploadField({ value, onChange }) {
       {editOpen && value ? (
         <CropModal src={value} onApply={du => { onChange(du); setEditOpen(false); }} onClose={() => setEditOpen(false)} />
       ) : null}
-      <div className="h5-upload-presets">
-        {NEW_PROD_IMGS.map(im => (
-          <button key={im.key} type="button" className={'h5-img-opt' + (value === im.src ? ' on' : '')}
-            title={t('Preset icon — click to add')} onClick={() => onChange(value === im.src ? '' : im.src)}>
-            <img src={im.src} alt={im.key} />
-          </button>
-        ))}
-      </div>
     </div>
   );
 }

@@ -443,7 +443,6 @@ const ZH = {
   'JPG / PNG / SVG · demo stores it in-browser': 'JPG / PNG / SVG · 演示环境存于浏览器内',
   'Upload up to 10 images (multiple allowed) or click preset icons to add; the first one is the main image': '最多上传 10 张图片（支持多选），也可点击预设图标添加；第一张为主图',
   'Up to N images · tap to preview, corner × to remove': '最多 N 张图片 · 点击图片可全屏预览，角标 × 可删除',
-  'Preset icon — click to add': '预设图标——点击添加',
   'Specification': '规格',
   'Spec': '规格',
   'Model': '型号',
