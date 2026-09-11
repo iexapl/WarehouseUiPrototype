@@ -46,17 +46,17 @@ function H5Skeleton({ variant }) {
   let body;
   if (variant === 'home') {
     body = (<React.Fragment>
-      <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 14 }}>
+      <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 16 }}>
         <SkBlock w={46} h={46} r={12} mb={0} />
         <div style={{ flex: 1 }}><SkBlock w="58%" h={16} mb={8} /><SkBlock w="38%" h={12} mb={0} /></div>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
         {rows(4).map(i => (<div key={i} style={card}><SkBlock w="46%" h={12} mb={8} /><SkBlock w="72%" h={20} mb={0} /></div>))}
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 14 }}>
-        {rows(8).map(i => (<div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}><SkBlock w={44} h={44} r={12} mb={0} /><SkBlock w={40} h={9} mb={0} /></div>))}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 16 }}>
+        {rows(8).map(i => (<div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}><SkBlock w={44} h={44} r={12} mb={0} /><SkBlock w={40} h={9} mb={0} /></div>))}
       </div>
-      {rows(3).map(i => (<div key={i} style={{ ...card, display: 'flex', gap: 10, alignItems: 'center' }}>
+      {rows(3).map(i => (<div key={i} style={{ ...card, display: 'flex', gap: 12, alignItems: 'center' }}>
         <SkBlock w={38} h={38} r={10} mb={0} />
         <div style={{ flex: 1 }}><SkBlock w="66%" h={12} mb={6} /><SkBlock w="42%" h={10} mb={0} /></div>
       </div>))}
@@ -64,7 +64,7 @@ function H5Skeleton({ variant }) {
   } else if (variant === 'list') {
     body = (<React.Fragment>
       <SkBlock w="100%" h={38} r={10} mb={12} />
-      {rows(5).map(i => (<div key={i} style={{ ...card, display: 'flex', gap: 10, alignItems: 'center', padding: 12 }}>
+      {rows(5).map(i => (<div key={i} style={{ ...card, display: 'flex', gap: 12, alignItems: 'center', padding: 12 }}>
         <SkBlock w={40} h={40} r={10} mb={0} />
         <div style={{ flex: 1 }}><SkBlock w="70%" h={13} mb={7} /><SkBlock w="44%" h={11} mb={0} /></div>
         <SkBlock w={46} h={20} r={10} mb={0} />
@@ -77,7 +77,7 @@ function H5Skeleton({ variant }) {
         {rows(4).map(i => (<div key={i} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: i === 3 ? 0 : 10 }}><SkBlock w={64} h={12} mb={0} /><SkBlock w={118} h={12} mb={0} /></div>))}
       </div>
       <div style={card}>
-        {rows(3).map(i => (<div key={i} style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: i === 2 ? 0 : 12 }}>
+        {rows(3).map(i => (<div key={i} style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: i === 2 ? 0 : 12 }}>
           <SkBlock w={36} h={36} r={8} mb={0} />
           <div style={{ flex: 1 }}><SkBlock w="58%" h={12} mb={6} /><SkBlock w="30%" h={10} mb={0} /></div>
           <SkBlock w={44} h={12} mb={0} />
@@ -99,7 +99,7 @@ function H5Skeleton({ variant }) {
         <div style={{ flex: 1 }}><SkBlock w="40%" h={15} mb={8} /><SkBlock w="60%" h={11} mb={0} /></div>
       </div>
       <div style={card}>
-        {rows(4).map(i => (<div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: i === 3 ? 0 : 14 }}>
+        {rows(4).map(i => (<div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: i === 3 ? 0 : 14 }}>
           <SkBlock w={30} h={30} r={8} mb={0} />
           <SkBlock w="52%" h={13} mb={0} />
         </div>))}
@@ -299,20 +299,22 @@ function H5Confirm({ confirm, onClose }) {
   // R81 — rejection flows pass a reason flag: a written reason is required
   const needReason = !!confirm.reason;
   const reasonOk = !needReason || reasonText.trim().length > 0;
+  // R108 — 按钮 type 语义：确认弹窗按操作语义着色（默认 primary）
+  const tone = ['success', 'warning', 'error'].includes(confirm.tone) ? confirm.tone : 'primary';
   return (
     <div style={{ position: 'absolute', inset: 0, background: 'rgba(23,35,47,0.5)', zIndex: 300, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: 16, paddingBottom: 40 }} onClick={onClose}>
       <div style={{ background: '#fff', borderRadius: 14, overflow: 'hidden', animation: 'slideIn 0.2s ease' }} onClick={e => e.stopPropagation()}>
         <div style={{ padding: '18px 18px 14px', borderBottom: '1px solid #F0F2F5' }}>
           <div style={{ fontWeight: 700, fontSize: 15 }}>{confirm.title}</div>
-          <div style={{ fontSize: 13, color: 'var(--text-2)', marginTop: 6, lineHeight: 1.6 }}>{confirm.message}</div>
+          <div style={{ fontSize: 13, color: 'var(--text-2)', marginTop: 8, lineHeight: 1.6 }}>{confirm.message}</div>
           {requireText && step === 2 && (
-            <div style={{ marginTop: 10 }}>
+            <div style={{ marginTop: 12 }}>
               <div style={{ fontSize: 12, color: 'var(--text-2)', marginBottom: 4 }}>{t(`Type "${requireText}" to confirm`)}</div>
               <input className="input" style={{ height: 36, width: '100%' }} value={typed} onChange={e => setTyped(e.target.value)} placeholder={requireText} />
             </div>
           )}
           {needReason && (
-            <div style={{ marginTop: 10 }}>
+            <div style={{ marginTop: 12 }}>
               <div style={{ fontSize: 12, color: 'var(--text-2)', marginBottom: 4 }}>{t('Rejection reason (required)')}</div>
               <textarea className="input" style={{ width: '100%', minHeight: 64, fontSize: 13, resize: 'vertical' }} value={reasonText} onChange={e => setReasonText(e.target.value)} placeholder={t('Rejection reason (required)')} />
               {!reasonText.trim() && <div style={{ fontSize: 12, color: 'var(--danger)', marginTop: 4 }}>{t('Rejection reason is required')}</div>}
@@ -323,7 +325,7 @@ function H5Confirm({ confirm, onClose }) {
           <button className="h5-btn h5-dlg-btn" style={{ borderRadius: 0, border: 'none', borderRight: '1px solid #F0F2F5', height: 48 }} onClick={onClose}><Icon name="close" size={14} />Cancel</button>
           {requireText && step === 1
             ? <button className="h5-btn h5-dlg-btn" style={{ borderRadius: 0, border: 'none', height: 48, color: 'var(--danger)', fontWeight: 600 }} onClick={() => setStep(2)}><Icon name="chevronRight" size={14} />Continue</button>
-            : <button className="h5-btn primary h5-dlg-btn" style={{ borderRadius: 0, border: 'none', height: 48, opacity: (requireText && typed !== requireText) || !reasonOk ? 0.5 : 1 }} disabled={(!!requireText && typed !== requireText) || !reasonOk} onClick={() => { confirm.onConfirm(needReason ? reasonText.trim() : undefined); onClose(); }}><Icon name="check" size={14} />{confirm.confirmText || 'Confirm'}</button>}
+            : <button className={`h5-btn ${tone} h5-dlg-btn`} style={{ borderRadius: 0, border: 'none', height: 48, opacity: (requireText && typed !== requireText) || !reasonOk ? 0.5 : 1 }} disabled={(!!requireText && typed !== requireText) || !reasonOk} onClick={() => { confirm.onConfirm(needReason ? reasonText.trim() : undefined); onClose(); }}><Icon name="check" size={14} />{confirm.confirmText || 'Confirm'}</button>}
         </div>
       </div>
     </div>
@@ -448,14 +450,14 @@ function H5Home({ openDoc, push, platform, noPerm, setTab }) {
       </div>
       {attention.length === 0
         ? (isFreshTenant
-          ? <div className="h5-card" style={{ textAlign: 'center', padding: 18, background: 'var(--bg)' }}><Icon name="link" size={18} color="var(--primary)" /><div style={{ marginTop: 6, fontSize: 13, fontWeight: 600, color: 'var(--text-1)' }}>{t('No business yet')}</div><div style={{ marginTop: 4, fontSize: 12, color: 'var(--text-2)' }}>{t('Bind a supply partner to start your first transaction')}</div></div>
-          : <div className="h5-card" style={{ textAlign: 'center', color: 'var(--text-3)', fontSize: 12.5, padding: 18 }}><Icon name="checkDouble" size={18} color="var(--success)" /><div style={{ marginTop: 6 }}>{t('All caught up — nothing needs your action')}</div></div>)
+          ? <div className="h5-card" style={{ textAlign: 'center', padding: 18, background: 'var(--bg)' }}><Icon name="link" size={18} color="var(--primary)" /><div style={{ marginTop: 8, fontSize: 13, fontWeight: 600, color: 'var(--text-1)' }}>{t('No business yet')}</div><div style={{ marginTop: 4, fontSize: 12, color: 'var(--text-2)' }}>{t('Bind a supply partner to start your first transaction')}</div></div>
+          : <div className="h5-card" style={{ textAlign: 'center', color: 'var(--text-3)', fontSize: 12.5, padding: 18 }}><Icon name="checkDouble" size={18} color="var(--success)" /><div style={{ marginTop: 8 }}>{t('All caught up — nothing needs your action')}</div></div>)
         : attention.map(x => (
           <div key={x.label} className="h5-cell" onClick={() => { if (platform) return noPerm(); ordersSeg = x.goDocs[0]; ordersStatus = x.goDocs[1]; setTab('orders'); }}>
             <span className="cell-icon" style={{ background: ATT[x.tone][0], color: ATT[x.tone][1] }}><Icon name={x.icon} size={17} /></span>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 13.5 }}>{x.label}</div>
-              {x.updated && <div className="muted" style={{ fontSize: 10.5, marginTop: 2, display: 'inline-flex', alignItems: 'center', gap: 3 }}><Icon name="clock" size={10} /> {t('Updated')} {fmtDateTime(x.updated)}</div>}
+              {x.updated && <div className="muted" style={{ fontSize: 10.5, marginTop: 2, display: 'inline-flex', alignItems: 'center', gap: 4 }}><Icon name="clock" size={10} /> {t('Updated')} {fmtDateTime(x.updated)}</div>}
             </div>
             {x.unread > 0 && <span className="mini-chip" style={{ background: 'var(--danger-light)', color: 'var(--danger)' }}>{x.unread}{' unread'}</span>}
             <span className="mini-chip" style={{ background: ATT[x.tone][0], color: ATT[x.tone][1] }}>{x.n}</span>
@@ -472,7 +474,7 @@ function H5Home({ openDoc, push, platform, noPerm, setTab }) {
       ) : isFreshTenant ? (
         <div className="h5-card" style={{ textAlign: 'center', padding: 18, background: 'var(--bg)' }}>
           <Icon name="box" size={18} color="var(--primary)" />
-          <div style={{ marginTop: 6, fontSize: 13, fontWeight: 600, color: 'var(--text-1)' }}>{t('Not started yet')}</div>
+          <div style={{ marginTop: 8, fontSize: 13, fontWeight: 600, color: 'var(--text-1)' }}>{t('Not started yet')}</div>
           <div style={{ marginTop: 4, fontSize: 12, color: 'var(--text-2)' }}>{t('Bind a supply partner to start your first transaction')}</div>
         </div>
       ) : (
@@ -488,9 +490,9 @@ function H5Home({ openDoc, push, platform, noPerm, setTab }) {
       {!platform && isTenant && !hasPartners && (
         <div className="h5-card" style={{ textAlign: 'center', padding: 18, background: 'var(--bg)', marginBottom: 8 }}>
           <Icon name="link" size={18} color="var(--primary)" />
-          <div style={{ marginTop: 6, fontSize: 13, fontWeight: 600, color: 'var(--text-1)' }}>{t('Bind a partner to unlock Quick Actions')}</div>
+          <div style={{ marginTop: 8, fontSize: 13, fontWeight: 600, color: 'var(--text-1)' }}>{t('Bind a partner to unlock Quick Actions')}</div>
           <div style={{ marginTop: 4, fontSize: 12, color: 'var(--text-2)' }}>{t('Bind a supply partner or invite a sub-agent to unlock transactions and quick actions')}</div>
-          <button className="btn sm primary" style={{ marginTop: 10 }} onClick={() => push({ name: 'guide' })}>{t('View Guide')}</button>
+          <button className="btn sm primary" style={{ marginTop: 12 }} onClick={() => push({ name: 'guide' })}>{t('View Guide')}</button>
         </div>
       )}
       <div className="h5-actions">
@@ -543,7 +545,7 @@ function H5Empty({ icon, message, hint }) {
     <div className="h5-card h5-empty" style={{ textAlign: 'center', color: 'var(--text-3)', padding: '26px 18px' }}>
       <Icon name={icon || 'file'} size={26} />
       <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-2)', marginTop: 8 }}>{message || 'No Data'}</div>
-      {hint && <div style={{ fontSize: 11.5, marginTop: 6, lineHeight: 1.5 }}>{hint}</div>}
+      {hint && <div style={{ fontSize: 11.5, marginTop: 8, lineHeight: 1.5 }}>{hint}</div>}
     </div>
   );
 }
@@ -619,7 +621,7 @@ function H5Products({ push, platform, skReady = true }) {
             product list scrolls. Channel tab shows the upstream-catalog note;
             platform accounts (single read-only list) keep their note too. */}
         {(platform || (showTabs && tab === 'channel')) && (
-          <div className="h5-card" style={{ padding: '6px 10px', marginTop: 6, display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, color: 'var(--text-3)' }}>
+          <div className="h5-card" style={{ padding: '6px 10px', marginTop: 8, display: 'flex', alignItems: 'center', gap: 8, fontSize: 11.5, color: 'var(--text-3)' }}>
             <Icon name="lock" size={12} />
             <span>{platform
               ? 'Read-only — platform accounts cannot operate product data'
@@ -678,7 +680,7 @@ function H5Products({ push, platform, skReady = true }) {
               <div className="p-foot">
                 <div className="row-actions" onClick={e => e.stopPropagation()}>
                   {/* 询价 = 直接加入询价暂存：已在车中则数量 +1，不在则新增且数量默认 1 */}
-                  <button className="h5-item-act" title={t('Inquire')} aria-label={t('Inquire')} onClick={() => { cartApi.add('inquiry', { pid: p.id, qty: 1 }); toast(`${p.name} added to the inquiry staging`, 'success'); }}><Icon name="edit" size={12} />{t('Inquire')}</button>
+                  <button className="h5-item-act primary" title={t('Inquire')} aria-label={t('Inquire')} onClick={() => { cartApi.add('inquiry', { pid: p.id, qty: 1 }); toast(`${p.name} added to the inquiry staging`, 'success'); }}><Icon name="edit" size={12} />{t('Inquire')}</button>
                 </div>
               </div>
             )}
@@ -687,8 +689,8 @@ function H5Products({ push, platform, skReady = true }) {
                 <div className="row-actions" onClick={e => e.stopPropagation()}>
                   <button className="h5-item-act" title={t('Adjust Price')} aria-label={t('Adjust Price')} onClick={() => push({ name: 'adjustPrice', productId: p.id })}><Icon name="tag" size={12} />{t('Adjust Price')}</button>
                   {/* 调整库存拆分：入库/出库加入对应暂存（数量默认 1，已在车中则 +1） */}
-                  <button className="h5-item-act" title={t('Stock In')} aria-label={t('Stock In')} onClick={() => { cartApi.add('inbound', { kind: 'exist', pid: p.id, qty: 1 }); toast(`${p.name} added to the inbound staging`, 'success'); }}><Icon name="download" size={12} />{t('Stock In')}</button>
-                  <button className="h5-item-act" title={t('Stock Out')} aria-label={t('Stock Out')} onClick={() => { cartApi.add('outbound', { pid: p.id, qty: 1 }); toast(`${p.name} added to the outbound staging`, 'success'); }}><Icon name="truck" size={12} />{t('Stock Out')}</button>
+                  <button className="h5-item-act success" title={t('Stock In')} aria-label={t('Stock In')} onClick={() => { cartApi.add('inbound', { kind: 'exist', pid: p.id, qty: 1 }); toast(`${p.name} added to the inbound staging`, 'success'); }}><Icon name="download" size={12} />{t('Stock In')}</button>
+                  <button className="h5-item-act warning" title={t('Stock Out')} aria-label={t('Stock Out')} onClick={() => { cartApi.add('outbound', { pid: p.id, qty: 1 }); toast(`${p.name} added to the outbound staging`, 'success'); }}><Icon name="truck" size={12} />{t('Stock Out')}</button>
                   <button className="h5-item-act" title={t('View Stock')} aria-label={t('View Stock')} onClick={() => push({ name: 'channelStock', productId: p.id })}><Icon name="eye" size={12} />{t('View Stock')}</button>
                 </div>
               </div>
@@ -703,7 +705,7 @@ function H5Products({ push, platform, skReady = true }) {
           : (showTabs && tab === 'channel'
             ? <H5Empty icon="search" message="No channel products" hint="Adjust the supplier filter or search keywords." />
             : <H5Empty icon="box" message="No products yet" hint="Products you create or import appear here." />))}
-      <div className="muted h5-loadmore" style={{ textAlign: 'center', fontSize: 11, marginTop: 14 }}>Pull down to refresh · pull up to load more</div>
+      <div className="muted h5-loadmore" style={{ textAlign: 'center', fontSize: 11, marginTop: 16 }}>Pull down to refresh · pull up to load more</div>
 
       </React.Fragment>)}
       </div>
@@ -838,7 +840,7 @@ function H5Orders({ openDoc, platform, push, setConfirm, skReady = true }) {
           : <H5Empty icon="lock" message="No visible data for this account" hint="Cross-tenant data is isolated by design — you only see records you created, plus those of your own tenant and linked supply partners." />)
         : <H5Empty icon="search" message="No documents in this tab" hint="Try another document tab or clear the filters." />)}
       {rows.map(d => <H5DocCard key={d.id} doc={d} showRole onClick={() => openDoc(d.id)} onVerb={!platform ? (verb, doc) => h5DocVerb(verb, doc, { db, act, toast, push, setConfirm }) : null} />)}
-      <div className="muted h5-loadmore" style={{ textAlign: 'center', fontSize: 11, marginTop: 14 }}>Load more by pulling up</div>
+      <div className="muted h5-loadmore" style={{ textAlign: 'center', fontSize: 11, marginTop: 16 }}>Load more by pulling up</div>
       </React.Fragment>)}
       </div>
     </div>
@@ -860,6 +862,7 @@ function h5DocVerb(verb, doc, ctx) {
       message: `Reject ${doc.type === 'PO' ? 'order' : 'quote'} ${doc.no}? A rejection reason is required.`,
       confirmText: 'Reject',
       reason: true,
+      tone: 'error',
       onConfirm: (reason) => { act.docVerb('Reject', doc, null, reason); toast(`${doc.type === 'PO' ? 'Order' : 'Quote'} rejected — reason recorded`, 'success'); },
     });
     return;
@@ -881,6 +884,7 @@ function h5DocVerb(verb, doc, ctx) {
         message: `Terminate receiving for order ${po.no}? The follow-up replenishment stops and this order's receiving is completed. A termination reason is required.`,
         confirmText: 'Terminate',
         reason: true,
+        tone: 'error',
         onConfirm: (reason) => { act.terminateReceiving(po, reason); },
       });
       return;
@@ -906,7 +910,7 @@ function h5DocVerb(verb, doc, ctx) {
       'Replenish': `Issue a replenishment shipment for the shortfall of order ${po.no}? A new outbound order with waybill will be generated.`,
       'Terminate Receiving': `Terminate receiving for order ${po.no}? The follow-up replenishment stops and this order's receiving is completed.`,
     };
-    setConfirm({ title: verb, message: msgs[verb], confirmText: verb, onConfirm: () => {
+    setConfirm({ title: verb, message: msgs[verb], confirmText: verb, tone: ['Cancel', 'Close', 'Delete'].includes(verb) ? 'error' : verb === 'Re-receive' ? 'success' : verb === 'Dispatch' ? 'warning' : undefined, onConfirm: () => {
       if (verb === 'Dispatch') act.dispatch(doc);
       else if (verb === 'Re-receive') push({ name: 'rereceive', docId: po.id });
       else if (verb === 'Replenish') act.replenish(po);
@@ -953,10 +957,10 @@ function H5DocCard({ doc, onClick, showRole, onVerb }) {
         <span>{cp}</span>
         <span className="d-amount"><span className="cur-code">{doc.currency}</span>{' '}{money(docAmount(doc), doc.currency).num}</span>
       </div>
-      <div className="muted" style={{ fontSize: 11, marginTop: 6 }}>{doc.items.length} items · {doc.createdAt} · by {doc.createdBy}</div>
+      <div className="muted" style={{ fontSize: 11, marginTop: 8 }}>{doc.items.length} items · {doc.createdAt} · by {doc.createdBy}</div>
       {/* R82 — list items show only the buyer / seller role; no observer role */}
       {showRole && (side === 'buyer' || side === 'seller') && (
-        <div className="muted" style={{ fontSize: 11, marginTop: 6, display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center' }}>
+        <div className="muted" style={{ fontSize: 11, marginTop: 8, display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center' }}>
           <span>Your role</span><span>: </span>
           <span style={{ fontWeight: 600, color: 'var(--text-2)' }}>{side === 'seller' ? 'Seller' : 'Buyer'}</span>
           <span>{' · '}</span>
@@ -968,7 +972,7 @@ function H5DocCard({ doc, onClick, showRole, onVerb }) {
       {acts.length > 0 && (
         <div className="d-acts" onClick={e => e.stopPropagation()}>
           {acts.map(v => (
-            <button key={v} className={`d-act${['Accept', 'Approve', 'Submit', 'Quote', 'Confirm Quote', 'Place Order', 'Ship', 'Dispatch', 'Confirm Receipt', 'Create Invoice', 'Confirm Invoice', 'Record Payment'].includes(v) ? ' primary' : ['Reject', 'Cancel', 'Close', 'Delete'].includes(v) ? ' danger' : ''}`} onClick={() => onVerb(v, doc)}><Icon name={VERB_ICON[v] || 'check'} size={12} />{v === 'Quote' ? 'Quote now' : v}</button>
+            <button key={v} className={`d-act${['Confirm Receipt', 'Re-receive'].includes(v) ? ' success' : ['Ship', 'Dispatch'].includes(v) ? ' warning' : ['Accept', 'Approve', 'Submit', 'Quote', 'Confirm Quote', 'Place Order', 'Create Invoice', 'Confirm Invoice', 'Record Payment'].includes(v) ? ' primary' : ['Reject', 'Cancel', 'Close', 'Delete'].includes(v) ? ' error' : ''}`} onClick={() => onVerb(v, doc)}><Icon name={VERB_ICON[v] || 'check'} size={12} />{v === 'Quote' ? 'Quote now' : v}</button>
           ))}
         </div>
       )}
@@ -1018,7 +1022,7 @@ function H5Mine({ push }) {
           <span className={`avatar ${account.type === 'platform' ? 'plat' : 'tenant'}`} style={{ width: 48, height: 48, fontSize: 15 }}>{account.name.split(' ').map(w => w[0]).slice(0, 2).join('')}</span>
           <div>
             <div style={{ fontWeight: 700, fontSize: 15 }}>{account.name}</div>
-            <div className="muted" style={{ fontSize: 12, marginTop: 3 }}>
+            <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
               {account.type === 'platform' ? 'Platform Admin' : (db.tenants.find(t => t.id === account.tenantId) || {}).name}
             </div>
             <div className="muted mono" style={{ fontSize: 11, marginTop: 2 }}>{account.phone}{account.whatsapp ? ' · WhatsApp bound' : ''}</div>
@@ -1095,10 +1099,10 @@ function H5Mine({ push }) {
           {account.password && <div className="h5-form-row"><span className="k">Current Password</span><input className="input" type="password" style={{ height: 32, flex: 1 }} value={pw.cur} onChange={e => setPw(s => ({ ...s, cur: e.target.value }))} placeholder="current password" autoFocus /></div>}
           <div className="h5-form-row"><span className="k">New Password</span><input className="input" type="password" style={{ height: 32, flex: 1 }} value={pw.next} onChange={e => setPw(s => ({ ...s, next: e.target.value }))} placeholder="min. 6 characters" autoFocus={!account.password} /></div>
           <div className="h5-form-row" style={{ borderBottom: 'none' }}><span className="k">Confirm New Password</span><input className="input" type="password" style={{ height: 32, flex: 1 }} value={pw.conf} onChange={e => setPw(s => ({ ...s, conf: e.target.value }))} placeholder="repeat the new password" /></div>
-          <div className="muted" style={{ fontSize: 11, marginTop: 6 }}>demo password — hashed at rest in the real system</div>
+          <div className="muted" style={{ fontSize: 11, marginTop: 8 }}>demo password — hashed at rest in the real system</div>
         </Dialog>
       )}
-      <div className="muted" style={{ textAlign: 'center', fontSize: 11, marginTop: 20 }}>TierLink Warehouse MVP · Demo data only · v1.0.0</div>
+      <div className="muted" style={{ textAlign: 'center', fontSize: 11, marginTop: 16 }}>TierLink Warehouse MVP · Demo data only · v1.0.0</div>
       </div>
     </div>
   );
@@ -1217,7 +1221,7 @@ function H5DocPage({ docId, push, setConfirm, platform, noPerm }) {
           const prod = db.products.find(p => p.id === it.pid);
           const img = prod && prod.image;
           return (
-          <div key={i} style={{ display: 'flex', gap: 10, padding: '11px 0', borderBottom: i < doc.items.length - 1 ? '1px solid #F0F2F5' : 'none' }}>
+          <div key={i} style={{ display: 'flex', gap: 12, padding: '11px 0', borderBottom: i < doc.items.length - 1 ? '1px solid #F0F2F5' : 'none' }}>
             {img
               ? <img src={img} alt="" style={{ width: 42, height: 42, borderRadius: 8, objectFit: 'cover', flexShrink: 0, alignSelf: 'center' }} />
               : <div style={{ width: 42, height: 42, borderRadius: 8, background: '#F5F6F8', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, alignSelf: 'center' }}><Icon name="box" size={16} color="var(--text-3)" /></div>}
@@ -1253,7 +1257,7 @@ function H5DocPage({ docId, push, setConfirm, platform, noPerm }) {
       {!platform && actions.length > 0 && (
         <div className="h5-actionbar ghost">
           {actions.map(verb => (
-            <button key={verb} className={`h5-btn${['Accept', 'Approve', 'Submit', 'Quote', 'Confirm Quote', 'Place Order', 'Ship', 'Dispatch', 'Confirm Receipt', 'Create Invoice', 'Confirm Invoice', 'Record Payment', 'Re-receive', 'Replenish'].includes(verb) ? ' primary' : ['Reject', 'Cancel', 'Close', 'Terminate Receiving'].includes(verb) ? ' danger' : ''}`} onClick={() => runVerb(verb)}><Icon name={VERB_ICON[verb] || 'check'} size={14} />{verb}</button>
+            <button key={verb} className={`h5-btn${['Confirm Receipt', 'Re-receive'].includes(verb) ? ' success' : ['Ship', 'Dispatch'].includes(verb) ? ' warning' : ['Accept', 'Approve', 'Submit', 'Quote', 'Confirm Quote', 'Place Order', 'Create Invoice', 'Confirm Invoice', 'Record Payment', 'Replenish'].includes(verb) ? ' primary' : ['Reject', 'Cancel', 'Close', 'Delete', 'Terminate Receiving'].includes(verb) ? ' error' : ''}`} onClick={() => runVerb(verb)}><Icon name={VERB_ICON[verb] || 'check'} size={14} />{verb}</button>
           ))}
         </div>
       )}
@@ -1273,7 +1277,7 @@ function H5DocPage({ docId, push, setConfirm, platform, noPerm }) {
             <div style={{ padding: '16px 18px 12px', borderBottom: '1px solid #F0F2F5' }}>
               <div style={{ fontWeight: 700, fontSize: 15 }}>WhatsApp Document Link</div>
               <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>Copy the link below and open it in a new tab — no login required (demo).</div>
-              <div className="mono" style={{ fontSize: 11, background: 'var(--bg)', borderRadius: 8, padding: '8px 10px', marginTop: 10, wordBreak: 'break-all' }}>{demoLink}</div>
+              <div className="mono" style={{ fontSize: 11, background: 'var(--bg)', borderRadius: 8, padding: '8px 10px', marginTop: 12, wordBreak: 'break-all' }}>{demoLink}</div>
             </div>
             <div style={{ display: 'flex' }}>
               <button className="h5-btn h5-dlg-btn" style={{ borderRadius: 0, border: 'none', borderRight: '1px solid #F0F2F5', height: 48 }} onClick={() => setLinkOpen(null)}><Icon name="close" size={14} />Close</button>
@@ -1317,7 +1321,7 @@ function H5WhatsAppPage({ docId, push, setConfirm, platform, noPerm }) {
           const prod = db.products.find(p => p.id === it.pid);
           const img = prod && prod.image;
           return (
-          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 0', borderBottom: i < doc.items.length - 1 ? '1px solid #F0F2F5' : 'none', fontSize: 13 }}>
+          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderBottom: i < doc.items.length - 1 ? '1px solid #F0F2F5' : 'none', fontSize: 13 }}>
             {img
               ? <img src={img} alt="" style={{ width: 38, height: 38, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
               : <div style={{ width: 38, height: 38, borderRadius: 8, background: '#F5F6F8', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Icon name="box" size={15} color="var(--text-3)" /></div>}
@@ -1328,11 +1332,11 @@ function H5WhatsAppPage({ docId, push, setConfirm, platform, noPerm }) {
       </div>
       {canConfirm ? (
         <div className="h5-actionbar">
-          <button className="h5-btn" onClick={() => setConfirm({
+          <button className="h5-btn success" onClick={() => setConfirm({
             title: 'Confirm Receipt', message: `Confirm full receipt of ${doc.no}? Stock will increase and the inbound record will be generated.`,
-            confirmText: 'Confirm', onConfirm: () => act.receive(doc, 'accept', null, ''),
+            confirmText: 'Confirm', tone: 'success', onConfirm: () => act.receive(doc, 'accept', null, ''),
           })}><Icon name="checkDouble" size={14} />Confirm Receipt</button>
-          <button className="h5-btn primary" onClick={() => push({ name: 'receive', docId: doc.id })}><Icon name="eye" size={14} />Inspect Details</button>
+          <button className="h5-btn" onClick={() => push({ name: 'receive', docId: doc.id })}><Icon name="eye" size={14} />Inspect Details</button>
         </div>
       ) : (
         <div className="h5-card" style={{ textAlign: 'center', color: 'var(--text-3)', fontSize: 12 }}>View-only document — no confirmation required at this stage.</div>
@@ -1481,7 +1485,7 @@ function WaChatCore({ docId, back, onClose, onOpenDoc }) {
               </div>
             ) : (
               <div className="wa-bubble">
-                {m.lines.map((l, j) => <div key={j} style={m.lines.length > 1 && j === 0 ? { fontWeight: 600, marginBottom: 3 } : null}>{l}</div>)}
+                {m.lines.map((l, j) => <div key={j} style={m.lines.length > 1 && j === 0 ? { fontWeight: 600, marginBottom: 4 } : null}>{l}</div>)}
                 <div className="wa-meta">{m.ts}{m.me && <Icon name="checkDouble" size={12} color="#53BDEB" />}</div>
               </div>
             )}
@@ -1528,7 +1532,7 @@ function H5WaInboxPage({ docIds, push, back }) {
         <Icon name="whatsapp" size={18} color="#fff" />
       </div>
       <div className="h5-pad" style={{ flex: 1, overflowY: 'auto' }}>
-      <div className="h5-card" style={{ background: '#E8F6EF', border: '1px solid #C6E7D4', padding: '8px 12px', fontSize: 11.5, color: '#14603C', display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+      <div className="h5-card" style={{ background: '#E8F6EF', border: '1px solid #C6E7D4', padding: '8px 12px', fontSize: 11.5, color: '#14603C', display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
         <Icon name="whatsapp" size={13} />
         <span>{docs.length > 1 ? t(`${docs.length} inquiries sent via WhatsApp — tap a supplier to open the chat`) : t('Inquiry sent via WhatsApp — tap the supplier to open the chat')}</span>
       </div>
@@ -1536,13 +1540,13 @@ function H5WaInboxPage({ docIds, push, back }) {
         const sup = db.tenants.find(x => x.id === d.seller);
         const mainAcc = db.accounts.find(a => a.tenantId === d.seller && a.main);
         return (
-          <div key={d.id} className="h5-card" style={{ marginBottom: 8, padding: 12, display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}
+          <div key={d.id} className="h5-card" style={{ marginBottom: 8, padding: 12, display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}
             onClick={() => push({ name: 'waChat', docId: d.id })}>
             <span className="wa-avatar">{sup ? sup.name[0] : '?'}</span>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 13, fontWeight: 600 }}>{sup ? sup.name : d.seller}</div>
               <div className="muted" style={{ fontSize: 11.5, marginTop: 2 }}>{t('Inquiry')} {d.no} · {d.items.length} items · {money(docAmount(d), d.currency).full}</div>
-              <div className="muted" style={{ fontSize: 11, marginTop: 3, display: 'flex', alignItems: 'center', gap: 4 }}>
+              <div className="muted" style={{ fontSize: 11, marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
                 <Icon name="checkDouble" size={11} color="#53BDEB" />{t('Sent via WhatsApp · Delivered')}
                 {mainAcc && mainAcc.whatsapp ? <span className="mono">· {mainAcc.whatsapp}</span> : null}
               </div>
@@ -1633,7 +1637,7 @@ function H5DocFormPage({ mode, initialItems, onDone, push }) {
             <div className="flex gap8 mt8" style={{ flexWrap: 'nowrap', overflowX: 'auto' }}>
               <input className="input" type="number" placeholder="Qty" value={it.qty} style={{ height: 30, width: 90, flexShrink: 0 }}
                 onChange={e => setItems(items.map((x, j) => i === j ? { ...x, qty: e.target.value } : x))} />
-              <button className="h5-item-act danger" style={{ marginLeft: 'auto' }} onClick={() => items.length > 1 && setItems(items.filter((_, j) => j !== i))}><Icon name="trash" size={12} />Remove</button>
+              <button className="h5-item-act error" style={{ marginLeft: 'auto' }} onClick={() => items.length > 1 && setItems(items.filter((_, j) => j !== i))}><Icon name="trash" size={12} />Remove</button>
             </div>
           </div>
         </div>
@@ -1698,7 +1702,7 @@ function H5ProductPicker({ products, existingPids, onClose, onAdd, canPick, lock
               <div className="p-body">
                 <div className="p-name">{p.name}</div>
                 <div className="p-spec mono">{p.model} · {p.spec}</div>
-                <div className="flex" style={{ justifyContent: 'space-between', marginTop: 6, alignItems: 'center' }}>
+                <div className="flex" style={{ justifyContent: 'space-between', marginTop: 8, alignItems: 'center' }}>
                   <div className="p-price"><span className="cur">{p.currency}</span>{' '}{money(p.price, p.currency).num}</div>
                   {added && <span className="muted" style={{ fontSize: 11 }}>Already added</span>}
                   {locked && <span className="muted" style={{ fontSize: 11 }}>{lockedNote ? lockedNote(p) : 'Not available'}</span>}
@@ -1744,10 +1748,10 @@ function H5ReceivePage({ ckId, onDone }) {
           <span className="mono" style={{ fontWeight: 700, fontSize: 13 }}>{ck.no}</span>
           <StatusTag type="CK" status={ck.status} />
         </div>
-        <div className="muted" style={{ fontSize: 12, marginTop: 6 }}>From {tenantName(db, ck.seller)} · {ck.items.length} items</div>
+        <div className="muted" style={{ fontSize: 12, marginTop: 8 }}>From {tenantName(db, ck.seller)} · {ck.items.length} items</div>
       </div>
       <div className="h5-section-title mt12">Result</div>
-      <div className="h5-card" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div className="h5-card" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         {[['accept', 'Accept — all items match'], ['partial', 'Partial receipt'], ['reject', 'Reject shipment']].map(([v, label]) => (
           <span key={v} className={`radio-opt${mode === v ? ' on' : ''}`} onClick={() => pickMode(v)}>
             <span className="radio-dot"></span>{label}
@@ -1759,7 +1763,7 @@ function H5ReceivePage({ ckId, onDone }) {
         {ck.items.map((it, i) => {
           const prod = db.products.find(p => p.id === it.pid);
           return (
-          <div key={it.pid} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 0', borderBottom: i < ck.items.length - 1 ? '1px solid #F0F2F5' : 'none' }}>
+          <div key={it.pid} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderBottom: i < ck.items.length - 1 ? '1px solid #F0F2F5' : 'none' }}>
             <img src={prodImg(prod)} alt="" style={{ width: 38, height: 38, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 13, fontWeight: 600 }}>{it.name}</div>
@@ -1779,7 +1783,7 @@ function H5ReceivePage({ ckId, onDone }) {
           </div>
         </div>
       )}
-      <button className="h5-btn primary mt16" style={{ width: '100%' }} onClick={() => {
+      <button className="h5-btn success mt16" style={{ width: '100%' }} onClick={() => {
         if (mode !== 'accept' && !reason.trim()) { toast('Variance reason is required', 'error'); return; }
         if (mode === 'partial') {
           for (const it of ck.items) {
@@ -1807,24 +1811,24 @@ function H5ShipPage({ poId, onDone }) {
           <span className="mono" style={{ fontWeight: 700, fontSize: 13 }}>{po.no}</span>
           <StatusTag type="PO" status={po.status} />
         </div>
-        <div className="muted" style={{ fontSize: 12, marginTop: 6 }}>To {tenantName(db, po.buyer)} · {po.items.length} items · {money(docAmount(po), po.currency).full}</div>
+        <div className="muted" style={{ fontSize: 12, marginTop: 8 }}>To {tenantName(db, po.buyer)} · {po.items.length} items · {money(docAmount(po), po.currency).full}</div>
       </div>
       <div className="h5-section-title">Logistics Information</div>
       <div className="h5-card">
         {[['carrier', 'Carrier', 'e.g. Swift Cargo'], ['plate', 'Vehicle Plate', 'e.g. LAG-772-XA'], ['driver', 'Driver', 'e.g. Emeka Obi'], ['phone', 'Driver Phone', '+234 ...']].map(([k, label, ph]) => (
-          <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 0', borderBottom: '1px solid #F0F2F5' }}>
+          <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '9px 0', borderBottom: '1px solid #F0F2F5' }}>
             <span className="muted" style={{ fontSize: 12.5, width: 96 }}>{label}</span>
             <input className="input" value={w[k]} onChange={e => setW(s => ({ ...s, [k]: e.target.value }))} placeholder={ph} style={{ height: 32 }} />
           </div>
         ))}
       </div>
       <button className="btn block mt12" onClick={() => setW({ carrier: 'Swift Cargo', plate: 'LAG-889-XB', driver: 'Uche Nwankwo', phone: '+234 809 112 3344' })}><Icon name="ai" size={13} />Fill demo logistics</button>
-      <button className="h5-btn primary mt12" style={{ width: '100%' }} onClick={() => {
+      <button className="h5-btn warning mt12" style={{ width: '100%' }} onClick={() => {
         if (!w.carrier || !w.driver) { toast('Carrier and driver are required', 'error'); return; }
         act.ship(po, w);
         onDone();
       }}><Icon name="truck" size={14} />Confirm Shipment</button>
-      <div className="muted" style={{ fontSize: 11, marginTop: 10, textAlign: 'center' }}>Shipment decrements stock, generates CK + waybill, and pushes a WhatsApp link to the buyer</div>
+      <div className="muted" style={{ fontSize: 11, marginTop: 12, textAlign: 'center' }}>Shipment decrements stock, generates CK + waybill, and pushes a WhatsApp link to the buyer</div>
     </div>
   );
 }
@@ -1875,11 +1879,11 @@ function H5ProductPage({ productId, push, platform }) {
       {hasActions && (
         <div className="h5-act-row">
           {/* 询价 = 加入询价暂存（数量默认 1，已在车中则 +1） */}
-          {inqOk && <button className="h5-btn primary" onClick={() => { cartApi.add('inquiry', { pid: p.id, qty: 1 }); toast(`${p.name} added to the inquiry staging`, 'success'); }}><Icon name="edit" size={14} />{t('Inquire')}</button>}
+          {inqOk && <button className="h5-btn plain primary" onClick={() => { cartApi.add('inquiry', { pid: p.id, qty: 1 }); toast(`${p.name} added to the inquiry staging`, 'success'); }}><Icon name="edit" size={14} />{t('Inquire')}</button>}
           {mgrOk && <button className="h5-btn" onClick={() => push({ name: 'adjustPrice', productId: p.id })}><Icon name="tag" size={14} />{t('Adjust Price')}</button>}
           {/* 调整库存拆分：入库/出库加入对应暂存 */}
-          {mgrOk && <button className="h5-btn" onClick={() => { cartApi.add('inbound', { kind: 'exist', pid: p.id, qty: 1 }); toast(`${p.name} added to the inbound staging`, 'success'); }}><Icon name="download" size={14} />{t('Stock In')}</button>}
-          {mgrOk && <button className="h5-btn" onClick={() => { cartApi.add('outbound', { pid: p.id, qty: 1 }); toast(`${p.name} added to the outbound staging`, 'success'); }}><Icon name="truck" size={14} />{t('Stock Out')}</button>}
+          {mgrOk && <button className="h5-btn plain success" onClick={() => { cartApi.add('inbound', { kind: 'exist', pid: p.id, qty: 1 }); toast(`${p.name} added to the inbound staging`, 'success'); }}><Icon name="download" size={14} />{t('Stock In')}</button>}
+          {mgrOk && <button className="h5-btn plain warning" onClick={() => { cartApi.add('outbound', { pid: p.id, qty: 1 }); toast(`${p.name} added to the outbound staging`, 'success'); }}><Icon name="truck" size={14} />{t('Stock Out')}</button>}
           {mgrOk && <button className="h5-btn" onClick={() => push({ name: 'channelStock', productId: p.id })}><Icon name="eye" size={14} />{t('View Stock')}</button>}
         </div>
       )}
@@ -1913,7 +1917,7 @@ function H5GuidePage() {
       {rules.map((r, i) => (
         <div key={i} className="h5-card" style={{ marginBottom: 8 }}>
           <div className="flex gap8"><span className="n" style={{ width: 20, height: 20, borderRadius: 10, background: 'var(--primary-light)', color: 'var(--primary)', fontSize: 11, fontWeight: 700, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{i + 1}</span>
-            <div><b style={{ fontSize: 13 }}>{r[0]}</b><div className="muted" style={{ fontSize: 12, marginTop: 3, lineHeight: 1.55 }}>{r[1]}</div></div>
+            <div><b style={{ fontSize: 13 }}>{r[0]}</b><div className="muted" style={{ fontSize: 12, marginTop: 4, lineHeight: 1.55 }}>{r[1]}</div></div>
           </div>
         </div>
       ))}

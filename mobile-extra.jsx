@@ -33,7 +33,7 @@ function H5ProductFormPage({ onDone }) {
         <div className="h5-form-row"><span className="k">Model</span><div style={{ flex: 1 }}><input className="input" style={{ height: 32, width: '100%' }} value={f.model} onChange={e => set('model', e.target.value)} placeholder="unique, e.g. SK-INV-5K" />{errs.model && <div className="field-error">{errs.model}</div>}</div></div>
         <div className="h5-form-row"><span className="k">Brand</span><input className="input" style={{ height: 32, flex: 1 }} value={f.brand} onChange={e => set('brand', e.target.value)} placeholder="e.g. SunKing" /></div>
         <div className="h5-form-row"><span className="k">Unit</span><div style={{ flex: 1 }}><Select value={f.unit} onChange={v => set('unit', v)} options={['pcs', 'set', 'box', 'kg'].map(u => ({ value: u, label: u }))} style={{ height: 32 }} /></div></div>
-        <div className="h5-form-row"><span className="k">Price *</span><div style={{ flex: 1, display: 'flex', gap: 8, alignItems: 'center' }}><input className="input" style={{ height: 32, flex: 1 }} type="number" value={f.price} onChange={e => set('price', e.target.value)} placeholder="0.00" /><Select value={f.currency} onChange={v => set('currency', v)} options={['USD', 'CNY', 'NGN'].map(c => ({ value: c, label: c }))} style={{ height: 32, width: 88 }} /></div>{errs.price && <span className="field-error">{errs.price}</span>}</div>
+        <div className="h5-form-row"><span className="k">Price *</span><div style={{ flex: 1, display: 'flex', gap: 8, alignItems: 'center' }}><Select value={f.currency} onChange={v => set('currency', v)} options={['USD', 'CNY', 'NGN'].map(c => ({ value: c, label: c }))} style={{ height: 32, width: 88 }} /><input className="input" style={{ height: 32, flex: 1 }} type="number" value={f.price} onChange={e => set('price', e.target.value)} placeholder="0.00" /></div>{errs.price && <span className="field-error">{errs.price}</span>}</div>
         <div className="h5-form-row"><span className="k">Stock</span><div style={{ flex: 1 }}><input className="input" style={{ height: 32, width: '100%' }} type="number" value={f.stock} onChange={e => set('stock', e.target.value)} placeholder="initial stock, e.g. 100" />{errs.stock && <div className="field-error">{errs.stock}</div>}</div></div>
       </div>
       <div className="h5-section-title">Categories <span className="muted" style={{ fontWeight: 400, fontSize: 11.5 }}>· {t('one product may belong to several')}</span></div>
@@ -326,7 +326,7 @@ function H5StockPage({ push }) {
             <div className="h5-form-row" style={{ borderBottom: 'none' }}><span className="k">Reason *</span><input className="input" style={{ height: 32, flex: 1 }} value={reason} onChange={e => setReason(e.target.value)} placeholder="e.g. cycle count / damaged write-off" /></div>
             <div className="flex gap10 mt8">
               <button className="h5-btn" onClick={() => setAdjust(null)}><Icon name="close" size={14} />Cancel</button>
-              <button className="h5-btn primary" onClick={doAdjust}><Icon name="check" size={14} />Confirm</button>
+              <button className="h5-btn warning" onClick={doAdjust}><Icon name="check" size={14} />Confirm</button>
             </div>
             <div className="muted" style={{ fontSize: 11, marginTop: 8 }}>A movement record (before → after, operator, reason) is generated automatically.</div>
           </div>
@@ -412,7 +412,7 @@ function H5QuoteFormPage({ docId, onDone }) {
           <span className="mono" style={{ fontWeight: 700, fontSize: 13 }}>{inquiry.no}</span>
           <StatusTag type="IQ" status={inquiry.status} />
         </div>
-        <div className="muted" style={{ fontSize: 12, marginTop: 6 }}>From {tenantName(db, inquiry.buyer)} · deliver {inquiry.deliveryDate || '—'}</div>
+        <div className="muted" style={{ fontSize: 12, marginTop: 8 }}>From {tenantName(db, inquiry.buyer)} · deliver {inquiry.deliveryDate || '—'}</div>
         {aiUsed && <div className="mt8"><span className="h5-badge-ai"><Icon name="ai" size={11} />AI DRAFTED PRICES — EDITABLE</span></div>}
       </div>
       <div className="h5-section-title">Quote Lines</div>
@@ -475,7 +475,7 @@ function H5PrintPage({ docId }) {
           <div><span className="muted">Buyer:</span> <b>{tenantName(db, doc.buyer)}</b></div>
           <div><span className="muted">Date:</span> {doc.createdAt}</div>
         </div>
-        <table className="table" style={{ marginTop: 10, fontSize: 10 }}>
+        <table className="table" style={{ marginTop: 12, fontSize: 10 }}>
           <thead><tr><th>Product</th><th>Spec</th><th>Qty</th><th className="right">Unit Price</th><th className="right">Amount</th></tr></thead>
           <tbody>
             {doc.items.map((it, i) => (
@@ -488,7 +488,7 @@ function H5PrintPage({ docId }) {
           <div><div className="barcode"></div><div className="mono muted" style={{ fontSize: 8, marginTop: 2 }}>{doc.no} · {doc.createdAt}</div></div>
           <div style={{ textAlign: 'right' }}><div className="muted" style={{ fontSize: 9 }}>TOTAL</div><div className="mono" style={{ fontSize: 15, fontWeight: 700 }}>{money(docAmount(doc), doc.currency).full}</div></div>
         </div>
-        <div className="muted" style={{ fontSize: 8.5, marginTop: 10, borderTop: '1px solid var(--border-light)', paddingTop: 6 }}>Anti-counterfeit watermark and barcode are rendered by the print template. Printing is logged as a data-outbound event.</div>
+        <div className="muted" style={{ fontSize: 8.5, marginTop: 12, borderTop: '1px solid var(--border-light)', paddingTop: 6 }}>Anti-counterfeit watermark and barcode are rendered by the print template. Printing is logged as a data-outbound event.</div>
       </div>
       <div className="flex gap10 mt16">
         <button className="h5-btn" onClick={() => toast('Template printing is prepared offline and uploaded (no online designer in MVP)')}><Icon name="info" size={14} />Template Info</button>
@@ -513,7 +513,7 @@ function H5ExportSheet({ doc, onClose }) {
           <div style={{ fontWeight: 700, fontSize: 15 }}>Export {doc.no}</div>
           <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>Exports are recorded as data-outbound events (audit trail).</div>
         </div>
-        <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 12 }}>
           {[
             { fmt: 'PDF', label: 'Export as PDF', icon: 'file', desc: 'Print pipeline with watermark & barcode' },
             { fmt: 'Excel', label: 'Export as Excel', icon: 'grid', desc: 'Downloads the file now' },
@@ -593,7 +593,7 @@ function H5GuestDocPage({ docNo, onExit }) {
               const prod = db.products.find(p => p.id === it.pid);
               const img = prod && prod.image;
               return (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 0', borderBottom: i < doc.items.length - 1 ? '1px solid #F0F2F5' : 'none', fontSize: 13 }}>
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderBottom: i < doc.items.length - 1 ? '1px solid #F0F2F5' : 'none', fontSize: 13 }}>
                 {img
                   ? <img src={img} alt="" style={{ width: 38, height: 38, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
                   : <div style={{ width: 38, height: 38, borderRadius: 8, background: '#F5F6F8', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Icon name="box" size={15} color="var(--text-3)" /></div>}
@@ -607,7 +607,7 @@ function H5GuestDocPage({ docNo, onExit }) {
               <div className="h5-card mt12 muted" style={{ fontSize: 11.5, lineHeight: 1.6 }}><Icon name="info" size={13} /> Confirming here increases your stock and generates the inbound record (RK-) — attributed to {buyerMain ? buyerMain.name : t('the buyer main account')} (demo).</div>
               <div className="h5-actionbar">
                 <button className="h5-btn" onClick={onExit}><Icon name="user" size={14} />Sign In</button>
-                <button className="h5-btn primary" onClick={() => {
+                <button className="h5-btn success" onClick={() => {
                   act.receive(doc, 'accept', null, '', buyerMain || null);
                 }}><Icon name="checkDouble" size={14} />Confirm Receipt</button>
               </div>
@@ -652,7 +652,7 @@ function H5AdminPage({ setConfirm }) {
                 <div className="muted" style={{ fontSize: 11.5 }}>{t.code} · {t.type === 'Supplier' ? 'Supplier' : `Agent · max level ${ifnull(t.maxLevel, '—')}`} · {t.country}</div>
               </div>
               {t.status === 'Active'
-                ? <button className="h5-item-act danger" onClick={() => setConfirm({ title: 'Suspend Tenant', message: `Suspend ${t.name}? Related accounts will be blocked from login immediately; data is retained.`, confirmText: 'Suspend', requireText: t.code, onConfirm: () => act.suspendTenant(t.id) })}><Icon name="lock" size={12} />Suspend</button>
+                ? <button className="h5-item-act error" onClick={() => setConfirm({ title: 'Suspend Tenant', message: `Suspend ${t.name}? Related accounts will be blocked from login immediately; data is retained.`, confirmText: 'Suspend', requireText: t.code, tone: 'error', onConfirm: () => act.suspendTenant(t.id) })}><Icon name="lock" size={12} />Suspend</button>
                 : <Tag tone="dark">Suspended</Tag>}
             </div>
           ))}
@@ -669,12 +669,12 @@ function H5AdminPage({ setConfirm }) {
             <div className="h5-form-row"><span className="k">{t('Master Name')} *</span><input className="input" style={{ height: 32, flex: 1 }} value={tenantForm.masterName} onChange={e => setT('masterName', e.target.value)} placeholder="e.g. Ada Obi" /></div>
             <div className="h5-form-row"><span className="k">{t('Phone Number')} *</span><input className="input" style={{ height: 32, flex: 1 }} value={tenantForm.masterPhone} onChange={e => setT('masterPhone', e.target.value)} placeholder="+234 801 234 5678" /></div>
             <div className="h5-form-row"><span className="k">{t('Password')} *</span><input className="input" style={{ height: 32, flex: 1 }} type="password" value={tenantForm.masterPassword} onChange={e => setT('masterPassword', e.target.value)} placeholder={t('set a login password')} /></div>
-            <div className="muted" style={{ fontSize: 11, marginTop: 6 }}>{t('demo password — hashed at rest in the real system')}</div>
+            <div className="muted" style={{ fontSize: 11, marginTop: 8 }}>{t('demo password — hashed at rest in the real system')}</div>
           </div>
           <div className="h5-section-title">{t('WhatsApp Binding')}</div>
           <div className="h5-card">
             <div className="h5-form-row"><span className="k">{t('WhatsApp Number')}</span><input className="input" style={{ height: 32, flex: 1 }} value={tenantForm.whatsapp} onChange={e => setT('whatsapp', e.target.value)} placeholder="+234 801 234 5678" /></div>
-            <div className="muted" style={{ fontSize: 11, marginTop: 6 }}>{t('push links (quotes / invoices) are delivered to this number')}</div>
+            <div className="muted" style={{ fontSize: 11, marginTop: 8 }}>{t('push links (quotes / invoices) are delivered to this number')}</div>
           </div>
           <button className="h5-btn primary mt12" style={{ width: '100%' }} onClick={() => {
             if (!tenantForm.name.trim()) { toast('Company name is required', 'error'); return; }
@@ -691,9 +691,9 @@ function H5AdminPage({ setConfirm }) {
             <div key={i} className="h5-card" style={{ marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 13, fontWeight: 600 }}>{tenantName(db, r.upstream)} <Icon name="chevronRight" size={12} /> {tenantName(db, r.downstream)}</div>
-                <div className="muted" style={{ fontSize: 11.5, marginTop: 3 }}>Established {r.createdAt} · {t('same-type pair is unique')}</div>
+                <div className="muted" style={{ fontSize: 11.5, marginTop: 4 }}>Established {r.createdAt} · {t('same-type pair is unique')}</div>
               </div>
-              <button className="h5-item-act danger" onClick={() => setConfirm({ title: 'Dissolve Relation', message: `Remove the supply relation ${tenantName(db, r.upstream)} → ${tenantName(db, r.downstream)}? The downstream tenant loses visibility of upstream products. Data is retained.`, confirmText: 'Dissolve', onConfirm: () => act.removeRelation(r.upstream, r.downstream) })}><Icon name="close" size={12} />Dissolve</button>
+              <button className="h5-item-act error" onClick={() => setConfirm({ title: 'Dissolve Relation', message: `Remove the supply relation ${tenantName(db, r.upstream)} → ${tenantName(db, r.downstream)}? The downstream tenant loses visibility of upstream products. Data is retained.`, confirmText: 'Dissolve', tone: 'error', onConfirm: () => act.removeRelation(r.upstream, r.downstream) })}><Icon name="close" size={12} />Dissolve</button>
             </div>
           ))}
           <div className="h5-section-title">Establish Relation</div>
@@ -739,7 +739,7 @@ function H5AdminPage({ setConfirm }) {
             act.createAccount({ ...accForm, name: accForm.name.trim(), phone: accForm.phone.trim(), whatsapp: accForm.whatsapp.trim() || null });
             setAccForm({ name: '', tenant: '', phone: '', whatsapp: '', accountType: 'tenant', main: false });
           }}><Icon name="plus" size={14} />Create Account</button>
-          <div className="muted" style={{ fontSize: 11, textAlign: 'center', marginTop: 10 }}>MVP: permissions are flattened — creating an account grants the same action set.</div>
+          <div className="muted" style={{ fontSize: 11, textAlign: 'center', marginTop: 12 }}>MVP: permissions are flattened — creating an account grants the same action set.</div>
         </React.Fragment>
       )}
     </div>
@@ -831,7 +831,7 @@ function H5MembersPage() {
           onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') setDetail(a); }}>
           <span className="avatar tenant" style={{ width: 34, height: 34, fontSize: 12, flexShrink: 0 }}>{a.name.split(' ').map(w => w[0]).slice(0, 2).join('')}</span>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 13.5, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div style={{ fontSize: 13.5, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.name}</span>
               {a.main && <span className="mini-chip">MAIN</span>}
             </div>
@@ -882,7 +882,7 @@ function H5MembersPage() {
           <div className="h5-form-row"><span className="k">Name</span><div style={{ flex: 1, fontSize: 13 }}>{detail.name}{detail.main && <span className="mini-chip" style={{ marginLeft: 6 }}>MAIN</span>}</div></div>
           <div className="h5-form-row"><span className="k">Phone</span><div style={{ flex: 1, fontSize: 13 }}>{detail.phone}</div></div>
           <div className="h5-form-row"><span className="k">Email</span><div style={{ flex: 1, fontSize: 13, display: 'flex', alignItems: 'center' }}>{detail.email ? detail.email : <span className="muted" style={{ fontSize: 12 }}>Not set</span>}</div></div>
-          <div className="h5-form-row"><span className="k">WhatsApp</span><div style={{ flex: 1, fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>{detail.whatsapp ? <React.Fragment><span>{detail.whatsapp}</span><Tag tone="success" dot>WhatsApp bound</Tag></React.Fragment> : <span className="muted" style={{ fontSize: 12 }}>Not bound</span>}</div></div>
+          <div className="h5-form-row"><span className="k">WhatsApp</span><div style={{ flex: 1, fontSize: 13, display: 'flex', alignItems: 'center', gap: 8 }}>{detail.whatsapp ? <React.Fragment><span>{detail.whatsapp}</span><Tag tone="success" dot>WhatsApp bound</Tag></React.Fragment> : <span className="muted" style={{ fontSize: 12 }}>Not bound</span>}</div></div>
           <div className="h5-form-row" style={{ borderBottom: 'none' }}><span className="k">Status</span><div style={{ flex: 1, fontSize: 13 }}>{detail.status === 'Suspended' ? <Tag tone="danger">Suspended</Tag> : <Tag tone="teal">Active</Tag>}</div></div>
         </Dialog>
       )}
@@ -898,7 +898,7 @@ function H5MembersPage() {
           <div className="h5-form-row"><span className="k">Email</span><input className="input" type="email" style={{ height: 32, flex: 1 }} value={ef.email} onChange={e => setEf(s => ({ ...s, email: e.target.value }))} placeholder="name@company.com" /></div>
           <div className="h5-form-row"><span className="k">WhatsApp *</span><input className="input" type="tel" style={{ height: 32, flex: 1 }} value={ef.whatsapp} onChange={e => setEf(s => ({ ...s, whatsapp: e.target.value }))} placeholder="+234 ..." /></div>
           <div className="h5-form-row" style={{ borderBottom: 'none' }}><span className="k">Password *</span><input className="input" type="password" style={{ height: 32, flex: 1 }} value={ef.password} onChange={e => setEf(s => ({ ...s, password: e.target.value }))} placeholder="set a login password" /></div>
-          <div className="muted" style={{ fontSize: 11, marginTop: 6 }}>demo password — hashed at rest in the real system</div>
+          <div className="muted" style={{ fontSize: 11, marginTop: 8 }}>demo password — hashed at rest in the real system</div>
           <div className="muted" style={{ fontSize: 11, marginTop: 8 }}>Accounts with a bound WhatsApp receive document push links</div>
         </Dialog>
       )}
@@ -913,8 +913,8 @@ function H5MembersPage() {
           <div className="h5-form-row"><span className="k">Phone *</span><input className="input" style={{ height: 32, flex: 1 }} value={sf.phone} onChange={e => setSf(s => ({ ...s, phone: e.target.value }))} placeholder="+234 ..." /></div>
           <div className="h5-form-row"><span className="k">WhatsApp</span><input className="input" style={{ height: 32, flex: 1 }} value={sf.whatsapp} onChange={e => setSf(s => ({ ...s, whatsapp: e.target.value }))} placeholder="optional push binding" /></div>
           <div className="h5-form-row" style={{ borderBottom: 'none' }}><span className="k">Password *</span><input className="input" type="password" style={{ height: 32, flex: 1 }} value={sf.password} onChange={e => setSf(s => ({ ...s, password: e.target.value }))} placeholder="set a login password" /></div>
-          <div className="muted" style={{ fontSize: 11, marginTop: 6 }}>demo password — hashed at rest in the real system</div>
-          <div className="muted" style={{ fontSize: 11, marginTop: 10 }}>Sub-accounts belong to {tenant ? tenant.name : ''} and share its flattened permission set.</div>
+          <div className="muted" style={{ fontSize: 11, marginTop: 8 }}>demo password — hashed at rest in the real system</div>
+          <div className="muted" style={{ fontSize: 11, marginTop: 12 }}>Sub-accounts belong to {tenant ? tenant.name : ''} and share its flattened permission set.</div>
         </Dialog>
       )}
 
@@ -932,9 +932,9 @@ function H5MembersPage() {
           <div className="h5-form-row"><span className="k">Email</span><input className="input" type="email" style={{ height: 32, flex: 1 }} value={f.email} onChange={e => set('email', e.target.value)} placeholder="name@company.com" /></div>
           <div className="h5-form-row"><span className="k">WhatsApp *</span><input className="input" type="tel" style={{ height: 32, flex: 1 }} value={f.whatsapp} onChange={e => set('whatsapp', e.target.value)} placeholder="+234 ..." /></div>
           <div className="h5-form-row" style={{ borderBottom: 'none' }}><span className="k">Password *</span><input className="input" type="password" style={{ height: 32, flex: 1 }} value={f.password} onChange={e => set('password', e.target.value)} placeholder="set a login password" /></div>
-          <div className="muted" style={{ fontSize: 11, marginTop: 6 }}>demo password — hashed at rest in the real system</div>
+          <div className="muted" style={{ fontSize: 11, marginTop: 8 }}>demo password — hashed at rest in the real system</div>
           <div className="muted" style={{ fontSize: 11, marginTop: 8 }}>Master accounts receive document push links</div>
-          <div className="muted" style={{ fontSize: 11, marginTop: 10 }}>Creates the agent tenant, its master account (WhatsApp bound) and the supply relation in one step.</div>
+          <div className="muted" style={{ fontSize: 11, marginTop: 12 }}>Creates the agent tenant, its master account (WhatsApp bound) and the supply relation in one step.</div>
         </Dialog>
       )}
     </div>
@@ -1004,8 +1004,8 @@ function H5PriceFormPage({ productId, onDone }) {
             <Tag tone="dark">Read-only</Tag>
           </div>
         </div>
-        <div className="h5-form-row"><span className="k">Market Reference Price *</span><div style={{ flex: 1, display: 'flex', gap: 8 }}><input className="input" style={{ height: 32, flex: 1, minWidth: 0 }} type="number" value={market} onChange={e => setMarket(e.target.value)} placeholder="0.00" /><Select value={mktCur} onChange={setMktCur} options={CUR_OPTS} style={{ width: 84 }} />{errs.market && <div className="field-error">{errs.market}</div>}</div></div>
-        <div className="h5-form-row"><span className="k">Channel Sales Price *</span><div style={{ flex: 1, display: 'flex', gap: 8 }}><input className="input" style={{ height: 32, flex: 1, minWidth: 0 }} type="number" value={sale} onChange={e => setSale(e.target.value)} placeholder="0.00" /><Select value={saleCur} onChange={setSaleCur} options={CUR_OPTS} style={{ width: 84 }} />{errs.sale && <div className="field-error">{errs.sale}</div>}</div></div>
+        <div className="h5-form-row"><span className="k">Market Reference Price *</span><div style={{ flex: 1, display: 'flex', gap: 8 }}><Select value={mktCur} onChange={setMktCur} options={CUR_OPTS} style={{ width: 84, height: 32 }} /><input className="input" style={{ height: 32, flex: 1, minWidth: 0 }} type="number" value={market} onChange={e => setMarket(e.target.value)} placeholder="0.00" />{errs.market && <div className="field-error">{errs.market}</div>}</div></div>
+        <div className="h5-form-row"><span className="k">Channel Sales Price *</span><div style={{ flex: 1, display: 'flex', gap: 8 }}><Select value={saleCur} onChange={setSaleCur} options={CUR_OPTS} style={{ width: 84, height: 32 }} /><input className="input" style={{ height: 32, flex: 1, minWidth: 0 }} type="number" value={sale} onChange={e => setSale(e.target.value)} placeholder="0.00" />{errs.sale && <div className="field-error">{errs.sale}</div>}</div></div>
       </div>
       <div className="h5-card mt12 muted" style={{ fontSize: 11.5, lineHeight: 1.6 }}><Icon name="info" size={12} /> Cost price is the procurement record and cannot be edited here. The adjustment updates the channel sales price / market reference price on your catalog and is logged in the operation events. Each price field keeps its own currency code — they are set independently.</div>
       <div className="flex gap10 mt16">
@@ -1063,7 +1063,7 @@ function H5AdjustStockPage({ productId, onDone }) {
       <div className="h5-card mt12 muted" style={{ fontSize: 11.5, lineHeight: 1.6 }}><Icon name="info" size={12} /> The adjustment is recorded as a stock movement (ADJ) and attributed to your account.</div>
       <div className="flex gap10 mt16">
         <button className="h5-btn" style={{ flex: 1 }} onClick={onDone}><Icon name="close" size={14} />Cancel</button>
-        <button className="h5-btn primary" style={{ flex: 1 }} onClick={save} disabled={projected < 0}><Icon name="check" size={14} />Confirm Adjustment</button>
+        <button className="h5-btn warning" style={{ flex: 1 }} onClick={save} disabled={projected < 0}><Icon name="check" size={14} />Confirm Adjustment</button>
       </div>
     </div>
   );
@@ -1090,14 +1090,14 @@ function H5ReReceivePage({ poId, onDone }) {
           <span className="mono" style={{ fontWeight: 700, fontSize: 13 }}>{po.no}</span>
           <StatusTag type="PO" status={po.status} />
         </div>
-        <div className="muted" style={{ fontSize: 12, marginTop: 6 }}>From {tenantName(db, po.seller)} · {po.items.length} items</div>
+        <div className="muted" style={{ fontSize: 12, marginTop: 8 }}>From {tenantName(db, po.seller)} · {po.items.length} items</div>
       </div>
       <div className="h5-section-title">Actually Re-received</div>
       <div className="h5-card">
         {po.items.map((it, i) => {
           const out = outstanding[it.pid] || 0;
           return (
-            <div key={it.pid} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 0', borderBottom: i < po.items.length - 1 ? '1px solid #F0F2F5' : 'none' }}>
+            <div key={it.pid} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderBottom: i < po.items.length - 1 ? '1px solid #F0F2F5' : 'none' }}>
               <img src={prodImg(db.products.find(p => p.id === it.pid))} alt="" style={{ width: 38, height: 38, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 13, fontWeight: 600 }}>{it.name}</div>
@@ -1112,7 +1112,7 @@ function H5ReReceivePage({ poId, onDone }) {
       <div className="h5-card" style={{ background: '#FFF9E8', border: '1px dashed #E4CE8E', fontSize: 11.5, color: '#96601A', lineHeight: 1.6 }}>
         <Icon name="info" size={13} /> Re-change the goods received previously; goods delivered later may also be added.
       </div>
-      <button className="h5-btn primary mt16" style={{ width: '100%' }} onClick={() => {
+      <button className="h5-btn success mt16" style={{ width: '100%' }} onClick={() => {
         const numQtys = {};
         let any = false;
         for (const k of Object.keys(qtys)) { const v = Number(qtys[k]); if (v > 0) { numQtys[k] = v; any = true; } }
@@ -1138,7 +1138,7 @@ function H5AcceptPage({ poId, onDone }) {
           <span className="mono" style={{ fontWeight: 700, fontSize: 13 }}>{po.no}</span>
           <StatusTag type="PO" status={po.status} />
         </div>
-        <div className="muted" style={{ fontSize: 12, marginTop: 6 }}>From {tenantName(db, po.buyer)} · {po.items.length} items · {money(docAmount(po), po.currency).full}</div>
+        <div className="muted" style={{ fontSize: 12, marginTop: 8 }}>From {tenantName(db, po.buyer)} · {po.items.length} items · {money(docAmount(po), po.currency).full}</div>
       </div>
       <div className="h5-card mt12" style={{ background: '#EFF6FF', border: '1px dashed #93C5FD', fontSize: 11.5, color: '#1D4ED8', lineHeight: 1.6 }}>
         <Icon name="info" size={13} /> Accepting issues the sales invoice (FP-) automatically and pushes it to the buyer via WhatsApp. The order then awaits the buyer's offline payment.
@@ -1146,7 +1146,7 @@ function H5AcceptPage({ poId, onDone }) {
       <div className="h5-section-title mt12">Order Summary</div>
       <div className="h5-card">
         {po.items.map((it, i) => (
-          <div key={it.pid} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 0', borderBottom: i < po.items.length - 1 ? '1px solid #F0F2F5' : 'none' }}>
+          <div key={it.pid} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderBottom: i < po.items.length - 1 ? '1px solid #F0F2F5' : 'none' }}>
             <img src={prodImg(db.products.find(p => p.id === it.pid))} alt="" style={{ width: 38, height: 38, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 13, fontWeight: 600 }}>{it.name}</div>
@@ -1159,11 +1159,11 @@ function H5AcceptPage({ poId, onDone }) {
       </div>
       <div className="h5-section-title mt12">Acceptance Details</div>
       <div className="h5-card">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 0', borderBottom: '1px solid #F0F2F5' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '9px 0', borderBottom: '1px solid #F0F2F5' }}>
           <span className="muted" style={{ fontSize: 12.5, width: 118 }}>Dispatch Date</span>
           <input className="input" type="date" value={shipDate} onChange={e => setShipDate(e.target.value)} style={{ height: 32 }} />
         </div>
-        <textarea className="textarea" rows={2} value={note} onChange={e => setNote(e.target.value)} placeholder="Acceptance note (optional) — e.g. stock confirmed, dispatch within 48h of payment" style={{ border: 'none', padding: 0, marginTop: 9 }}></textarea>
+        <textarea className="textarea" rows={2} value={note} onChange={e => setNote(e.target.value)} placeholder="Acceptance note (optional) — e.g. stock confirmed, dispatch within 48h of payment" style={{ border: 'none', padding: 0, marginTop: 8 }}></textarea>
       </div>
       <button className="h5-btn primary mt16" style={{ width: '100%' }} onClick={() => {
         act.docVerb('Accept', po, null, note.trim(), { expectedShipDate: shipDate });
@@ -1192,21 +1192,21 @@ function H5PayPage({ poId, onDone }) {
           <span className="mono" style={{ fontWeight: 700, fontSize: 13 }}>{po.no}</span>
           <StatusTag type="PO" status={po.status} />
         </div>
-        <div className="muted" style={{ fontSize: 12, marginTop: 6 }}>Buyer {tenantName(db, po.buyer)} · Total {money(docAmount(po), po.currency).full}</div>
+        <div className="muted" style={{ fontSize: 12, marginTop: 8 }}>Buyer {tenantName(db, po.buyer)} · Total {money(docAmount(po), po.currency).full}</div>
       </div>
       <div className="h5-section-title mt12">Payment Details</div>
       <div className="h5-card">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 0', borderBottom: '1px solid #F0F2F5' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '9px 0', borderBottom: '1px solid #F0F2F5' }}>
           <span className="muted" style={{ fontSize: 12.5, width: 118 }}>{t('Amount (' + (po.currency === 'NGN' ? '₦' : '$') + ')')}</span>
           <input className="input" type="number" value={amount} onChange={e => setAmount(e.target.value)} style={{ height: 32 }} />
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 0', borderBottom: '1px solid #F0F2F5' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '9px 0', borderBottom: '1px solid #F0F2F5' }}>
           <span className="muted" style={{ fontSize: 12.5, width: 118 }}>Payment Date</span>
           <input className="input" type="date" value={date} onChange={e => setDate(e.target.value)} style={{ height: 32 }} />
         </div>
         <div style={{ padding: '9px 0', borderBottom: '1px solid #F0F2F5' }}>
-          <div className="muted" style={{ fontSize: 12.5, marginBottom: 7 }}>Method</div>
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          <div className="muted" style={{ fontSize: 12.5, marginBottom: 8 }}>Method</div>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             {METHODS.map(m => (
               <button key={m} className="btn" style={{
                 padding: '4px 10px', fontSize: 11.5, borderRadius: 999,
@@ -1215,11 +1215,11 @@ function H5PayPage({ poId, onDone }) {
             ))}
           </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 0', borderBottom: '1px solid #F0F2F5' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '9px 0', borderBottom: '1px solid #F0F2F5' }}>
           <span className="muted" style={{ fontSize: 12.5, width: 118 }}>Transaction Ref</span>
           <input className="input" value={ref} onChange={e => setRef(e.target.value)} placeholder="e.g. TRF-99213" style={{ height: 32 }} />
         </div>
-        <textarea className="textarea" rows={2} value={note} onChange={e => setNote(e.target.value)} placeholder="Note (optional) — e.g. branch deposit confirmed by call" style={{ border: 'none', padding: 0, marginTop: 9 }}></textarea>
+        <textarea className="textarea" rows={2} value={note} onChange={e => setNote(e.target.value)} placeholder="Note (optional) — e.g. branch deposit confirmed by call" style={{ border: 'none', padding: 0, marginTop: 8 }}></textarea>
       </div>
       <button className="h5-btn primary mt16" style={{ width: '100%' }} onClick={() => {
         const n = Number(amount);
@@ -1228,7 +1228,7 @@ function H5PayPage({ poId, onDone }) {
         onDone();
         toast(`Payment recorded for ${po.no} — order moves to Pending Outbound`, 'success');
       }}><Icon name="wallet" size={14} />Record Payment</button>
-      <div className="muted" style={{ fontSize: 11, marginTop: 10, textAlign: 'center' }}>Recording payment moves the order to Pending Outbound, ready for shipment</div>
+      <div className="muted" style={{ fontSize: 11, marginTop: 12, textAlign: 'center' }}>Recording payment moves the order to Pending Outbound, ready for shipment</div>
     </div>
   );
 }
@@ -1255,7 +1255,7 @@ function H5ReplenishPage({ poId, onDone }) {
           <span className="mono" style={{ fontWeight: 700, fontSize: 13 }}>{po.no}</span>
           <StatusTag type="PO" status={po.status} />
         </div>
-        <div className="muted" style={{ fontSize: 12, marginTop: 6 }}>From {tenantName(db, po.seller)} · {po.items.length} items</div>
+        <div className="muted" style={{ fontSize: 12, marginTop: 8 }}>From {tenantName(db, po.seller)} · {po.items.length} items</div>
       </div>
       <div className="h5-card mt12" style={{ background: '#FFF9E8', border: '1px dashed #E4CE8E', fontSize: 11.5, color: '#96601A', lineHeight: 1.6 }}>
         <Icon name="info" size={13} /> Append a follow-up shipment to make up the items that were not received previously.
@@ -1264,7 +1264,7 @@ function H5ReplenishPage({ poId, onDone }) {
       <div className="h5-card">
         {shortItems.length === 0 && <div className="muted" style={{ fontSize: 12.5, padding: '14px 0', textAlign: 'center' }}>No outstanding shortfall on this order</div>}
         {shortItems.map((it, i) => (
-          <div key={it.pid} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 0', borderBottom: i < shortItems.length - 1 ? '1px solid #F0F2F5' : 'none' }}>
+          <div key={it.pid} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderBottom: i < shortItems.length - 1 ? '1px solid #F0F2F5' : 'none' }}>
             <img src={prodImg(db.products.find(p => p.id === it.pid))} alt="" style={{ width: 38, height: 38, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 13, fontWeight: 600 }}>{it.name}</div>

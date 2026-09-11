@@ -1869,3 +1869,101 @@ body:has(.mobile-stage) .toast {
 .h5-app .h5-input-suffix,
 .h5-app .h5-cart-fab,
 .h5-app .h5-catsel-item.on { color: #fff; }
+
+/* ============================================================
+   R108 — 行间距令牌 / 页签最初风格 / 按钮 type 语义体系
+   ----------------------------------------------------------
+   1. 间距令牌：微 2 / 紧凑 4 / 组内 8 / 标准 12 / 宽松 16 五档，
+      全系统（含子页面、弹窗、面板）垂直行距与 gap 统一落档；
+      结构类归一（卡片堆叠 12、表单行 8、desc 行 12），
+      JSX 内联散值由脚本扫入梯（3/5→4、6/7/9→8、10→12、
+      14/18/20→16），0/1/2/4/8/12/16 保留。
+   2. 页签恢复最初版本风格：页顶分段 = 白底胶囊分段控件
+      （激活主色实底白字）；底部导航 = 纯变色无指示条；
+      暂存面板页签 = #F1F3F6 底 38px 下划线（基础样式与最初
+      版一致，仅恢复容器底色）。恢复依据：R101 改造前最后
+      版本（commit 5958f1a）的 .h5-segments/.h5-tabs/
+      .h5-cart-segs 定义。
+   3. 按钮 type 语义体系（uView/Element 词汇，两端一致）：
+      primary=主确认/提交/新建 · success=入库/收货/启用 ·
+      warning=出库/发货/调库存 · error=删除/清空/停用/拒绝 ·
+      info(default)=查看/编辑/取消/次要。实底 + plain（浅底
+      彩字）两种形态；移动端行内小按钮用 tinted。
+   ============================================================ */
+
+/* ---------- 1. 间距令牌 ---------- */
+:root {
+  --sp-micro: 2px;   /* 微距：图标-文字 */
+  --sp-tight: 4px;    /* 紧凑：组内元素（标签-值、caption） */
+  --sp-compact: 8px;  /* 组内块间距 / 紧凑表单行 */
+  --sp-base: 12px;    /* 标准行距：表单行、卡片堆叠、列表行 */
+  --sp-loose: 16px;   /* 宽松：区块间、分区标题上方 */
+}
+.h5-app {
+  --sp-micro: 2px; --sp-tight: 4px; --sp-compact: 8px; --sp-base: 12px; --sp-loose: 16px;
+}
+/* 结构类行距归一 */
+.h5-card + .h5-card { margin-top: var(--sp-base); }
+.h5-cell + .h5-cell { margin-top: var(--sp-base); }
+.h5-app .h5-form-row { padding: 8px 0; }
+.form-row { gap: var(--sp-compact); }
+.h5-desc-row .k, .h5-desc-row .v { padding-top: 12px; padding-bottom: 12px; }
+.h5-doc .d-acts { gap: var(--sp-compact); margin-top: var(--sp-compact); padding-top: var(--sp-compact); }
+
+/* ---------- 2. 页签 → 最初版本风格 ---------- */
+/* 页顶分段：白底胶囊分段控件，激活主色实底白字 */
+.h5-app .h5-segments { background: #fff; border-radius: 9px; padding: 3px; gap: 2px; border-bottom: none; }
+.h5-app .h5-segment { border-radius: 7px; padding: 7px 0; font-size: 12.5px; color: var(--text-2); }
+.h5-app .h5-segment.active { background: var(--primary); color: #fff; font-weight: 600; box-shadow: none; }
+.h5-app .h5-segment.active::after { content: none; }
+/* 底部导航：纯变色（最初版无指示条、无加粗） */
+.h5-app .h5-tab.active::before { content: none; }
+.h5-app .h5-tab.active { font-weight: 400; }
+/* 暂存面板页签：恢复 #F1F3F6 容器底色（38px 下划线基础样式未变） */
+.h5-app .h5-cart-segs { background: #F1F3F6; }
+
+/* ---------- 3. 按钮 type 语义体系 — Web (.btn) ---------- */
+.btn.success, .btn.error { color: #fff; }
+.btn.success { background: var(--success); border-color: var(--success); }
+.btn.success:hover { opacity: 0.9; background: var(--success); border-color: var(--success); }
+.btn.warning { background: var(--warning); border-color: var(--warning); color: #fff; }
+.btn.warning:hover { opacity: 0.9; background: var(--warning); border-color: var(--warning); }
+/* error 与 danger 同义（danger 为历史别名，保留兼容） */
+.btn.error, .btn.danger { background: var(--danger); border-color: var(--danger); color: #fff; }
+.btn.error:hover { opacity: 0.9; }
+.btn.error-plain, .btn.danger-plain { color: var(--danger); border-color: #F1C7C5; background: var(--danger-light); }
+.btn.error-plain:hover, .btn.danger-plain:hover { background: var(--danger); color: #fff; border-color: var(--danger); }
+/* 文字按钮语义色 */
+.btn.text.success-text { color: var(--success); }
+.btn.text.success-text:hover { background: var(--success-light); }
+.btn.text.warning-text { color: var(--warning); }
+.btn.text.warning-text:hover { background: var(--warning-light); }
+.btn.text.error-text, .btn.text.danger-text { color: var(--danger); }
+.btn.text.error-text:hover, .btn.text.danger-text:hover { background: var(--danger-light); }
+.btn.text.info { color: var(--text-2); }
+.btn.text.info:hover { background: var(--info-light); color: var(--text-2); }
+
+/* ---------- 4. 按钮 type 语义体系 — 移动端 (.h5-btn) ---------- */
+/* 实底（面板主确认） */
+.h5-app .h5-btn.success { background: var(--success); border-color: var(--success); color: #fff; font-weight: 600; }
+.h5-app .h5-btn.success:active { background: var(--success); opacity: 0.88; }
+.h5-app .h5-btn.warning { background: var(--warning); border-color: var(--warning); color: #fff; font-weight: 600; }
+.h5-app .h5-btn.warning:active { background: var(--warning); opacity: 0.88; }
+.h5-app .h5-btn.error { background: var(--danger); border-color: var(--danger); color: #fff; font-weight: 600; }
+.h5-app .h5-btn.error:active { background: var(--danger); opacity: 0.88; }
+/* plain（浅底彩字，行内操作） */
+.h5-app .h5-btn.plain.primary { background: var(--primary-light); border-color: transparent; color: var(--primary); font-weight: 600; }
+.h5-app .h5-btn.plain.success { background: var(--success-light); border-color: transparent; color: var(--success); font-weight: 600; }
+.h5-app .h5-btn.plain.warning { background: var(--warning-light); border-color: transparent; color: var(--warning); font-weight: 600; }
+.h5-app .h5-btn.plain.error { background: var(--danger-light); border-color: transparent; color: var(--danger); font-weight: 600; }
+
+/* ---------- 5. 行内小按钮 tinted (.h5-item-act / .d-act) ---------- */
+.h5-app .h5-item-act.primary, .h5-doc .d-act.primary { background: var(--primary-light); border-color: transparent; color: var(--primary); }
+.h5-app .h5-item-act.success, .h5-doc .d-act.success { background: var(--success-light); border-color: transparent; color: var(--success); }
+.h5-app .h5-item-act.warning, .h5-doc .d-act.warning { background: var(--warning-light); border-color: transparent; color: var(--warning); }
+.h5-app .h5-item-act.error, .h5-doc .d-act.error,
+.h5-app .h5-item-act.danger, .h5-doc .d-act.danger { background: var(--danger-light); border-color: transparent; color: var(--danger); }
+
+/* ---------- 6. 币种前置控件（价格表单项：币种在前） ---------- */
+.input-group .input-prefix { position: absolute; left: 10px; font-size: 12px; font-weight: 600; color: var(--text-3); pointer-events: none; }
+.input-group .input-prefix + input.input { padding-left: 38px; }

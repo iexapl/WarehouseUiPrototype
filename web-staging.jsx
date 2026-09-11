@@ -22,7 +22,7 @@ function WebStagingDialog({ onClose, onInquired }) {
   ];
   return (
     <Dialog title={t('Staging')} width="880px" onClose={onClose}>
-      <div className="segments" style={{ marginBottom: 14 }}>
+      <div className="segments" style={{ marginBottom: 16 }}>
         {mods.map(m => (
           <button key={m.id} type="button" className={`segment${seg === m.id ? ' active' : ''}`} onClick={() => setSeg(m.id)}>
             {m.label}{m.n > 0 ? ` (${m.n})` : ''}
@@ -68,7 +68,7 @@ function WebInquiryPanel({ onInquired }) {
       {groups.map(g => {
         const tn = db.tenants.find(x => x.id === g.ownerId);
         return (
-          <div key={g.ownerId} className="card" style={{ marginBottom: 10 }}>
+          <div key={g.ownerId} className="card" style={{ marginBottom: 12 }}>
             <div className="flex gap8" style={{ alignItems: 'center', padding: '10px 14px', borderBottom: '1px solid var(--border-light)' }}>
               <span className="wa-avatar" style={{ width: 28, height: 28, fontSize: 13 }}>{tn ? tn.name[0] : '?'}</span>
               <div style={{ flex: 1, minWidth: 0, fontWeight: 700, fontSize: 13.5 }}>{tn ? tn.name : g.ownerId}</div>
@@ -93,7 +93,7 @@ function WebInquiryPanel({ onInquired }) {
                         </td>
                         <td><Money amount={p.price || 0} currency={p.currency} /></td>
                         <td><Input value={String(l.qty)} onChange={v => cartApi.setQty('inquiry', i, Math.max(0, parseInt(v, 10) || 0))} type="number" /></td>
-                        <td><button className="btn sm text danger-text" title={t('Remove')} onClick={() => cartApi.removeAt('inquiry', i)}><Icon name="trash" size={13} /></button></td>
+                        <td><button className="btn sm text error-text" title={t('Remove')} onClick={() => cartApi.removeAt('inquiry', i)}><Icon name="trash" size={13} /></button></td>
                       </tr>
                     );
                   })}
@@ -107,9 +107,9 @@ function WebInquiryPanel({ onInquired }) {
         <Icon name="info" size={12} /> {t('Lines are grouped by supplier — one inquiry is created per supplier.')}<br />
         <Icon name="whatsapp" size={12} /> {t("After submitting, each inquiry is sent to the supplier's WhatsApp chat.")}
       </div>
-      <div className="flex" style={{ alignItems: 'center', gap: 10 }}>
+      <div className="flex" style={{ alignItems: 'center', gap: 12 }}>
         <div style={{ flex: 1 }} className="muted small">{`${lines.length} items · ${totalQty} units · ${groups.length} suppliers`}</div>
-        <button className="btn" onClick={() => { cartApi.clear('inquiry'); toast('Inquiry staging cleared', 'info'); }}><Icon name="trash" size={13} />{t('Clear')}</button>
+        <button className="btn error-plain" onClick={() => { cartApi.clear('inquiry'); toast('Inquiry staging cleared', 'info'); }}><Icon name="trash" size={13} />{t('Clear')}</button>
         <button className="btn primary" onClick={submit}><Icon name="whatsapp" size={13} />{t('Submit Inquiry')}</button>
       </div>
     </div>
@@ -164,15 +164,15 @@ function WebInboundPanel({ onDone }) {
                         <span className="cell-icon" style={{ background: 'var(--primary-light)', color: 'var(--primary)' }}><Icon name="plus" size={16} /></span>
                         <div style={{ minWidth: 220 }}>
                           <input className="input" style={{ height: 30, width: '100%' }} value={l.name} placeholder={t('e.g. Solar Inverter 5kW')} onChange={e => cartApi.setField('inbound', i, 'name', e.target.value)} />
-                          <div className="cell-sub mono" style={{ marginTop: 3 }}>{l.code || '—'} · {t('New product — quick profile')}</div>
+                          <div className="cell-sub mono" style={{ marginTop: 4 }}>{l.code || '—'} · {t('New product — quick profile')}</div>
                         </div>
                       </div>
                     )}
                   </td>
                   <td><Input value={String(l.qty)} onChange={v => cartApi.setQty('inbound', i, Math.max(0, parseInt(v, 10) || 0))} type="number" /></td>
-                  <td><input className="input mono" style={{ height: 30, width: 110, textAlign: 'right' }} type="number" min="0" step="0.01" aria-label={t('Unit Price')} value={String(ifnull(l.kind === 'exist' ? l.unitPrice : l.price, 0))} onChange={e => cartApi.setField('inbound', i, l.kind === 'exist' ? 'unitPrice' : 'price', e.target.value)} /></td>
+                  <td><div className="flex gap8" style={{ justifyContent: 'flex-end' }}><span className="cur-code">{cur}</span><input className="input mono" style={{ height: 30, width: 110, textAlign: 'right' }} type="number" min="0" step="0.01" aria-label={t('Unit Price')} value={String(ifnull(l.kind === 'exist' ? l.unitPrice : l.price, 0))} onChange={e => cartApi.setField('inbound', i, l.kind === 'exist' ? 'unitPrice' : 'price', e.target.value)} /></div></td>
                   <td style={{ textAlign: 'right' }}><span className="mono" style={{ fontSize: 13 }}><b style={{ color: '#D35400' }}>{money(unit * qty, cur).text}</b></span></td>
-                  <td><button className="btn sm text danger-text" title={t('Remove')} onClick={() => cartApi.removeAt('inbound', i)}><Icon name="trash" size={13} /></button></td>
+                  <td><button className="btn sm text error-text" title={t('Remove')} onClick={() => cartApi.removeAt('inbound', i)}><Icon name="trash" size={13} /></button></td>
                 </tr>
               );
             })}
@@ -196,10 +196,10 @@ function WebInboundPanel({ onDone }) {
           <Textarea value={note} onChange={setNote} rows={3} placeholder={t('e.g. purchase arrival')} />
         </FormRow>
       </div>
-      <div className="flex" style={{ alignItems: 'center', gap: 10, marginTop: 4 }}>
+      <div className="flex" style={{ alignItems: 'center', gap: 12, marginTop: 4 }}>
         <div style={{ flex: 1 }} className="muted small">{t('Unit price × qty = stock-in amount')}</div>
-        <button className="btn" onClick={() => { cartApi.clear('inbound'); toast('Inbound staging cleared', 'info'); }}><Icon name="trash" size={13} />{t('Clear')}</button>
-        <button className="btn primary" onClick={confirm}><Icon name="download" size={13} />{t('Confirm Batch Stock In')}</button>
+        <button className="btn error-plain" onClick={() => { cartApi.clear('inbound'); toast('Inbound staging cleared', 'info'); }}><Icon name="trash" size={13} />{t('Clear')}</button>
+        <button className="btn success" onClick={confirm}><Icon name="download" size={13} />{t('Confirm Batch Stock In')}</button>
       </div>
       {supOpen && (
         <NewSupplierDialog onClose={() => setSupOpen(false)} onCreated={tn => { setSupOpen(false); setSupplier(tn.id); }} />
@@ -256,7 +256,7 @@ function WebOutboundPanel({ onDone }) {
                   </td>
                   <td><span className="mono small">{onHand} {p.unit}</span></td>
                   <td><Input value={String(l.qty)} onChange={v => cartApi.setQty('outbound', i, Math.max(0, parseInt(v, 10) || 0))} type="number" /></td>
-                  <td><button className="btn sm text danger-text" title={t('Remove')} onClick={() => cartApi.removeAt('outbound', i)}><Icon name="trash" size={13} /></button></td>
+                  <td><button className="btn sm text error-text" title={t('Remove')} onClick={() => cartApi.removeAt('outbound', i)}><Icon name="trash" size={13} /></button></td>
                 </tr>
               );
             })}
@@ -270,7 +270,7 @@ function WebOutboundPanel({ onDone }) {
               options={downstream.map(x => ({ value: x.id, label: x.name + (x.type === 'Supplier' ? '' : ' (' + x.type + ')') }))
                 .concat([{ value: 'custom', label: t('Custom receiver…') }])} />
             {recvTenant && recvTenantPhone && (
-              <div className="muted mono small" style={{ marginTop: 5 }}>{recvTenant.name} · {recvTenantPhone}</div>
+              <div className="muted mono small" style={{ marginTop: 4 }}>{recvTenant.name} · {recvTenantPhone}</div>
             )}
           </div>
         </FormRow>
@@ -288,10 +288,10 @@ function WebOutboundPanel({ onDone }) {
           <Textarea value={note} onChange={setNote} rows={3} placeholder={t('e.g. transfer to another warehouse')} />
         </FormRow>
       </div>
-      <div className="flex" style={{ alignItems: 'center', gap: 10, marginTop: 4 }}>
+      <div className="flex" style={{ alignItems: 'center', gap: 12, marginTop: 4 }}>
         <div style={{ flex: 1 }} className="muted small">{`${lines.length} items · ${totalQty} units`}</div>
-        <button className="btn" onClick={() => { cartApi.clear('outbound'); toast('Outbound staging cleared', 'info'); }}><Icon name="trash" size={13} />{t('Clear')}</button>
-        <button className="btn primary" onClick={confirm}><Icon name="truck" size={13} />{t('Confirm Batch Outbound')}</button>
+        <button className="btn error-plain" onClick={() => { cartApi.clear('outbound'); toast('Outbound staging cleared', 'info'); }}><Icon name="trash" size={13} />{t('Clear')}</button>
+        <button className="btn warning" onClick={confirm}><Icon name="truck" size={13} />{t('Confirm Batch Outbound')}</button>
       </div>
     </div>
   );

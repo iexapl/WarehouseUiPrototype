@@ -57,9 +57,10 @@ function ProductFormDialog({ editProduct, onClose }) {
           <Select value={f.unit} onChange={v => set('unit', v)} options={['pcs', 'box', 'set', 'kg'].map(u => ({ value: u, label: u }))} />
         </FormRow>
         <FormRow label="Price" required error={errors.price}>
+          {/* R108 — 价格表单项统一币种在前、金额在后 */}
           <div className="flex gap8">
-            <Input value={f.price} onChange={v => set('price', v)} placeholder="0.00" suffix={f.currency} error={errors.price} />
             <Select value={f.currency} onChange={v => set('currency', v)} style={{ width: 100 }} options={['USD', 'NGN', 'CNY'].map(c => ({ value: c, label: c }))} />
+            <Input value={f.price} onChange={v => set('price', v)} placeholder="0.00" error={errors.price} />
           </div>
         </FormRow>
         <FormRow label="Initial Stock" hint="Stocked into your Default Warehouse">
@@ -319,7 +320,7 @@ function InquiryFormDialog({ editDoc, initialPid, onClose }) {
                     <td><Input value={it.qty} onChange={v => updItem(i, 'qty', v)} type="number" placeholder="0" /></td>
                     <td>{it.pid ? <Money amount={(db.products.find(x => x.id === it.pid) || {}).price || 0} currency={(db.products.find(x => x.id === it.pid) || {}).currency} /> : <span className="muted">—</span>}</td>
                     <td className="mono small">{it.pid ? stockAvail(it.pid) : '—'}</td>
-                    <td>{f.items.length > 1 && <button className="btn sm text danger-text" onClick={() => setF(s => ({ ...s, items: s.items.filter((_, j) => j !== i) }))}><Icon name="trash" size={13} /></button>}</td>
+                    <td>{f.items.length > 1 && <button className="btn sm text error-text" onClick={() => setF(s => ({ ...s, items: s.items.filter((_, j) => j !== i) }))}><Icon name="trash" size={13} /></button>}</td>
                   </tr>
                 ))}
                 <tr><td colSpan={5}>
@@ -388,7 +389,8 @@ function QuoteFormDialog({ inquiry, editQuote, onClose }) {
                 <td><div style={{ fontSize: 13 }} className="bold">{it.name}</div><div className="cell-sub mono">{it.spec}</div></td>
                 <td className="mono">{it.qty}</td>
                 <td><div className="flex gap8">
-                  <Input value={it.price} onChange={v => setItems(items.map((x, j) => i === j ? { ...x, price: v, suggested: false } : x))} placeholder="0.00" />
+                  {/* R108 — 币种在前、金额在后 */}
+                  <Input value={it.price} onChange={v => setItems(items.map((x, j) => i === j ? { ...x, price: v, suggested: false } : x))} placeholder="0.00" prefix={currency} />
                   {it.suggested && <span className="mini-chip ai">AI</span>}
                 </div></td>
                 <td className="right"><Money amount={(Number(it.price) || 0) * it.qty} currency={currency} /></td>
@@ -492,9 +494,9 @@ function POFormDialog({ editDoc, onClose }) {
                       if (p) { updItem(i, 'price', p.price); updItem(i, 'name', p.name); updItem(i, 'spec', p.spec); }
                     }} placeholder="Select product" options={db.products.map(p => ({ value: p.id, label: `${p.name} (${p.model})` }))} /></td>
                     <td><Input value={it.qty} onChange={v => updItem(i, 'qty', v)} type="number" placeholder="0" /></td>
-                    <td><Input value={it.price} onChange={v => updItem(i, 'price', v)} placeholder="0.00" /></td>
+                    <td><Input value={it.price} onChange={v => updItem(i, 'price', v)} placeholder="0.00" prefix={(db.products.find(x => x.id === it.pid) || {}).currency || ''} /></td>
                     <td className="mono small">{it.pid ? stockAvail(it.pid) : '—'}</td>
-                    <td>{f.items.length > 1 && <button className="btn sm text danger-text" onClick={() => setF(s => ({ ...s, items: s.items.filter((_, j) => j !== i) }))}><Icon name="trash" size={13} /></button>}</td>
+                    <td>{f.items.length > 1 && <button className="btn sm text error-text" onClick={() => setF(s => ({ ...s, items: s.items.filter((_, j) => j !== i) }))}><Icon name="trash" size={13} /></button>}</td>
                   </tr>
                 ))}
                 <tr><td colSpan={5}>
@@ -522,7 +524,7 @@ function AdjustStockDialog({ productId, onClose }) {
     <Dialog title="Adjust Stock" width="480px" onClose={onClose}
       footer={<React.Fragment>
         <button className="btn" onClick={onClose}><Icon name="close" size={13} />Cancel</button>
-        <button className="btn primary" onClick={() => {
+        <button className="btn warning" onClick={() => {
           const n = Number(qty);
           if (!qty || isNaN(n) || n <= 0 || (type === 'OUT' && n > current)) { setErr(type === 'OUT' && n > current ? `Only ${current} ${t(p.unit)} on hand` : 'Enter a valid quantity'); return; }
           act.adjustStock(productId, type, n, reason || 'Manual adjustment');
@@ -560,7 +562,7 @@ function ShipDialog({ po, onClose }) {
     <Dialog title={`Ship ${po.no}`} width="560px" onClose={onClose}
       footer={<React.Fragment>
         <button className="btn" onClick={onClose}><Icon name="close" size={13} />Cancel</button>
-        <button className="btn primary" onClick={() => {
+        <button className="btn warning" onClick={() => {
           const errs = {};
           ['carrier', 'driver'].forEach(k => { if (!w[k]) errs[k] = 'Required'; });
           setErrors(errs);
@@ -607,7 +609,7 @@ function ReceiveDialog({ ck, onClose }) {
     <Dialog title={`Confirm Receipt · ${ck.no}`} width="640px" onClose={onClose}
       footer={<React.Fragment>
         <button className="btn" onClick={onClose}><Icon name="close" size={13} />Cancel</button>
-        <button className="btn primary" onClick={() => {
+        <button className="btn success" onClick={() => {
           if (mode !== 'accept' && !reason.trim()) { setErr('Variance reason is required for partial / rejected receiving'); return; }
           if (mode === 'partial') {
             for (const it of ck.items) {
@@ -738,7 +740,7 @@ function PayDialog({ po, onClose }) {
       <Banner tone="warning" icon="receipt">The buyer pays offline (bank transfer / cash). Recording the payment notifies the buyer and unlocks shipment arrangements.</Banner>
       <div className="form mt16">
         <FormRow label="Amount Received" required error={err}>
-          <Input value={amount} onChange={v => { setAmount(v); setErr(''); }} type="number" error={err} suffix={po.currency} />
+          <Input value={amount} onChange={v => { setAmount(v); setErr(''); }} type="number" error={err} prefix={po.currency} />
         </FormRow>
         <FormRow label="Payment Date" required>
           <Input value={date} onChange={setDate} type="date" />
@@ -881,7 +883,7 @@ function TerminateDialog({ po, onClose }) {
     <Dialog title={`Terminate Receiving · ${po.no}`} width="520px" onClose={onClose}
       footer={<React.Fragment>
         <button className="btn" onClick={onClose}><Icon name="close" size={13} />Cancel</button>
-        <button className="btn danger-plain" disabled={!reason.trim()} onClick={() => {
+        <button className="btn error-plain" disabled={!reason.trim()} onClick={() => {
           act.terminateReceiving(po, reason.trim());
           onClose();
           toast(`Receiving for ${po.no} terminated — order closed with partial receipt`, 'info');
@@ -989,11 +991,11 @@ function DocDetailDialog({ docId, onClose, onOpenDoc }) {
       badge={<React.Fragment><StatusTag type={doc.type} status={doc.status} />{isPlatform && <Tag tone="warning">Read-only</Tag>}</React.Fragment>}
       footer={<React.Fragment>
         {isPlatform ? (
-          <span className="muted small" style={{ marginRight: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span className="muted small" style={{ marginRight: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
             <Icon name="lock" size={13} /> Platform account — no write access to business data (MVP permission rule)
           </span>
         ) : side === 'observer' ? (
-          <span className="muted small" style={{ marginRight: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span className="muted small" style={{ marginRight: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
             <Icon name="eye" size={13} /> Visible via business relation — you are not a party to this document
           </span>
         ) : null}
@@ -1032,7 +1034,7 @@ function DocDetailDialog({ docId, onClose, onOpenDoc }) {
         )}
         <button className="btn" onClick={onClose}><Icon name="close" size={13} />Close</button>
         {!isPlatform && side !== 'observer' && actions.filter(v => v !== 'View').map(verb => (
-          <button key={verb} className={`btn${['Accept', 'Approve', 'Submit', 'Quote', 'Confirm Quote', 'Place Order', 'Ship', 'Dispatch', 'Confirm Receipt', 'Create Invoice', 'Confirm Invoice', 'Record Payment', 'Re-receive', 'Replenish'].includes(verb) ? ' primary' : ['Delete', 'Cancel', 'Reject', 'Close', 'Terminate Receiving'].includes(verb) ? ' danger-plain' : ''}`} onClick={() => runVerb(verb)}><Icon name={DLG_VERB_ICON[verb] || 'check'} size={13} />{verb}</button>
+          <button key={verb} className={`btn${['Confirm Receipt', 'Re-receive'].includes(verb) ? ' success' : ['Ship', 'Dispatch'].includes(verb) ? ' warning' : ['Accept', 'Approve', 'Submit', 'Quote', 'Confirm Quote', 'Place Order', 'Create Invoice', 'Confirm Invoice', 'Record Payment', 'Replenish'].includes(verb) ? ' primary' : ['Delete', 'Cancel', 'Reject', 'Close', 'Terminate Receiving'].includes(verb) ? ' error-plain' : ''}`} onClick={() => runVerb(verb)}><Icon name={DLG_VERB_ICON[verb] || 'check'} size={13} />{verb}</button>
         ))}
       </React.Fragment>}>
       <Descriptions cols={3} items={headerItems} />
@@ -1101,18 +1103,18 @@ function DocDetailDialog({ docId, onClose, onOpenDoc }) {
         <Dialog title={`Reject ${doc.type === 'PO' ? 'Order' : 'Quote'} ${doc.no}`} width="480px" onClose={() => setRejectOpen(false)}
           footer={<React.Fragment>
             <button className="btn" onClick={() => setRejectOpen(false)}><Icon name="close" size={13} />Cancel</button>
-            <button className="btn danger-plain" disabled={!rejectReason.trim()} onClick={() => {
+            <button className="btn error-plain" disabled={!rejectReason.trim()} onClick={() => {
               act.docVerb('Reject', doc, null, rejectReason.trim());
               setRejectOpen(false);
               toast(`${doc.type === 'PO' ? 'Order' : 'Quote'} rejected — reason recorded`, 'success');
             }}><Icon name="close" size={13} />Reject</button>
           </React.Fragment>}>
-          <div style={{ fontSize: 13, color: 'var(--text-2)', marginBottom: 10 }}>
+          <div style={{ fontSize: 13, color: 'var(--text-2)', marginBottom: 12 }}>
             A rejection reason is required. It is recorded on the document timeline and sent to the counterparty.
           </div>
           <textarea className="input" style={{ width: '100%', minHeight: 90, padding: '8px 10px' }} value={rejectReason}
             onChange={e => setRejectReason(e.target.value)} placeholder="Rejection reason (required)" />
-          {!rejectReason.trim() && <div className="field-error" style={{ marginTop: 6 }}>Rejection reason is required</div>}
+          {!rejectReason.trim() && <div className="field-error" style={{ marginTop: 8 }}>Rejection reason is required</div>}
         </Dialog>
       )}
       {dialog === 'print' && <PrintPreviewDialog doc={doc} onClose={() => setDialog(null)} />}
@@ -1157,7 +1159,7 @@ function PrintPreviewDialog({ doc, onClose }) {
           </div>
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontWeight: 800, fontSize: 14, letterSpacing: 1 }}>{TYPE_NAME[doc.type]}</div>
-            <div className="mono" style={{ fontSize: 12, marginTop: 3 }}>{doc.no}</div>
+            <div className="mono" style={{ fontSize: 12, marginTop: 4 }}>{doc.no}</div>
           </div>
         </div>
         <div className="flex gap12 mt12" style={{ justifyContent: 'space-between', fontSize: 12 }}>
@@ -1177,14 +1179,14 @@ function PrintPreviewDialog({ doc, onClose }) {
         <div className="flex mt12" style={{ justifyContent: 'space-between', alignItems: 'flex-end' }}>
           <div>
             <div className="barcode"></div>
-            <div className="mono muted" style={{ fontSize: 10, marginTop: 3 }}>{doc.no} · {doc.createdAt}</div>
+            <div className="mono muted" style={{ fontSize: 10, marginTop: 4 }}>{doc.no} · {doc.createdAt}</div>
           </div>
           <div style={{ textAlign: 'right' }}>
             <div className="muted" style={{ fontSize: 11 }}>TOTAL</div>
             <div className="mono" style={{ fontSize: 18, fontWeight: 700 }}>{money(docAmount(doc), doc.currency).full}</div>
           </div>
         </div>
-        <div className="muted" style={{ fontSize: 10, marginTop: 14, borderTop: '1px solid var(--border-light)', paddingTop: 8 }}>
+        <div className="muted" style={{ fontSize: 10, marginTop: 16, borderTop: '1px solid var(--border-light)', paddingTop: 8 }}>
           Anti-counterfeit watermark and barcode are rendered by the uploaded print template. Printing / export is logged as a data-outbound event.
         </div>
       </div>
@@ -1671,7 +1673,7 @@ function ProfileDialog({ onClose }) {
         <span className={`avatar ${isPlatform ? 'plat' : 'tenant'}`} style={{ width: 52, height: 52, fontSize: 17 }}>{initials}</span>
         <div style={{ minWidth: 0 }}>
           <div style={{ fontSize: 16, fontWeight: 700 }}>{account.name}</div>
-          <div className="small muted" style={{ marginTop: 3 }}>{isPlatform ? 'Platform account — all tenants' : (tenant ? `${tenant.name} · ${tenant.code}` : '')}</div>
+          <div className="small muted" style={{ marginTop: 4 }}>{isPlatform ? 'Platform account — all tenants' : (tenant ? `${tenant.name} · ${tenant.code}` : '')}</div>
         </div>
         <span style={{ marginLeft: 'auto' }}><Tag tone={isPlatform || role === 'Supplier' ? 'purple' : 'primary'}>{role}</Tag></span>
       </div>

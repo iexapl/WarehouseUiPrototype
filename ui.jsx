@@ -100,9 +100,10 @@ function Money({ amount, currency, className }) {
 }
 
 // ---------- inputs ----------
-function Input({ value, onChange, placeholder, type = 'text', readonly, error, suffix, style, onFocus, inputRef }) {
+function Input({ value, onChange, placeholder, type = 'text', readonly, error, suffix, prefix, style, onFocus, inputRef }) {
   return (
     <div className="input-group" style={style}>
+      {prefix && <span className="input-prefix">{prefix}</span>}
       <input ref={inputRef} className={`input${error ? ' error' : ''}${readonly ? ' readonly' : ''}`} type={type} value={value == null ? '' : value}
         placeholder={placeholder} onChange={e => onChange && onChange(e.target.value)} readOnly={readonly} onFocus={onFocus} />
       {suffix && <span className="input-suffix">{suffix}</span>}
@@ -463,7 +464,7 @@ function ProductImagePicker({ value, onChange, maxCount = 10 }) {
         )}
         <input ref={fileRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={onFile} />
       </div>
-      <div className="muted" style={{ fontSize: 11.5, marginTop: 6 }}>{hint ? <span style={{ color: 'var(--warning)' }}>{t(hint)}</span> : t('Up to N images · drag ⣿ to reorder, ★ sets the main image, tap to preview').replace('N', maxCount)}</div>
+      <div className="muted" style={{ fontSize: 11.5, marginTop: 8 }}>{hint ? <span style={{ color: 'var(--warning)' }}>{t(hint)}</span> : t('Up to N images · drag ⣿ to reorder, ★ sets the main image, tap to preview').replace('N', maxCount)}</div>
       {drag && (
         <div className="uupload-ghost" style={{ left: drag.x - drag.rx - 32, top: drag.y - drag.ry - 32 }}>
           <img src={drag.src} alt="" draggable={false} />
@@ -523,8 +524,8 @@ function ConfirmDialog({ title, message, confirmText = 'Confirm', danger, onConf
       footer={<React.Fragment>
         <button className="btn" onClick={onClose}>Cancel</button>
         {requireText && step === 1
-          ? <button className="btn danger" onClick={() => setStep(2)}>Continue</button>
-          : <button className="btn danger" disabled={requireText && typed !== requireText} onClick={() => { onConfirm(); onClose(); }}>{confirmText}</button>}
+          ? <button className="btn error" onClick={() => setStep(2)}>Continue</button>
+          : <button className="btn error" disabled={requireText && typed !== requireText} onClick={() => { onConfirm(); onClose(); }}>{confirmText}</button>}
       </React.Fragment>}>
       {step === 1 && <div className="banner danger"><Icon name="warn" size={15} /><div>{message}</div></div>}
       {step === 2 && (
@@ -718,7 +719,7 @@ function DownstreamStockTree({ db, rootTenantId, productId }) {
       <div key={n.id} style={{ marginLeft: 18, borderLeft: '1.5px dashed #D4DAE3', paddingLeft: 14, marginTop: 4 }}>
         <div className="flex" style={{ justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #F0F2F5' }}>
           <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: 12.5, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+            <div style={{ fontSize: 12.5, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
               <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.name}</span>
               {t.status === 'Suspended' && <Tag tone="dark">Suspended</Tag>}
             </div>
@@ -736,7 +737,7 @@ function DownstreamStockTree({ db, rootTenantId, productId }) {
         <div style={{ minWidth: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
           <span className="cell-icon" style={{ background: 'var(--success-light)', color: 'var(--success)', width: 28, height: 28 }}><Icon name="warehouse" size={15} /></span>
           <div>
-            <div style={{ fontSize: 12.5, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div style={{ fontSize: 12.5, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
               {root.name}<Tag tone="teal" dot>You</Tag>
             </div>
             <div className="muted mono" style={{ fontSize: 10.5, marginTop: 1 }}>{`${root.code || ''} · ${root.type || ''}`}</div>

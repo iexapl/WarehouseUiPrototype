@@ -271,7 +271,7 @@ function Forbidden403() {
       <div style={{ margin: 'auto', textAlign: 'center' }}>
         <div style={{ fontSize: 64, fontWeight: 800, color: 'var(--danger)', fontFamily: 'var(--mono)' }}>403</div>
         <div style={{ fontSize: 16, fontWeight: 700, marginTop: 8 }}>Access Denied</div>
-        <div className="muted" style={{ marginTop: 6, fontSize: 13 }}>You do not have permission to access this page. Switch to an account with the required access.</div>
+        <div className="muted" style={{ marginTop: 8, fontSize: 13 }}>You do not have permission to access this page. Switch to an account with the required access.</div>
       </div>
     </div>
   );
@@ -362,7 +362,7 @@ function ActionButtons({ doc, openDoc, size = 'sm', extraAction }) {
     <React.Fragment>
       <div className="row-actions">
         {actions.map(verb => (
-          <button key={verb} className={`btn sm ${verb === 'Delete' || verb === 'Cancel' || verb === 'Reject' ? 'text danger-text' : 'text'}`} onClick={() => runVerb(verb)}><Icon name={WEB_VERB_ICON[verb] || 'check'} size={13} />{verb}</button>
+          <button key={verb} className={`btn sm text${['Confirm Receipt', 'Re-receive'].includes(verb) ? ' success-text' : ['Ship', 'Dispatch'].includes(verb) ? ' warning-text' : ['Delete', 'Cancel', 'Reject', 'Close', 'Terminate Receiving'].includes(verb) ? ' error-text' : ''}`} onClick={() => runVerb(verb)}><Icon name={WEB_VERB_ICON[verb] || 'check'} size={13} />{verb}</button>
         ))}
         {actions.length === 0 && (
           <span className="act-none" title="Read-only — platform accounts cannot operate">
@@ -381,13 +381,13 @@ function ActionButtons({ doc, openDoc, size = 'sm', extraAction }) {
         <Dialog title={`Reject ${doc.type === 'PO' ? 'Order' : 'Quote'} ${doc.no}`} width="480px" onClose={() => setRejectOpen(false)}
           footer={<React.Fragment>
             <button className="btn" onClick={() => setRejectOpen(false)}><Icon name="close" size={13} />Cancel</button>
-            <button className="btn danger-plain" disabled={!rejectReason.trim()} onClick={() => {
+            <button className="btn error-plain" disabled={!rejectReason.trim()} onClick={() => {
               act.docVerb('Reject', doc, null, rejectReason.trim());
               setRejectOpen(false);
               toast(`${doc.type === 'PO' ? 'Order' : 'Quote'} rejected — reason recorded`, 'success');
             }}><Icon name="close" size={13} />Reject</button>
           </React.Fragment>}>
-          <div style={{ marginBottom: 10 }}>A rejection reason is required. It is recorded on the document timeline and sent to the counterparty.</div>
+          <div style={{ marginBottom: 12 }}>A rejection reason is required. It is recorded on the document timeline and sent to the counterparty.</div>
           <textarea className="input" rows="3" style={{ width: '100%' }} value={rejectReason} onChange={e => setRejectReason(e.target.value)} placeholder="Rejection reason (required)" />
           {!rejectReason.trim() && <div className="field-error">Rejection reason is required</div>}
         </Dialog>
@@ -455,7 +455,7 @@ function ProductListPage() {
       </div>
       <div className="card">
         {isTenant && (
-          <div className="flex" style={{ alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px 0', flexWrap: 'wrap', gap: 10 }}>
+          <div className="flex" style={{ alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px 0', flexWrap: 'wrap', gap: 12 }}>
             <div className="segments">
               <button className={`segment${tab === 'mine' ? ' active' : ''}`} onClick={() => { setTab('mine'); setSupplier('ALL'); setCat(''); }}>My Products</button>
               <button className={`segment${tab === 'channel' ? ' active' : ''}`} onClick={() => { setTab('channel'); setSupplier('ALL'); setCat(''); }}>Sourcing Channel</button>
@@ -518,12 +518,12 @@ function ProductListPage() {
           ) : canManageProduct(db, account, p) ? (
             <div className="row-actions">
               {/* 加入入库/出库暂存（与移动端同一套暂存数据） */}
-              <button className="btn sm text" title={t('Add to Inbound Staging')} onClick={() => { cartApi.add('inbound', { kind: 'exist', pid: p.id, qty: 1 }); toast(`${p.name} added to the inbound staging`, 'success'); }}><Icon name="download" size={13} />{t('Stock In')}</button>
-              <button className="btn sm text" title={t('Add to Outbound Staging')} onClick={() => { cartApi.add('outbound', { pid: p.id, qty: 1 }); toast(`${p.name} added to the outbound staging`, 'success'); }}><Icon name="truck" size={13} />{t('Stock Out')}</button>
-              <button className="btn sm text" onClick={() => setDialog('edit:' + p.id)}><Icon name="edit" size={13} />Edit</button>
-              <button className="btn sm text" onClick={() => setDialog('stock:' + p.id)}><Icon name="warehouse" size={13} />Adjust Stock</button>
-              <button className="btn sm text" onClick={() => setDialog('chain:' + p.id)}><Icon name="link" size={13} />View Stock</button>
-              <button className="btn sm text danger-text" onClick={() => setConfirmDel(p)}><Icon name="trash" size={13} />Delete</button>
+              <button className="btn sm text success-text" title={t('Add to Inbound Staging')} onClick={() => { cartApi.add('inbound', { kind: 'exist', pid: p.id, qty: 1 }); toast(`${p.name} added to the inbound staging`, 'success'); }}><Icon name="download" size={13} />{t('Stock In')}</button>
+              <button className="btn sm text warning-text" title={t('Add to Outbound Staging')} onClick={() => { cartApi.add('outbound', { pid: p.id, qty: 1 }); toast(`${p.name} added to the outbound staging`, 'success'); }}><Icon name="truck" size={13} />{t('Stock Out')}</button>
+              <button className="btn sm text info" onClick={() => setDialog('edit:' + p.id)}><Icon name="edit" size={13} />Edit</button>
+              <button className="btn sm text info" onClick={() => setDialog('stock:' + p.id)}><Icon name="warehouse" size={13} />Adjust Stock</button>
+              <button className="btn sm text info" onClick={() => setDialog('chain:' + p.id)}><Icon name="link" size={13} />View Stock</button>
+              <button className="btn sm text error-text" onClick={() => setConfirmDel(p)}><Icon name="trash" size={13} />Delete</button>
             </div>
           ) : (
             <span className="muted small" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }} title="Price and stock are managed by the owning tenant"><Icon name="lock" size={12} /> {`Owned by ${tenantName(db, p.ownerId)}`}</span>
@@ -570,8 +570,8 @@ function CategoriesPage() {
           { key: 'status', label: 'Status', width: 110, render: () => <Tag tone="success" dot>Enabled</Tag> },
           { key: 'act', label: 'Actions', width: 160, render: c => (
             <div className="row-actions">
-              <button className="btn sm text" onClick={() => setDialog(c)}><Icon name="edit" size={13} />Edit</button>
-              <button className="btn sm text danger-text" onClick={() => toast('Category deleted (demo)', 'success')}><Icon name="trash" size={13} />Delete</button>
+              <button className="btn sm text info" onClick={() => setDialog(c)}><Icon name="edit" size={13} />Edit</button>
+              <button className="btn sm text error-text" onClick={() => toast('Category deleted (demo)', 'success')}><Icon name="trash" size={13} />Delete</button>
             </div>
           )},
         ]} rows={db.categories} rowKey="id" />
@@ -861,7 +861,7 @@ function InventoryPage() {
           }},
           { key: 'act', label: 'Actions', width: 150, render: p => (
             <div className="row-actions">
-              <button className="btn sm text" onClick={() => setAdjustId(p.id)}><Icon name="warehouse" size={13} />Adjust</button>
+              <button className="btn sm text info" onClick={() => setAdjustId(p.id)}><Icon name="warehouse" size={13} />Adjust</button>
             </div>
           )},
         ]} rows={paged.slice} rowKey="id" />
@@ -1147,7 +1147,7 @@ function DocCenterPage({ openDoc, goPage }) {
             <span className="label">Scope</span>
             <ScopeSwitch value={scope} onChange={setScope} />
           </React.Fragment>}
-          <div style={{ marginLeft: 'auto', position: 'relative', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ marginLeft: 'auto', position: 'relative', display: 'flex', alignItems: 'center', gap: 12 }}>
             <span className="label">{rows.length} documents</span>
             <div style={{ position: 'relative' }}>
               <button className="btn sm" onClick={() => setColsOpen(o => !o)}><Icon name="settings" size={13} />Columns</button>
@@ -1292,11 +1292,11 @@ function AccountMgmtPage() {
           { key: 'status', label: 'Status', width: 100, render: a => a.status === 'Active' ? <Tag tone="success" dot>Active</Tag> : <Tag tone="danger" dot>Disabled</Tag> },
           { key: 'act', label: 'Actions', width: 220, render: a => (
             <div className="row-actions">
-              {!isPlatform && <button className="btn sm text" onClick={() => setBindAcc(a)}><Icon name="whatsapp" size={13} />{a.whatsapp ? 'Bind WA' : 'Bind WhatsApp'}</button>}
-              <button className="btn sm text" onClick={() => setDialog({ editAcc: a })}><Icon name="edit" size={13} />Edit</button>
+              {!isPlatform && <button className="btn sm text info" onClick={() => setBindAcc(a)}><Icon name="whatsapp" size={13} />{a.whatsapp ? 'Bind WA' : 'Bind WhatsApp'}</button>}
+              <button className="btn sm text info" onClick={() => setDialog({ editAcc: a })}><Icon name="edit" size={13} />Edit</button>
               {a.status === 'Active'
-                ? <button className="btn sm text danger-text" onClick={() => setConfirmDisable(a)}><Icon name="lock" size={13} />Disable</button>
-                : <button className="btn sm text" onClick={() => toast('Account enabled (demo)', 'success')}><Icon name="check" size={13} />Enable</button>}
+                ? <button className="btn sm text error-text" onClick={() => setConfirmDisable(a)}><Icon name="lock" size={13} />Disable</button>
+                : <button className="btn sm text success-text" onClick={() => toast('Account enabled (demo)', 'success')}><Icon name="check" size={13} />Enable</button>}
             </div>
           )},
         ]} rows={rows} rowKey="id" />
@@ -1321,8 +1321,8 @@ function AccountMgmtPage() {
             { key: 'act', label: 'Actions', width: 150, render: t => (
               <div className="row-actions">
                 {t.status === 'Active'
-                  ? <button className="btn sm text danger-text" onClick={() => setDeactivate(t)}><Icon name="lock" size={13} />Deactivate</button>
-                  : <button className="btn sm text" onClick={() => toast(`Tenant ${t.name} reactivated`, 'success')}><Icon name="refresh" size={13} />Reactivate</button>}
+                  ? <button className="btn sm text error-text" onClick={() => setDeactivate(t)}><Icon name="lock" size={13} />Deactivate</button>
+                  : <button className="btn sm text success-text" onClick={() => toast(`Tenant ${t.name} reactivated`, 'success')}><Icon name="refresh" size={13} />Reactivate</button>}
               </div>
             )},
           ]} rows={db.tenants} rowKey="id" />
@@ -1408,11 +1408,11 @@ function TenantMgmtPage() {
               { key: 'createdAt', label: 'Created', width: 100, render: t => <span className="small muted">{t.createdAt}</span> },
               { key: 'act', label: 'Actions', width: 220, render: t => (
                 <div className="row-actions">
-                  <button className="btn sm text" onClick={() => setDialog({ detail: t })}><Icon name="eye" size={13} />View</button>
-                  <button className="btn sm text" onClick={() => setDialog({ edit: t })}><Icon name="edit" size={13} />Edit</button>
+                  <button className="btn sm text info" onClick={() => setDialog({ detail: t })}><Icon name="eye" size={13} />View</button>
+                  <button className="btn sm text info" onClick={() => setDialog({ edit: t })}><Icon name="edit" size={13} />Edit</button>
                   {t.status === 'Active'
-                    ? <button className="btn sm text danger-text" onClick={() => setSuspend(t)}><Icon name="lock" size={13} />Suspend</button>
-                    : <button className="btn sm text" onClick={() => toast(`Tenant ${t.name} reactivated`, 'success')}><Icon name="refresh" size={13} />Reactivate</button>}
+                    ? <button className="btn sm text error-text" onClick={() => setSuspend(t)}><Icon name="lock" size={13} />Suspend</button>
+                    : <button className="btn sm text success-text" onClick={() => toast(`Tenant ${t.name} reactivated`, 'success')}><Icon name="refresh" size={13} />Reactivate</button>}
                 </div>
               )},
             ]} rows={rows} rowKey="id" />
@@ -1425,7 +1425,7 @@ function TenantMgmtPage() {
             { key: 'uniqueness', label: 'Uniqueness', width: 220, render: () => <span className="small muted">One relation per tenant pair (same-type unique)</span> },
             { key: 'act', label: 'Actions', width: 110, render: r => (
               <div className="row-actions">
-                <button className="btn sm text danger-text" onClick={() => setDissolve(r)}><Icon name="close" size={13} />Dissolve</button>
+                <button className="btn sm text error-text" onClick={() => setDissolve(r)}><Icon name="close" size={13} />Dissolve</button>
               </div>
             )},
           ]} rows={db.relations} rowKey="createdAt" />

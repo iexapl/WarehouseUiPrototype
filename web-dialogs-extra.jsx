@@ -83,7 +83,7 @@ function WaybillCard({ doc }) {
             The buyer opens the H5 link to view items &amp; logistics and confirm receipt.
           </div>
         </div>
-        <div className="flex gap8" style={{ marginTop: 10 }}>
+        <div className="flex gap8" style={{ marginTop: 12 }}>
           {canPush && (
             <button className="btn sm" onClick={() => act.resendWaybillLink(doc)}><Icon name="whatsapp" size={13} />Resend WhatsApp Link</button>
           )}
@@ -123,19 +123,19 @@ function ExportDialog({ docs, onClose }) {
       <Banner tone="warning" icon="shield"><b>Data-outbound events are logged.</b> Every export / download / batch print records the operator, time, scope and format for the audit trail.</Banner>
       <div className="form mt12" style={{ gridTemplateColumns: '1fr' }}>
         <FormRow label="Format" required>
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
             {[
               { value: 'excel', icon: 'grid', title: 'Excel (.csv)', desc: 'Downloads the file now' },
               { value: 'pdf', icon: 'file', title: 'PDF', desc: 'Print pipeline with watermark & barcode' },
             ].map(opt => {
               const on = format === opt.value;
               return (
-                <div key={opt.value} onClick={() => setFormat(opt.value)} style={{ flex: '1 1 220px', minWidth: 220, cursor: 'pointer', padding: '12px 14px', borderRadius: 10, border: `2px solid ${on ? 'var(--primary)' : 'var(--border-light)'}`, background: on ? 'var(--primary-light)' : '#FAFBFC', display: 'flex', gap: 10, alignItems: 'flex-start', boxSizing: 'border-box' }}>
+                <div key={opt.value} onClick={() => setFormat(opt.value)} style={{ flex: '1 1 220px', minWidth: 220, cursor: 'pointer', padding: '12px 14px', borderRadius: 10, border: `2px solid ${on ? 'var(--primary)' : 'var(--border-light)'}`, background: on ? 'var(--primary-light)' : '#FAFBFC', display: 'flex', gap: 12, alignItems: 'flex-start', boxSizing: 'border-box' }}>
                   <div style={{ width: 34, height: 34, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', background: on ? 'var(--primary)' : '#E8EBF0', color: on ? '#fff' : '#667085', flexShrink: 0 }}>
                     <Icon name={opt.icon} size={16} />
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
                       {opt.title}
                       {on && <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 16, height: 16, borderRadius: '50%', background: 'var(--primary)', color: '#fff' }}><Icon name="check" size={10} /></span>}
                     </div>
@@ -147,7 +147,7 @@ function ExportDialog({ docs, onClose }) {
           </div>
         </FormRow>
         <FormRow label="Scope">
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {docs.map(d => (
               <span key={d.id} className="mono" style={{ fontSize: 11.5, padding: '3px 10px', borderRadius: 999, background: '#F0F3F8', border: '1px solid var(--border-light)' }}>
                 {d.no}<span className="muted" style={{ marginLeft: 5 }}>({d.type})</span>
