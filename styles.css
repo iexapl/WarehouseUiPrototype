@@ -1156,7 +1156,7 @@ button { font-family: inherit; }
    ============================================================ */
 /* mobile FAB — absolute inside .h5-app, above the tab bar */
 .h5-cart-fab {
-  position: absolute; right: 14px; z-index: 60; width: 48px; height: 48px; border-radius: 25px;
+  position: absolute; right: 14px; z-index: 60; width: 48px; height: 48px; border-radius: 999px;
   border: none; background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: #fff;
   display: flex; align-items: center; justify-content: center; cursor: pointer;
   box-shadow: 0 6px 18px rgba(46, 111, 232, 0.42);
@@ -1998,7 +1998,8 @@ body:has(.mobile-stage) .toast {
 .h5-app .wa-chip { border-radius: 999px; }
 /* R109 补充：类目多选点选块（h5-catsel-item）胶囊；步进器恢复胶囊容器
    （原最初版即 16px 胶囊，内 +/− 钮随容器 overflow 裁切）；
-   图片预设缩略块 h5-img-opt 为图像瓦片非按钮，保持 6px 微圆角 */
+   预设图片选择块 h5-img-opt（38px 图瓦点选钮）同样入按钮 round 胶囊 = 圆形缩略图 */
 .h5-app .h5-catsel-item { border-radius: 999px; }
+.h5-app .h5-img-opt { border-radius: 999px; }
 .h5-app .h5-stepper { border-radius: 999px; }
 .h5-app .h5-stepper button { border-radius: 999px; }
