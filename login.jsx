@@ -63,7 +63,7 @@ function LoginPage() {
           <li><Icon name="check" size={14} />Inquiry &amp; quote with AI-drafted prices</li>
           <li><Icon name="check" size={14} />Order → outbound → waybill → receiving, stock auto-updated</li>
           <li><Icon name="check" size={14} />Auto-issued invoices &amp; WhatsApp push links</li>
-          <li><Icon name="check" size={14} />Tenant isolation · personal data scope · platform oversight</li>
+          <li><Icon name="check" size={14} />Merchant isolation · personal data scope · platform oversight</li>
         </ul>
         <div className="ll-foot">MVP-stage prototype · demo data only · frontend-simulated auth</div>
       </div>
@@ -97,7 +97,7 @@ function LoginPage() {
           </button>
           <div className="lc-note">
             <Icon name="info" size={13} />
-            <span>Demo only — no real credentials. Suspended tenants (e.g. Ibadan Sub-Distributor) are blocked from login, matching the MVP rule “suspend → login disabled, data retained”.</span>
+            <span>Demo only — no real credentials. Suspended merchants (e.g. Ibadan Sub-Distributor) are blocked from login, matching the MVP rule “suspend → login disabled, data retained”.</span>
           </div>
         </div>
         <div className="login-foot">TierLink Warehouse · MVP · EN / 中文</div>

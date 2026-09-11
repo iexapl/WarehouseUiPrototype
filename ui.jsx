@@ -548,7 +548,7 @@ function Table({ columns, rows, rowKey, onRowClick, selectable, selectedKeys, on
   // tenant accounts: empty lists fall back to an isolation-aware message so
   // cross-tenant data isolation is never mistaken for a bug
   const fallbackEmpty = isTenant ? 'No visible data for this account' : 'No Data';
-  const fallbackHint = isTenant ? 'Cross-tenant data is isolated by design — you only see records you created, plus those of your own tenant and linked supply partners.' : undefined;
+  const fallbackHint = isTenant ? 'Cross-merchant data is isolated by design — you only see records you created, plus those of your own merchant and linked supply partners.' : undefined;
   const fallbackIcon = isTenant ? 'lock' : 'file';
   const allSelected = rows.length > 0 && selectedKeys && rows.every(r => selectedKeys.includes(r[rowKey]));
   return (
@@ -747,7 +747,7 @@ function DownstreamStockTree({ db, rootTenantId, productId }) {
       </div>
       {chain.length
         ? chain.map(n => renderNode(n, 0))
-        : <div className="muted" style={{ padding: '12px 18px', fontSize: 12 }}>No downstream tenants yet — stock of this product held by your sub-agents will appear here.</div>}
+        : <div className="muted" style={{ padding: '12px 18px', fontSize: 12 }}>No downstream merchants yet — stock of this product held by your sub-agents will appear here.</div>}
     </div>
   );
 }

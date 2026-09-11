@@ -54,4 +54,5 @@
 - 移动端单层导航：push 页面点返回直接回 Tab 视图，不要连点两次返回。
 - `navigator.clipboard.writeText` 返回 Promise，同步 try/catch 捕获不了拒绝——必须链 `.catch()`，否则 unhandledrejection 打断 E2E。
 - 多轮编辑注意：连续 eval 报 `SyntaxError: Unexpected token/end of input` 多为 shell 引号嵌套问题，简化表达式重试即可，通常非页面错误。
-- JSX 三元表达式删分支时极易多留/漏掉闭合括号（本应用两次因此白屏，症状 = "MobileStage is not defined"，因 mobile.jsx 整文件解析失败）。自查法：①node 数花括号平衡；②浏览器里 `Babel.transform(await (await fetch('/mobile.jsx')).text(), {presets:[['react',{runtime:'classic'}]]})` 精确定位行号。
+- **agent-browser eval 里严禁顶层 `var t`（i18n 全局 t 被覆盖 → 整页假崩溃）**：i18n.jsx 给 React.createElement 打了补丁，回调里的 `t` 走全局绑定；eval 顶层 `var t = <元素>` 会挂到 window.t，之后任何含字符串子节点的 createElement 都抛 `TypeError: t is not a function`，AppErrorBoundary 兆不住、root 直接卸载成空白 + 错误条（生产 React 下还伪装成跨域 "Script error."）。排查法：重新打开页面、换 IIFE 包 eval；定位法：浏览器下本地开发版 React（curl 下载 react/react-dom development 到 tmp/，临时换 index.html 标签）拿真实组件栈。
+- **租户→商户改名约定（2026-09-11）**：展示文本层全量改名（中文「租户」×190、英文 tenant×279，AST 替换 StringLiteral/TemplateElement/JSXText/RegExpLiteral 节点）；**不改**账号 `type: 'tenant'` 等数据值、`db.tenants`/`createTenant`/`suspendTenant` 等代码标识符、`key: 'tenant'` 列配置键。i18n 键与 ZH 词条同步改（含 PATTERNS 正则内文本）。

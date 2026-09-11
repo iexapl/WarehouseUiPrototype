@@ -130,7 +130,7 @@ function DownstreamStockDialog({ productId, onClose }) {
       footer={<button className="btn" onClick={onClose}><Icon name="close" size={13} />Close</button>}>
       <div className="flex gap10 mb12">
         <div style={{ flex: 1, textAlign: 'center', padding: '8px 6px', background: '#F7F9FB', borderRadius: 8 }}><div className="muted small">My Stock</div><div className="mono bold" style={{ fontSize: 16 }}>{myStockV == null ? '—' : <React.Fragment>{myStockV} {p.unit}</React.Fragment>}</div></div>
-        <div style={{ flex: 1, textAlign: 'center', padding: '8px 6px', background: '#F7F9FB', borderRadius: 8 }}><div className="muted small">Downstream Tenants</div><div className="mono bold" style={{ fontSize: 16 }}>{dsTenants}</div></div>
+        <div style={{ flex: 1, textAlign: 'center', padding: '8px 6px', background: '#F7F9FB', borderRadius: 8 }}><div className="muted small">Downstream Merchants</div><div className="mono bold" style={{ fontSize: 16 }}>{dsTenants}</div></div>
         <div style={{ flex: 1, textAlign: 'center', padding: '8px 6px', background: '#F7F9FB', borderRadius: 8 }}><div className="muted small">Channel Total</div><div className="mono bold" style={{ fontSize: 16 }}>{dsTotal} {p.unit}</div></div>
       </div>
       <DownstreamStockTree db={db} rootTenantId={account.tenantId} productId={productId} />
@@ -1208,13 +1208,13 @@ function TenantFormDialog({ editTenant, onClose }) {
   );
   const phoneOk = v => /^[+\d][\d\s\-()]{6,}$/.test(v.trim());
   return (
-    <Dialog title={editTenant ? t(`Edit Tenant ${editTenant.code}`) : t('New Tenant')} width="560px" onClose={onClose}
+    <Dialog title={editTenant ? t(`Edit Merchant ${editTenant.code}`) : t('New Merchant')} width="560px" onClose={onClose}
       footer={<React.Fragment>
         <button className="btn" onClick={onClose}><Icon name="close" size={13} />Cancel</button>
         <button className="btn primary" onClick={() => {
           const errs = {};
-          if (!f.code) errs.code = 'Tenant code is required';
-          if (!f.name) errs.name = 'Tenant name is required';
+          if (!f.code) errs.code = 'Merchant code is required';
+          if (!f.name) errs.name = 'Merchant name is required';
           if (!editTenant) {
             if (!f.master.name.trim()) errs.mname = 'Master name is required';
             if (!f.master.phone.trim()) errs.mphone = 'Phone number is required';
@@ -1224,26 +1224,26 @@ function TenantFormDialog({ editTenant, onClose }) {
           }
           setErrors(errs);
           if (Object.keys(errs).length) return;
-          if (editTenant) { toast(`Tenant ${f.name} updated`, 'success'); }
+          if (editTenant) { toast(`Merchant ${f.name} updated`, 'success'); }
           else { act.createTenant({ ...f, master: { ...f.master, name: f.master.name.trim(), phone: f.master.phone.trim(), whatsapp: f.whatsapp.trim() || null } }); }
           onClose();
-        }}><Icon name="check" size={13} />{editTenant ? 'Save' : t('Create Tenant & Master Account')}</button>
+        }}><Icon name="check" size={13} />{editTenant ? 'Save' : t('Create Merchant & Master Account')}</button>
       </React.Fragment>}>
       <div className="form">
-        <Section first>{t('Tenant Info')}</Section>
-        <FormRow label="Tenant Code" required error={errors.code}>
+        <Section first>{t('Merchant Info')}</Section>
+        <FormRow label="Merchant Code" required error={errors.code}>
           <Input value={f.code} onChange={v => set('code', v)} placeholder="e.g. T-006" error={errors.code} />
         </FormRow>
-        <FormRow label="Tenant Name" required error={errors.name}>
+        <FormRow label="Merchant Name" required error={errors.name}>
           <Input value={f.name} onChange={v => set('name', v)} placeholder="e.g. Enugu Solar Traders" error={errors.name} />
         </FormRow>
-        <FormRow label="Tenant Type" required>
+        <FormRow label="Merchant Type" required>
           <RadioRow value={f.type} onChange={v => set('type', v)} options={[{ value: 'Supplier', label: 'Supplier' }, { value: 'Agent', label: 'Agent' }]} />
         </FormRow>
         <FormRow label="Country / Region">
           <Select value={f.country} onChange={v => set('country', v)} options={['Nigeria', 'Ghana', 'Kenya', 'China', 'Vietnam'].map(c => ({ value: c, label: c }))} />
         </FormRow>
-        <FormRow label="Max Agent Levels" hint="Depth of sub-agents this tenant may develop">
+        <FormRow label="Max Agent Levels" hint="Depth of sub-agents this merchant may develop">
           <Input value={f.maxLevel} onChange={v => set('maxLevel', v)} type="number" placeholder="e.g. 2" />
         </FormRow>
         <FormRow label="Status">
@@ -1264,7 +1264,7 @@ function TenantFormDialog({ editTenant, onClose }) {
           <Input value={f.whatsapp} onChange={v => set('whatsapp', v)} placeholder="+234 801 234 5678" error={errors.wa} />
         </FormRow>}
         {!editTenant && <FormRow label="Access Model" span2>
-          <div className="field-hint" style={{ marginTop: 2 }}>Creating a tenant provisions its master account (flattened permissions, MVP) and binds the WhatsApp push channel.</div>
+          <div className="field-hint" style={{ marginTop: 2 }}>Creating a merchant provisions its master account (flattened permissions, MVP) and binds the WhatsApp push channel.</div>
         </FormRow>}
       </div>
     </Dialog>
@@ -1283,18 +1283,18 @@ function RelationDialog({ onClose }) {
         <button className="btn" onClick={onClose}><Icon name="close" size={13} />Cancel</button>
         <button className="btn primary" disabled={!up || !down || exists || selfPair} onClick={() => { act.createRelation(up, down); onClose(); }}><Icon name="link" size={13} />Establish Relation</button>
       </React.Fragment>}>
-      <Banner tone="info" icon="building">A supply relation (TenantRelation) is unique per tenant pair — duplicates are rejected. Data visibility flows along established relations only.</Banner>
+      <Banner tone="info" icon="building">A supply relation (MerchantRelation) is unique per merchant pair — duplicates are rejected. Data visibility flows along established relations only.</Banner>
       <div className="form mt16" style={{ gridTemplateColumns: '1fr' }}>
         <FormRow label="Upstream (Supplier)" required>
-          <Select value={up} onChange={setUp} placeholder="Select supplier tenant"
+          <Select value={up} onChange={setUp} placeholder="Select supplier merchant"
             options={db.tenants.filter(t => t.status === 'Active').map(t => ({ value: t.id, label: `${t.name} (${t.type})` }))} />
         </FormRow>
         <FormRow label="Downstream (Agent)" required>
-          <Select value={down} onChange={setDown} placeholder="Select agent tenant"
+          <Select value={down} onChange={setDown} placeholder="Select agent merchant"
             options={db.tenants.filter(t => t.status === 'Active').map(t => ({ value: t.id, label: `${t.name} (${t.type})` }))} />
         </FormRow>
-        {exists && <Banner tone="danger" icon="error">These two tenants already have a relation — same-type relations must be unique.</Banner>}
-        {selfPair && <Banner tone="danger" icon="error">A tenant cannot be related to itself.</Banner>}
+        {exists && <Banner tone="danger" icon="error">These two merchants already have a relation — same-type relations must be unique.</Banner>}
+        {selfPair && <Banner tone="danger" icon="error">A merchant cannot be related to itself.</Banner>}
       </div>
     </Dialog>
   );
@@ -1306,10 +1306,10 @@ function TenantDetailDialog({ tenant, onClose }) {
   const down = db.relations.filter(r => r.upstream === tenant.id);
   const accounts = db.accounts.filter(a => a.tenantId === tenant.id);
   return (
-    <Dialog title={`Tenant ${tenant.code}`} width="640px" onClose={onClose}
+    <Dialog title={`Merchant ${tenant.code}`} width="640px" onClose={onClose}
       footer={<button className="btn" onClick={onClose}><Icon name="close" size={13} />Close</button>}>
       <Descriptions cols={2} items={[
-        { label: 'Tenant Name', value: <span className="bold">{tenant.name}</span> },
+        { label: 'Merchant Name', value: <span className="bold">{tenant.name}</span> },
         { label: 'Type', value: <TenantTag type={tenant.type} /> },
         { label: 'Country', value: tenant.country },
         { label: 'Max Agent Levels', value: ifnull(tenant.maxLevel, '—') },
@@ -1318,7 +1318,7 @@ function TenantDetailDialog({ tenant, onClose }) {
         { label: 'Accounts', value: `${accounts.length} (${accounts.filter(a => a.main).length} master)` },
       ]} />
       <div className="section-label mt16">Business Relations</div>
-      {up.length + down.length === 0 && <EmptyState message="No relations established" hint="This tenant's data is fully isolated from other tenants" />}
+      {up.length + down.length === 0 && <EmptyState message="No relations established" hint="This merchant's data is fully isolated from other merchants" />}
       <div className="table-wrap">
         <table className="table">
           <thead><tr><th>Direction</th><th>Counterparty</th><th>Since</th></tr></thead>
@@ -1366,7 +1366,7 @@ function AccountFormDialog({ mode, onClose }) {
       if (!f.password) errs.password = 'Password is required';
       else if (f.password.length < 6) errs.password = 'At least 6 characters';
       if (!f.maxSubLevel || Number(f.maxSubLevel) < 1) errs.maxSubLevel = 'At least 1 level';
-      else if (Number(f.maxSubLevel) > grantMax) errs.maxSubLevel = `Your tenant can grant at most ${grantMax} level${grantMax > 1 ? 's' : ''}`;
+      else if (Number(f.maxSubLevel) > grantMax) errs.maxSubLevel = `Your merchant can grant at most ${grantMax} level${grantMax > 1 ? 's' : ''}`;
       setErrors(errs);
       if (Object.keys(errs).length) { toast('Please fix the highlighted fields', 'error'); return; }
       act.createSubAgent(f);
@@ -1376,7 +1376,7 @@ function AccountFormDialog({ mode, onClose }) {
     if (!f.name) errs.name = 'Name is required';
     if (!validPhone(f.phone)) errs.phone = 'Enter a valid phone number';
     if (f.password.length < 6) errs.password = 'At least 6 characters';
-    if (f.accountType !== 'platform' && !f.tenant) errs.tenant = 'Select a tenant';
+    if (f.accountType !== 'platform' && !f.tenant) errs.tenant = 'Select a merchant';
     setErrors(errs);
     if (Object.keys(errs).length) { toast('Please fix the highlighted fields', 'error'); return; }
     if (editing) toast(`Account ${f.name} updated`, 'success');
@@ -1392,7 +1392,7 @@ function AccountFormDialog({ mode, onClose }) {
         <button className="btn primary" onClick={save}><Icon name="check" size={13} />{editing ? 'Save' : subAgent ? 'Create Sub-Agent' : 'Create Account'}</button>
       </React.Fragment>}>
       {subAgent ? (<React.Fragment>
-        <Banner tone="info" icon="building">Creates a new agent tenant, its master account and the supply relation in one step.</Banner>
+        <Banner tone="info" icon="building">Creates a new agent merchant, its master account and the supply relation in one step.</Banner>
         <div className="form mt16">
           <FormRow label="Company Name" required error={errors.company}>
             <Input value={f.company} onChange={v => set('company', v)} placeholder="e.g. Enugu Solar Traders" error={errors.company} />
@@ -1412,18 +1412,18 @@ function AccountFormDialog({ mode, onClose }) {
           <FormRow label="Password" required error={errors.password} hint="Hashed at rest (demo)">
             <Input value={f.password} onChange={v => set('password', v)} type="password" placeholder="Min. 6 characters" error={errors.password} />
           </FormRow>
-          <FormRow label="Max Sub-level" required error={errors.maxSubLevel} hint={`Depth of sub-agents this sub-agent may develop (your tenant grants at most ${grantMax})`}>
+          <FormRow label="Max Sub-level" required error={errors.maxSubLevel} hint={`Depth of sub-agents this sub-agent may develop (your merchant grants at most ${grantMax})`}>
             <Input value={f.maxSubLevel} onChange={v => set('maxSubLevel', v)} type="number" error={errors.maxSubLevel} />
           </FormRow>
         </div>
       </React.Fragment>) : (<React.Fragment>
         <Banner tone="info" icon="user">{isPlatform
-          ? 'Platform admins may create platform accounts or accounts for any tenant; suppliers / agents create sub-accounts of their own tenant. Permissions are flattened in MVP — visibility is governed by tenant type, business relations and personal data scope.'
-          : 'Creates a sub-account of your own tenant. Permissions are flattened in MVP — every account gets the same action set; visibility is governed by tenant type, business relations and personal data scope.'}</Banner>
+          ? 'Platform admins may create platform accounts or accounts for any merchant; suppliers / agents create sub-accounts of their own merchant. Permissions are flattened in MVP — visibility is governed by merchant type, business relations and personal data scope.'
+          : 'Creates a sub-account of your own merchant. Permissions are flattened in MVP — every account gets the same action set; visibility is governed by merchant type, business relations and personal data scope.'}</Banner>
         <div className="form mt16">
           {isPlatform && !editing && <FormRow label="Account Type" required>
             <Select value={f.accountType} onChange={v => set('accountType', v)} options={[
-              { value: 'tenant', label: 'Tenant Account' },
+              { value: 'tenant', label: 'Merchant Account' },
               { value: 'platform', label: 'Platform Account' },
             ]} />
           </FormRow>}
@@ -1436,13 +1436,13 @@ function AccountFormDialog({ mode, onClose }) {
           <FormRow label="Password" required error={errors.password} hint="Hashed at rest (demo)">
             <Input value={f.password} onChange={v => set('password', v)} type="password" placeholder="Min. 6 characters" error={errors.password} />
           </FormRow>
-          {!platAcc && <FormRow label="Tenant" required error={errors.tenant}>
+          {!platAcc && <FormRow label="Merchant" required error={errors.tenant}>
             <Select value={f.tenant} onChange={v => set('tenant', v)} options={tenantOptions} disabled={!isPlatform} />
           </FormRow>}
           {!platAcc && (isPlatform || account.main) && <FormRow label="Master Account" hint={editing && !isPlatform ? t('Only platform admins can change the master status of an existing account') : 'Master accounts receive document push links'}>
             <Select value={f.main ? 'yes' : 'no'} onChange={v => set('main', v === 'yes')} options={[
               { value: 'no', label: 'No — regular sub-account' },
-              { value: 'yes', label: 'Yes — master of the tenant' },
+              { value: 'yes', label: 'Yes — master of the merchant' },
             ]} disabled={editing && !isPlatform} />
           </FormRow>}
           {!platAcc && <FormRow label="WhatsApp (for pushes)" error={errors.whatsapp} hint="Optional — master accounts receive document push links">
@@ -1501,10 +1501,10 @@ function PermissionSummaryDialog({ onClose }) {
   let scopeTag, scopeDetail;
   if (isPlatform) {
     scopeTag = 'Platform-wide';
-    scopeDetail = 'Cross-tenant read-only — all tenants, relations and documents';
+    scopeDetail = 'Cross-merchant read-only — all merchants, relations and documents';
   } else if (isSupplier) {
-    scopeTag = 'Tenant-level';
-    scopeDetail = <span>Supply-side worklists are tenant-wide; other lists default to your own records · linked partners: <b>{partnerNames}</b></span>;
+    scopeTag = 'Merchant-level';
+    scopeDetail = <span>Supply-side worklists are merchant-wide; other lists default to your own records · linked partners: <b>{partnerNames}</b></span>;
   } else if (isAgent && account.main && partnerNames) {
     scopeTag = 'Personal + downstream';
     scopeDetail = <span>Lists default to records you created · linked partners: <b>{partnerNames}</b></span>;
@@ -1517,8 +1517,8 @@ function PermissionSummaryDialog({ onClose }) {
   }
 
   const actions = isPlatform ? [
-    { page: 'Tenants & Relations', acts: ['New Tenant', 'New Relation', 'Suspend Tenant'], note: 'create supplier / agent tenants together with their master accounts' },
-    { page: 'Accounts', acts: ['New Platform Account', 'New Account', 'Edit', 'Disable', 'Enable'], note: 'accounts of any tenant, optionally master, or platform-side accounts' },
+    { page: 'Merchants & Relations', acts: ['New Merchant', 'New Relation', 'Suspend Merchant'], note: 'create supplier / agent merchants together with their master accounts' },
+    { page: 'Accounts', acts: ['New Platform Account', 'New Account', 'Edit', 'Disable', 'Enable'], note: 'accounts of any merchant, optionally master, or platform-side accounts' },
     { page: 'Products / Purchase / Warehouse / Invoices', ro: true },
   ] : isSupplier ? [
     { page: 'Products', acts: ['Add Product', 'Batch Import', 'Template', 'Edit', 'Adjust Stock', 'Delete'] },
@@ -1528,12 +1528,12 @@ function PermissionSummaryDialog({ onClose }) {
     { page: 'Invoices', acts: ['Download'], note: 'auto-issued (FP) after order fulfillment' },
     { page: 'Accounts', acts: ['New Account', 'Edit', 'Disable', 'Enable'] },
   ] : isAgent ? [
-    { page: 'Purchase (Inquiries / Quotes / Purchase Orders)', acts: ['New Inquiry', 'Submit', 'New Order', 'Accept', 'Reject', 'Close'], note: 'tenant-side generic capability — inquire and purchase from your upstream supplier' },
+    { page: 'Purchase (Inquiries / Quotes / Purchase Orders)', acts: ['New Inquiry', 'Submit', 'New Order', 'Accept', 'Reject', 'Close'], note: 'merchant-side generic capability — inquire and purchase from your upstream supplier' },
     { page: 'Receiving', acts: ['Confirm Receipt'], note: 'full / partial / reject' },
     { page: 'Document Center (downstream orders)', acts: ['Approve', 'Ship'], note: 'received from sub-distributors; waybill auto-generated on ship' },
     { page: 'Invoices', acts: ['Download'], note: 'received from supplier and auto-issued (FP) to downstream after fulfillment' },
     { page: 'Products', acts: ['Add Product', 'Batch Import', 'Template', 'Edit', 'Adjust Stock', 'Delete'] },
-    { page: 'Accounts', acts: ['New Account', 'Edit', 'Disable', 'Enable'], note: 'sub-accounts of your own tenant; sub-agent development where your level allows' },
+    { page: 'Accounts', acts: ['New Account', 'Edit', 'Disable', 'Enable'], note: 'sub-accounts of your own merchant; sub-agent development where your level allows' },
   ] : [
     { page: 'Inquiries', acts: ['New Inquiry', 'Edit', 'Submit', 'Delete', 'Close'] },
     { page: 'Quotes (received)', acts: ['Accept', 'Reject'] },
@@ -1544,13 +1544,13 @@ function PermissionSummaryDialog({ onClose }) {
   ];
 
   const boundary = isPlatform
-    ? 'Cross-tenant read-only oversight: manage tenants, relations and accounts; no write access to business data.'
+    ? 'Cross-merchant read-only oversight: manage merchants, relations and accounts; no write access to business data.'
     : isSupplier
     ? 'Supply side: quote inquiries (AI draft), approve and ship orders; invoices (FP) are auto-issued after fulfillment.'
     : (isAgent && account.main)
-    ? 'Distribution side with downstream: purchase is a tenant-side generic capability — inquire, order and receive from your upstream supplier. Fulfill and ship downstream orders; invoices (FP) are auto-issued after fulfillment. Account management covers your own tenant — create sub-accounts and (where your level allows) sub-agent master accounts.'
+    ? 'Distribution side with downstream: purchase is a merchant-side generic capability — inquire, order and receive from your upstream supplier. Fulfill and ship downstream orders; invoices (FP) are auto-issued after fulfillment. Account management covers your own merchant — create sub-accounts and (where your level allows) sub-agent master accounts.'
     : isAgent
-    ? 'Same flattened permissions as tenant colleagues: manage sub-accounts of your own tenant; purchase is a tenant-side generic capability — the other boundary is data scope: you see just your own records.'
+    ? 'Same flattened permissions as merchant colleagues: manage sub-accounts of your own merchant; purchase is a merchant-side generic capability — the other boundary is data scope: you see just your own records.'
     : 'Agent L2 buy side: inquire, order and receive from your upstream agent, including partial receiving with variance.';
 
   const renderGroup = (g, i) => (
@@ -1573,7 +1573,7 @@ function PermissionSummaryDialog({ onClose }) {
         <span className={`avatar ${isPlatform ? 'plat' : 'tenant'}`} style={{ width: 44, height: 44, fontSize: 15 }}>{initials}</span>
         <div style={{ minWidth: 0 }}>
           <div style={{ fontSize: 15, fontWeight: 700 }}>{account.name}</div>
-          <div className="small muted" style={{ marginTop: 2 }}>{isPlatform ? 'Platform account — all tenants' : (tenant ? `${tenant.name} · ${tenant.code}` : '')}</div>
+          <div className="small muted" style={{ marginTop: 2 }}>{isPlatform ? 'Platform account — all merchants' : (tenant ? `${tenant.name} · ${tenant.code}` : '')}</div>
         </div>
         <span style={{ marginLeft: 'auto' }}><Tag tone={isPlatform || isSupplier ? 'purple' : 'primary'}>{role}</Tag></span>
       </div>
@@ -1581,9 +1581,9 @@ function PermissionSummaryDialog({ onClose }) {
         <Descriptions items={[
           { label: 'Account Type', value: role },
           { label: 'Data Scope', full: true, value: <span><span className="mini-chip scope">{scopeTag}</span> <span className="small" style={{ marginLeft: 6 }}>{scopeDetail}</span></span> },
-          { label: 'Cross-Tenant Isolation', full: true, value: <span className="small">{isPlatform
-            ? 'All tenants and accounts are visible to platform admins for oversight; business data stays mutually isolated between tenants.'
-            : 'Cross-tenant data is isolated by design — you see your own records, your tenant and linked supply partners. Accounts outside your business chain (e.g. Kano Wholesale Hub) are not listed in the account switcher.'}</span> },
+          { label: 'Cross-Merchant Isolation', full: true, value: <span className="small">{isPlatform
+            ? 'All merchants and accounts are visible to platform admins for oversight; business data stays mutually isolated between merchants.'
+            : 'Cross-merchant data is isolated by design — you see your own records, your merchant and linked supply partners. Accounts outside your business chain (e.g. Kano Wholesale Hub) are not listed in the account switcher.'}</span> },
         ]} />
       </div>
       <div className="section-label">Visible Menus</div>
@@ -1610,13 +1610,13 @@ function PermissionGuideDialog({ onClose }) {
   const { db, account } = useApp();
   const rules = [
     ['No role system in MVP', 'All accounts have flattened, identical permissions. Role management, permission resources and data-scope configuration do not exist in this phase.'],
-    ['Two account types', 'Platform accounts manage tenants, relations and accounts. Tenant accounts (Supplier / Agent) run the business: products, purchase, warehouse, documents, invoices.'],
-    ['Personal data scope', 'Lists default to records created by the current account ("My Records"). Tenant-wide scope arrives with RBAC post-MVP.'],
-    ['Tenant isolation & business visibility', 'A supplier sees downstream agents; an agent sees itself and its sub-agents. Tenants without a relation (e.g. Kano Wholesale Hub) are fully isolated.'],
-    ['Platform read-only', 'Platform accounts see cross-tenant documents for oversight, but write actions (edit / submit / ship / receive / invoice) are hidden, not merely disabled.'],
-    ['Actions follow business side', 'Who can act depends on which side of the document your tenant is: buyers inquire, order and receive; suppliers quote, ship and invoice.'],
-    ['Purchase is a tenant-side capability', 'Purchase (Inquiries / Quotes / Purchase Orders) is a tenant-side generic capability — L1 agents inquire and purchase from their upstream supplier, with the same menu as suppliers and sub-distributors. Downstream orders are reviewed and fulfilled from the Document Center.'],
-    ['Agent accounts are read-only', 'Agent accounts see a read-only member list of their own tenant — invite, edit, disable and permission actions are hidden. Account administration is performed by suppliers and the platform.'],
+    ['Two account types', 'Platform accounts manage merchants, relations and accounts. Merchant accounts (Supplier / Agent) run the business: products, purchase, warehouse, documents, invoices.'],
+    ['Personal data scope', 'Lists default to records created by the current account ("My Records"). Merchant-wide scope arrives with RBAC post-MVP.'],
+    ['Merchant isolation & business visibility', 'A supplier sees downstream agents; an agent sees itself and its sub-agents. Merchants without a relation (e.g. Kano Wholesale Hub) are fully isolated.'],
+    ['Platform read-only', 'Platform accounts see cross-merchant documents for oversight, but write actions (edit / submit / ship / receive / invoice) are hidden, not merely disabled.'],
+    ['Actions follow business side', 'Who can act depends on which side of the document your merchant is: buyers inquire, order and receive; suppliers quote, ship and invoice.'],
+    ['Purchase is a merchant-side capability', 'Purchase (Inquiries / Quotes / Purchase Orders) is a merchant-side generic capability — L1 agents inquire and purchase from their upstream supplier, with the same menu as suppliers and sub-distributors. Downstream orders are reviewed and fulfilled from the Document Center.'],
+    ['Agent accounts are read-only', 'Agent accounts see a read-only member list of their own merchant — invite, edit, disable and permission actions are hidden. Account administration is performed by suppliers and the platform.'],
     ['WhatsApp-first notifications', 'Document changes push WhatsApp links to the buyer; the H5 link opens a login-free document view with one-tap confirmation.'],
   ];
   return (
@@ -1635,11 +1635,11 @@ function PermissionGuideDialog({ onClose }) {
       <Table columns={[
         { key: 'name', label: 'Account', render: a => <span className="bold" style={{ fontSize: 13 }}>{a.name}</span> },
         { key: 'type', label: 'Type', width: 120, render: a => a.type === 'platform' ? <Tag tone="purple">Platform Admin</Tag> : <TenantTag type={(db.tenants.find(t => t.id === a.tenantId) || {}).type} /> },
-        { key: 'tenant', label: 'Tenant', render: a => a.tenantId ? tenantName(db, a.tenantId) : '—' },
+        { key: 'tenant', label: 'Merchant', render: a => a.tenantId ? tenantName(db, a.tenantId) : '—' },
         { key: 'note', label: 'Demonstrates', render: a => <span className="small muted">{{
-          'a-alex': 'Cross-tenant read-only; tenant/relation management',
+          'a-alex': 'Cross-merchant read-only; merchant/relation management',
           'a-sarah': 'Supply side: quote (AI draft), ship, invoice',
-          'a-david': 'Personal data scope within the same tenant',
+          'a-david': 'Personal data scope within the same merchant',
           'a-chidi': 'Agent L1: buy from upstream supplier, receive & fulfill downstream orders',
           'a-ngozi': 'Personal data scope — own records only',
           'a-tunde': 'Agent L2: partial receiving with variance',
@@ -1673,23 +1673,23 @@ function ProfileDialog({ onClose }) {
         <span className={`avatar ${isPlatform ? 'plat' : 'tenant'}`} style={{ width: 52, height: 52, fontSize: 17 }}>{initials}</span>
         <div style={{ minWidth: 0 }}>
           <div style={{ fontSize: 16, fontWeight: 700 }}>{account.name}</div>
-          <div className="small muted" style={{ marginTop: 4 }}>{isPlatform ? 'Platform account — all tenants' : (tenant ? `${tenant.name} · ${tenant.code}` : '')}</div>
+          <div className="small muted" style={{ marginTop: 4 }}>{isPlatform ? 'Platform account — all merchants' : (tenant ? `${tenant.name} · ${tenant.code}` : '')}</div>
         </div>
         <span style={{ marginLeft: 'auto' }}><Tag tone={isPlatform || role === 'Supplier' ? 'purple' : 'primary'}>{role}</Tag></span>
       </div>
       <div className="mt16">
         <Descriptions items={[
           { label: 'Account Type', value: role },
-          { label: 'Tenant', value: isPlatform ? null : (tenant ? `${tenant.name} (${tenant.code})` : null) },
+          { label: 'Merchant', value: isPlatform ? null : (tenant ? `${tenant.name} (${tenant.code})` : null) },
           { label: 'Phone', value: account.phone },
           { label: 'WhatsApp', value: account.whatsapp },
           { label: 'Status', value: <StatusTag status={account.status} /> },
           { label: 'Language Preference', value: <span>{getLang() === 'zh' ? '中文' : 'English'} · <span className="muted small">switch via the top bar EN/中 button</span></span> },
           { label: 'Data Scope', full: true, value: isPlatform
-            ? 'Cross-tenant read-only oversight — all tenants, relations and documents'
+            ? 'Cross-merchant read-only oversight — all merchants, relations and documents'
             : (partnerNames
               ? <span>Personal records only (created by me) · business visibility: <b>{partnerNames}</b></span>
-              : 'Personal records only (created by me) · no linked partners — fully isolated tenant') },
+              : 'Personal records only (created by me) · no linked partners — fully isolated merchant') },
         ]} />
       </div>
       <div className="mt16">
@@ -1703,12 +1703,12 @@ function ProfileDialog({ onClose }) {
 // QA fix: 核验方式列内容折行可见 + 悬停 title 显示完整内容；固定列宽比例避免末列被挤压截断
 const NOTES_ROWS = [
   ['MVP scope (flat product fields, single warehouse, WhatsApp-first, six document types, account creation only, etc.)', 'Verified fact', 'MVP and evolution capabilities coexist in the prompt; this prototype strictly follows the xlsx MVP sheet as its functional boundary — dashboards / role systems and other evolution capabilities are not included', 'High', 'conf-high', 'User source materials (xlsx + prompt.md)'],
-  ['MVP permission model: no role system, flat account permissions, data scope = own data only, two account types (platform / tenant)', 'Verified fact', 'Differs from the evolved RBAC (6 roles × 15 permission codes); the prototype must not show role-management / permission-resource / data-scope configuration pages', 'High', 'conf-high', 'User source materials (prompt.md §13)'],
+  ['MVP permission model: no role system, flat account permissions, data scope = own data only, two account types (platform / merchant)', 'Verified fact', 'Differs from the evolved RBAC (6 roles × 15 permission codes); the prototype must not show role-management / permission-resource / data-scope configuration pages', 'High', 'conf-high', 'User source materials (prompt.md §13)'],
   ['Data visibility rules: suppliers see downstream; distributors see themselves and their sub-levels; only nodes with a business relationship; full isolation otherwise', 'Verified fact', 'The prototype demonstrates this rule on the front end; real enforcement requires backend data filtering', 'High', 'conf-high', 'User source materials (prompt.md)'],
   ['Form-factor specs: Web console (Element Plus style, dialogs), mobile (uViewUI card style, full-screen pages), UI copy in English (later changed to bilingual per user request, see next row), interaction-state specs', 'Verified fact', 'Styles are design references only; navigation must not mention tech-stack names; MVP excludes data dashboards (evolution capability)', 'High', 'conf-high', 'User source materials (prompt.md §17)'],
   ['Six document numbering rules (IQ-/QT-/PO-/CK-/RK-/FP- + date + sequence), status transitions, three-section detail pages', 'Verified fact', 'Document templates are used via offline upload; the prototype does not provide an online template designer', 'High', 'conf-high', 'User source materials (prompt.md §9)'],
   ['UI language: bilingual Chinese/English switch (built-in switch in the top bar / "Mine" page)', 'Verified fact', 'prompt.md originally suggested "MVP English only"; the bilingual switch was a later explicit user request (from user comments) — the user\'s latest request prevails', 'High', 'conf-high', 'User source materials + user comments (this round)'],
-  ['All business data in the prototype (products, documents, inventory, tenants, accounts, WhatsApp push records, etc.)', 'Virtual sample', 'Does not represent real business data; must not be used for business decisions or metric commitments', 'Low (demo data)', 'conf-low', 'Explicitly labeled as demo data in the prototype'],
+  ['All business data in the prototype (products, documents, inventory, merchants, accounts, WhatsApp push records, etc.)', 'Virtual sample', 'Does not represent real business data; must not be used for business decisions or metric commitments', 'Low (demo data)', 'conf-low', 'Explicitly labeled as demo data in the prototype'],
   ['Permission control is pure front-end JS injection, no backend', 'Concept (prototype implementation)', 'A real system must authenticate on the backend; front-end control is presentation-layer adaptation only', 'High (for the prototype)', 'conf-concept', 'Directly verifiable in the prototype code'],
 ];
 function DataNotesTable() {

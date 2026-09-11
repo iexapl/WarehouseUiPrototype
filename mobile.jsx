@@ -254,7 +254,7 @@ function MobileApp() {
               {tab === 'products' && !platform && (
                 <button type="button" className="h5-headtool" title={t('Batch Import')} aria-label={t('Batch Import')} onClick={() => push({ name: 'import' })}><Icon name="upload" size={18} /></button>
               )}
-              {/* 统一扫码入口（仅租户账号）：进入后切换 入库/出库 模式，
+              {/* 统一扫码入口（仅商户账号）：进入后切换 入库/出库 模式，
                   扫码结果按模式加入入库暂存/出库暂存（平台账号只读无入口） */}
               {tab === 'products' && !platform && (
                 <button type="button" className="h5-headtool" title={t('Scan')} aria-label={t('Scan')} onClick={() => push({ name: 'scan' })}><Icon name="scan" size={18} /></button>
@@ -421,7 +421,7 @@ function H5Home({ openDoc, push, platform, noPerm, setTab }) {
 
   // fix #22 — platform admin home: replace tenant-scoped blocks with platform-wide stats
   const platformStats = platform ? [
-    { label: 'Total Tenants', value: db.tenants.length },
+    { label: 'Total Merchants', value: db.tenants.length },
     { label: 'Total Accounts', value: db.accounts.filter(a => a.type === 'tenant').length },
     { label: 'Total Products', value: db.products.length },
     { label: 'Total Documents', value: db.docs.length },
@@ -514,7 +514,7 @@ function H5Home({ openDoc, push, platform, noPerm, setTab }) {
       </div>
       {isTenant && (
         <div className="h5-card" style={{ fontSize: 11, color: 'var(--text-3)', padding: '8px 12px', marginBottom: 8, background: 'var(--bg-2)' }}>
-          {t('Pushes are sent to the tenant main account and visible to all members')}
+          {t('Pushes are sent to the merchant main account and visible to all members')}
         </div>
       )}
       {pushes.length === 0 && <div className="h5-card" style={{ textAlign: 'center', color: 'var(--text-3)', fontSize: 12.5, padding: 22 }}>No notifications yet</div>}
@@ -699,7 +699,7 @@ function H5Products({ push, platform, skReady = true }) {
           );
         })}
       {rows.length === 0 && (tab === 'channel' && showTabs && upstream.length === 0 && !q
-        ? <H5Empty icon="building" message="No upstream suppliers" hint="This tab lists products from your upstream suppliers / parent agents. Suppliers and unlinked tenants have no channel products." />
+        ? <H5Empty icon="building" message="No upstream suppliers" hint="This tab lists products from your upstream suppliers / parent agents. Suppliers and unlinked merchants have no channel products." />
         : (q || cat)
           ? <H5Empty icon="search" message="No products match the search" />
           : (showTabs && tab === 'channel'
@@ -742,7 +742,7 @@ function H5ChannelStockPage({ productId }) {
           <div className="mono bold" style={{ fontSize: 17, marginTop: 2 }}>{myStock == null ? '—' : <React.Fragment>{myStock} {p.unit}</React.Fragment>}</div>
         </div>
         <div className="h5-card" style={{ flex: 1, textAlign: 'center', padding: '10px 6px' }}>
-          <div className="muted" style={{ fontSize: 11 }}>Downstream Tenants</div>
+          <div className="muted" style={{ fontSize: 11 }}>Downstream Merchants</div>
           <div className="mono bold" style={{ fontSize: 17, marginTop: 2 }}>{dsTenants}</div>
         </div>
         <div className="h5-card" style={{ flex: 1, textAlign: 'center', padding: '10px 6px' }}>
@@ -801,7 +801,7 @@ function H5Orders({ openDoc, platform, push, setConfirm, skReady = true }) {
   // 可见报价单 / 可见订单 / 可见发票) and sits on ONE row with the Filters
   // button: count left-aligned, Filters right-aligned
   const SEG_NOUN = { IQ: 'inquiries', QT: 'quotes', PO: 'orders', FP: 'invoices' };
-  const countLabel = platform ? t('Cross-tenant documents (read-only)') : t('Visible ' + SEG_NOUN[seg]);
+  const countLabel = platform ? t('Cross-merchant documents (read-only)') : t('Visible ' + SEG_NOUN[seg]);
   return (
     <div className="h5-tabpage">
       {/* R99e — segment tabs + filter bar pinned; the document list below scrolls */}
@@ -837,7 +837,7 @@ function H5Orders({ openDoc, platform, push, setConfirm, skReady = true }) {
       {rows.length === 0 && (tabDocs.length === 0
         ? (platform
           ? <H5Empty message="No documents" />
-          : <H5Empty icon="lock" message="No visible data for this account" hint="Cross-tenant data is isolated by design — you only see records you created, plus those of your own tenant and linked supply partners." />)
+          : <H5Empty icon="lock" message="No visible data for this account" hint="Cross-merchant data is isolated by design — you only see records you created, plus those of your own merchant and linked supply partners." />)
         : <H5Empty icon="search" message="No documents in this tab" hint="Try another document tab or clear the filters." />)}
       {rows.map(d => <H5DocCard key={d.id} doc={d} showRole onClick={() => openDoc(d.id)} onVerb={!platform ? (verb, doc) => h5DocVerb(verb, doc, { db, act, toast, push, setConfirm }) : null} />)}
       <div className="muted h5-loadmore" style={{ textAlign: 'center', fontSize: 11, marginTop: 16 }}>Load more by pulling up</div>
@@ -1901,7 +1901,7 @@ function H5GuidePage() {
   const rules = [
     ['Flattened permissions', 'No roles in MVP — every account shares the same action set.'],
     ['Personal data scope', 'You see your own records by default; business partners see shared documents.'],
-    ['Tenant isolation', 'Suppliers see downstream agents; agents see themselves and sub-agents; unrelated tenants are invisible.'],
+    ['Merchant isolation', 'Suppliers see downstream agents; agents see themselves and sub-agents; unrelated merchants are invisible.'],
     ['Platform read-only', 'Platform accounts view business data but cannot act on it.'],
     ['Actions follow business side', 'Buyers inquire, order and receive; suppliers quote, ship and invoice.'],
     ['WhatsApp-first', 'Push links open login-free document views with one-tap confirmation.'],

@@ -54,7 +54,7 @@ function App() {
     if (!a) return;
     if (a.status === 'Suspended') { toast(`${a.name} is suspended and cannot sign in`, 'error'); return; }
     const tenant = a.tenantId ? db.tenants.find(t => t.id === a.tenantId) : null;
-    if (tenant && tenant.status === 'Suspended') { toast(`Tenant ${tenant.name} is suspended — login blocked`, 'error'); return; }
+    if (tenant && tenant.status === 'Suspended') { toast(`Merchant ${tenant.name} is suspended — login blocked`, 'error'); return; }
     setAccountId(id);
     setAuthed(true);
     setCarts(emptyCarts());
@@ -493,7 +493,7 @@ function App() {
         toast(`Stock adjusted — ${type === 'IN' ? '+' : type === 'OUT' ? '−' : ''}${Math.abs(delta)} units`, 'success');
       },
 
-      // R100h — 扫码批量出库：一次确认多条 OUT 库存流水（仅限本租户物料，逐行校验库存充足；共享一个 OUT- 编号便于追溯）
+      // R100h — 扫码批量出库：一次确认多条 OUT 库存流水（仅限本商户物料，逐行校验库存充足；共享一个 OUT- 编号便于追溯）
       batchScanOut(lines, note, receiver) {
         const tnow = now();
         const tid = account.tenantId;
@@ -505,7 +505,7 @@ function App() {
           if (!(ln.qty > 0)) { toast(`Invalid quantity — ${prod.name}`, 'error'); return false; }
           if (ln.qty > cur) { toast(`Insufficient stock — ${prod.name}: on hand ${cur}`, 'error'); return false; }
         }
-        // 收货方必填：可从下游租户选择，也可手动填写名称/手机号；流水携带收货方信息
+        // 收货方必填：可从下游商户选择，也可手动填写名称/手机号；流水携带收货方信息
         const recv = receiver && String(receiver.name || '').trim()
           ? { name: String(receiver.name).trim(), phone: String(receiver.phone || '').trim(), tenantId: receiver.tenantId || null }
           : null;
@@ -534,7 +534,7 @@ function App() {
         return true;
       },
 
-      // R100q — 扫码批量入库：一次确认多条 IN 库存流水。入库物料可能已在本租户仓库
+      // R100q — 扫码批量入库：一次确认多条 IN 库存流水。入库物料可能已在本商户仓库
       // （kind:'exist' → 直接累加库存），也可能是新物料（kind:'new' → 快速建档后入库）；
       // 全部流水共享一个 IN- 编号便于追溯。
       // 入库确认时必须选择供货方（supplierId）：流水带 supplier 字段并在事由中
@@ -543,7 +543,7 @@ function App() {
         const tnow = now();
         const tid = account.tenantId;
         const stockMap = db.stock[tid] || {};
-        // supplier 可为租户 id（已有供货方）或新建租户对象（手动输入路径：
+        // supplier 可为商户 id（已有供货方）或新建商户对象（手动输入路径：
         // createSupplier 的 setDb 在同一事件内尚未生效，直接传对象避免查不到）
         const sup = supplier && typeof supplier === 'object'
           ? supplier
@@ -672,13 +672,13 @@ function App() {
             : null;
           return { ...prev, tenants: [...prev.tenants, t], accounts: master ? [...prev.accounts, master] : prev.accounts };
         });
-        if (f.master && f.master.name) toast(`Tenant ${f.name} created — master account ${f.master.name} ready${f.master.whatsapp ? ' (WhatsApp bound)' : ''}`, 'success');
-        else toast(`Tenant ${f.name} created`, 'success');
+        if (f.master && f.master.name) toast(`Merchant ${f.name} created — master account ${f.master.name} ready${f.master.whatsapp ? ' (WhatsApp bound)' : ''}`, 'success');
+        else toast(`Merchant ${f.name} created`, 'success');
       },
 
       suspendTenant(id) {
         setDb(prev => ({ ...prev, tenants: prev.tenants.map(t => t.id === id ? { ...t, status: 'Suspended' } : t), accounts: prev.accounts.map(a => a.tenantId === id ? { ...a, status: 'Suspended' } : a) }));
-        toast('Tenant suspended — all related accounts are now blocked', 'success');
+        toast('Merchant suspended — all related accounts are now blocked', 'success');
       },
 
       createRelation(up, down) {
@@ -686,8 +686,8 @@ function App() {
         setDb(prev => ({ ...prev, relations: [...prev.relations, { upstream: up, downstream: down, createdAt: tnow }] }));
         toast('Supply relation established', 'success');
       },
-      // 入库选供货方 — 当场新建：以往来单位（Supplier 类型租户）建档，
-      // 立即返回新租户供本次选用；后续入库的供货方列表也会包含它。
+      // 入库选供货方 — 当场新建：以往来单位（Supplier 类型商户）建档，
+      // 立即返回新商户供本次选用；后续入库的供货方列表也会包含它。
       createSupplier(f) {
         const code = 'T-' + String(db.tenants.length + 1).padStart(3, '0');
         const tn = {

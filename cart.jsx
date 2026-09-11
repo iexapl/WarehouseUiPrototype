@@ -339,7 +339,7 @@ function InquiryCartEditor({ onDone, push }) {
   const [date, setDate] = useState('');
   const lines = carts.inquiry || [];
   const totalQty = lines.reduce((s, l) => s + (Number(l.qty) || 0), 0);
-  // 按供货方（商品归属租户）分组展示：提交时每个供货方生成一张询价单，
+  // 按供货方（商品归属商户）分组展示：提交时每个供货方生成一张询价单，
   // 并把询价单发送到该供货方的 WhatsApp 对话界面
   const groups = [];
   lines.forEach((l, i) => {
@@ -422,7 +422,7 @@ function InquiryCartEditor({ onDone, push }) {
 // (existing products restock / new products quick-profiled), the stock-in
 // note, the REQUIRED supplier, and the one-tap confirm that records every
 // line as an IN movement.
-// 供货方设置与出库收货方同一套交互：上游租户下拉（选中显示 名称 · 电话）
+// 供货方设置与出库收货方同一套交互：上游商户下拉（选中显示 名称 · 电话）
 // + 手动输入（名称/手机号表单，提交时以 createSupplier 建档后选用）；
 // 每行单价可独立设置币种，行金额与合计按币种分别小计（演示不折算）。
 function InboundCartEditor({ onDone }) {
@@ -434,7 +434,7 @@ function InboundCartEditor({ onDone }) {
   const lines = carts.inbound || [];
   const stockOf = pid => (db.stock[account.tenantId] || {})[pid] || 0;
   const totalQty = lines.reduce((s, l) => s + (Number(l.qty) || 0), 0);
-  // 供货方候选：上游租户（供应商/上级代理）+ 已建档往来供货方（Supplier 型租户，
+  // 供货方候选：上游商户（供应商/上级代理）+ 已建档往来供货方（Supplier 型商户，
   // 含手动输入路径当场新建的），去重后上游优先
   const upstream = [...upstreamTenantIds(db, account.tenantId)]
     .map(id => db.tenants.find(x => x.id === id)).filter(x => x && x.status === 'Active');
@@ -460,8 +460,8 @@ function InboundCartEditor({ onDone }) {
     if (supId === 'custom') {
       const name = String(supName || '').trim();
       if (!name) { toast('Supplier name is required', 'error'); return; }
-      // 手动输入 → 当场建档（Supplier 型租户），本次选用且后续可再选；
-      // 直接把新租户对象传给 submitInbound（同一次点击内 setDb 尚未生效）
+      // 手动输入 → 当场建档（Supplier 型商户），本次选用且后续可再选；
+      // 直接把新商户对象传给 submitInbound（同一次点击内 setDb 尚未生效）
       const tn = act.createSupplier({ name, phone: String(supPhone || '').trim() });
       sid = tn;
     } else if (!supId) { toast('Select or enter a supplier for the stock-in', 'error'); return; }
@@ -470,7 +470,7 @@ function InboundCartEditor({ onDone }) {
   return (
     <div>
       <div className="h5-cart-scroll">
-      {lines.length === 0 && <H5Empty icon="warehouse" message="Inbound staging is empty" hint="Scan barcodes, or tap Stock In on the My Warehouse list" />}
+      {lines.length === 0 && <H5Empty icon="warehouse" message={t('Inbound staging is empty')} hint={t('Scan barcodes, or enter a Material Barcode and tap Add, or tap Stock In on the My Warehouse list')} />}
       {lines.map((l, i) => {
         const qty = Number(l.qty) || 0;
         if (l.kind === 'exist') {
@@ -634,7 +634,7 @@ function InboundCartEditor({ onDone }) {
 function OutboundCartEditor({ onDone }) {
   const { db, account, carts, cartApi, toast } = useApp();
   const [note, setNote] = useState('');
-  // 收货方：可从下游租户选择，也可手动输入名称（可选手机号）；提交后随出库单留痕
+  // 收货方：可从下游商户选择，也可手动输入名称（可选手机号）；提交后随出库单留痕
   const [recvId, setRecvId] = useState('');
   const [recvName, setRecvName] = useState('');
   const [recvPhone, setRecvPhone] = useState('');
@@ -665,7 +665,7 @@ function OutboundCartEditor({ onDone }) {
   return (
     <div>
       <div className="h5-cart-scroll">
-      {lines.length === 0 && <H5Empty icon="truck" message="Outbound staging is empty" hint="Scan items, or tap Stock Out on the My Warehouse list" />}
+      {lines.length === 0 && <H5Empty icon="truck" message={t('Outbound staging is empty')} hint={t('Scan items, or tap Stock Out on the My Warehouse list')} />}
       {lines.map((l, i) => {
         const p = db.products.find(x => x.id === l.pid) || {};
         const onHand = stockOf(l.pid);

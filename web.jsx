@@ -36,8 +36,8 @@ const WEB_MENU = {
     ]},
   ],
   platform: [
-    { id: 'tenants', label: 'Tenants', icon: 'building', children: [
-      { id: 'tenant-mgmt', label: 'Tenants & Relations' },
+    { id: 'merchants', label: 'Merchants', icon: 'building', children: [
+      { id: 'merchant-mgmt', label: 'Merchants & Relations' },
     ]},
     { id: 'accounts', label: 'Accounts', icon: 'users', children: [
       { id: 'account-mgmt', label: 'Accounts' },
@@ -93,7 +93,7 @@ function AccountSwitcher() {
     });
   } else {
     db.accounts.forEach(a => {
-      const key = a.type === 'platform' ? 'Platform' : (a.tenantId === account.tenantId ? 'Current tenant' : 'Linked tenants');
+      const key = a.type === 'platform' ? 'Platform' : (a.tenantId === account.tenantId ? 'Current merchant' : 'Linked merchants');
       if (a.type === 'tenant') {
         const vis = relatedTenantIds(db, account.tenantId);
         if (!vis.has(a.tenantId)) return; // demo: switcher lists reachable accounts
@@ -101,7 +101,7 @@ function AccountSwitcher() {
       (groups[key] = groups[key] || []).push(a);
     });
   }
-  const order = ['Platform', 'Current tenant', 'Linked tenants', ...db.tenants.map(t => t.name)];
+  const order = ['Platform', 'Current merchant', 'Linked merchants', ...db.tenants.map(t => t.name)];
   return (
     <Dropdown trigger={
       <span className="account-chip">
@@ -132,11 +132,11 @@ function AccountSwitcher() {
       <div className="dropdown-divider"></div>
       {isPlatform
         ? <div className="dropdown-item" style={{ fontSize: 11.5, color: 'var(--text-3)', cursor: 'default', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
-            title="Platform admins hold a cross-tenant read-only view and may enter any tenant demo account to inspect its workspace.">
-            Platform admins can enter any tenant demo account — cross-tenant read-only
+            title="Platform admins hold a cross-merchant read-only view and may enter any merchant demo account to inspect its workspace.">
+            Platform admins can enter any merchant demo account — cross-merchant read-only
           </div>
         : <div className="dropdown-item" style={{ fontSize: 11.5, color: 'var(--text-3)', cursor: 'default', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
-            title="Accounts outside your business chain (e.g. Kano Wholesale Hub) are not listed — tenant data is isolated in MVP. See Permission Summary for details.">
+            title="Accounts outside your business chain (e.g. Kano Wholesale Hub) are not listed — merchant data is isolated in MVP. See Permission Summary for details.">
             Only accounts in your business chain are listed — see Permission Summary
           </div>}
     </Dropdown>
@@ -181,7 +181,7 @@ function WebConsole() {
     'product-list': 'Product List', 'categories': 'Categories', 'inquiry': 'Inquiries', 'quote': 'Quotes',
     'po': 'Purchase Orders', 'inventory': 'Inventory', 'movements': 'Stock Movements', 'outbound': 'Outbound',
     'receiving': 'Receiving', 'doccenter': 'Document Center', 'invoice': 'Invoices', 'account-mgmt': 'Accounts',
-    'tenant-mgmt': 'Tenants & Relations',
+    'merchant-mgmt': 'Merchants & Relations',
   };
 
   return (
@@ -219,7 +219,7 @@ function WebConsole() {
                 <div className="side-scope-k">Visible data scope</div>
                 <div className="side-scope-v" title={account.type === 'tenant' && tenant ? tenant.name : undefined}>{account.type === 'tenant'
                   ? (() => { const c = [...relatedTenantIds(db, account.tenantId)].filter(id => id !== account.tenantId).length; return c === 0 ? t('No partners yet — invite your first one') : <React.Fragment>{tenant ? tenant.name : account.tenantId} + {c} {t(c === 1 ? 'linked partner' : 'linked partners')}</React.Fragment>; })()
-                  : 'All tenants (read-only)'}</div>
+                  : 'All merchants (read-only)'}</div>
               </div>
             </div>
           )}
@@ -249,7 +249,7 @@ function WebConsole() {
             {page === 'doccenter' && <DocCenterPage openDoc={openDoc} goPage={goPage} />}
             {page === 'invoice' && <InvoicePage openDoc={openDoc} />}
             {page === 'account-mgmt' && <AccountMgmtPage />}
-            {page === 'tenant-mgmt' && <TenantMgmtPage />}
+            {page === 'merchant-mgmt' && <TenantMgmtPage />}
           </div>
         </div>
       </div>
@@ -257,7 +257,7 @@ function WebConsole() {
       {permOpen && <PermissionSummaryDialog onClose={() => setPermOpen(false)} />}
       {notesOpen && <DataNotesDialog onClose={() => setNotesOpen(false)} />}
       {profileOpen && <ProfileDialog onClose={() => setProfileOpen(false)} />}
-      {/* 暂存单悬浮入口（仅租户账号，角标 = 三模块行数合计） */}
+      {/* 暂存单悬浮入口（仅商户账号，角标 = 三模块行数合计） */}
       {account.type === 'tenant' && <WebCartFab count={cartCount} onClick={() => setCartOpen(true)} />}
       {cartOpen && <WebStagingDialog onClose={() => setCartOpen(false)} onInquired={ids => { setCartOpen(false); setWaDocIds(ids); }} />}
       {waDocIds && waDocIds.length > 0 && <WebWhatsAppDialog docIds={waDocIds} onOpenDoc={openDoc} onClose={() => setWaDocIds(null)} />}
@@ -526,7 +526,7 @@ function ProductListPage() {
               <button className="btn sm text error-text" onClick={() => setConfirmDel(p)}><Icon name="trash" size={13} />Delete</button>
             </div>
           ) : (
-            <span className="muted small" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }} title="Price and stock are managed by the owning tenant"><Icon name="lock" size={12} /> {`Owned by ${tenantName(db, p.ownerId)}`}</span>
+            <span className="muted small" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }} title="Price and stock are managed by the owning merchant"><Icon name="lock" size={12} /> {`Owned by ${tenantName(db, p.ownerId)}`}</span>
           ) },
         ]} rows={paged.slice} rowKey="id" />
         <Pagination total={paged.total} page={paged.page} pageSize={8} onChange={paged.setPage} />
@@ -586,7 +586,7 @@ function ScopeSwitch({ value, onChange }) {
   return (
     <div className="segments">
       <button className={`segment${value === 'me' ? ' active' : ''}`} onClick={() => onChange('me')}>My Records</button>
-      <button className={`segment${value === 'all' ? ' active' : ''}`} onClick={() => onChange('all')}>Tenant Records</button>
+      <button className={`segment${value === 'all' ? ' active' : ''}`} onClick={() => onChange('all')}>Merchant Records</button>
     </div>
   );
 }
@@ -664,10 +664,10 @@ function InquiryPage({ openDoc }) {
         </div>
       </div>
       {isTenant && seg === 'mine' && (
-        <Banner tone="info" icon="lock"><b>MVP data scope — personal records only.</b> By default you only see inquiries you created. Switch to "Tenant Records" to preview what a full-tenant scope would show (available post-MVP). {account.name} · {db.docs.filter(d => d.type === 'IQ' && d.buyer === account.tenantId).length} total in tenant</Banner>
+        <Banner tone="info" icon="lock"><b>MVP data scope — personal records only.</b> By default you only see inquiries you created. Switch to "Merchant Records" to preview what a full-merchant scope would show (available post-MVP). {account.name} · {db.docs.filter(d => d.type === 'IQ' && d.buyer === account.tenantId).length} total in merchant</Banner>
       )}
       {isTenant && seg === 'toQuote' && (
-        <Banner tone="success" icon="whatsapp">Inquiries received from linked partners are visible because of an established supply relation (TenantRelation). Submitting a quote auto-notifies the buyer via WhatsApp.</Banner>
+        <Banner tone="success" icon="whatsapp">Inquiries received from linked partners are visible because of an established supply relation (MerchantRelation). Submitting a quote auto-notifies the buyer via WhatsApp.</Banner>
       )}
       {isTenant && seg === 'toConfirm' && (
         <Banner tone="success" icon="whatsapp">Quoted inquiries awaiting your confirmation appear here. Accept to auto-generate a purchase order.</Banner>
@@ -743,7 +743,7 @@ function QuotePage({ openDoc }) {
         <Banner tone="success" icon="whatsapp">Quotes from linked suppliers appear here. Accept to auto-generate a purchase order and submit it for the supplier's review.</Banner>
       )}
       {isTenant && seg === 'toQuote' && (
-        <Banner tone="success" icon="whatsapp">Inquiries received from linked partners are visible because of an established supply relation (TenantRelation). Submitting a quote auto-notifies the buyer via WhatsApp.</Banner>
+        <Banner tone="success" icon="whatsapp">Inquiries received from linked partners are visible because of an established supply relation (MerchantRelation). Submitting a quote auto-notifies the buyer via WhatsApp.</Banner>
       )}
       <div className="card">
         {isTenant && seg === 'sent' && <div className="filter-bar"><span className="label">Data scope</span><ScopeSwitch value={scope} onChange={setScope} /><span className="label" style={{ marginLeft: 'auto' }}>{rows.length} records</span></div>}
@@ -982,7 +982,7 @@ function ReceivingPage({ openDoc }) {
           <div className="page-desc">Inspect against the shipment doc. Accept / partial variance / reject — accepted quantities increase stock and generate the inbound record.</div>
         </div>
       </div>
-      <Banner tone="info" icon="lock"><b>MVP data scope — personal records only.</b> Inbound records default to those generated from your own receiving confirmations. Switch to "Tenant Records" to preview a full-tenant scope (available post-MVP).</Banner>
+      <Banner tone="info" icon="lock"><b>MVP data scope — personal records only.</b> Inbound records default to those generated from your own receiving confirmations. Switch to "Merchant Records" to preview a full-merchant scope (available post-MVP).</Banner>
       <div className="card">
         <div className="card-pad" style={{ paddingBottom: 4 }}>
           <div className="card-title">Awaiting Receiving <span className="mini-chip demo">{pending.length}</span></div>
@@ -1094,7 +1094,7 @@ function DocCenterPage({ openDoc, goPage }) {
     : (!isPlatform && scope === 'me') ? 'Get started by creating your first inquiry.'
     : (!isPlatform && hasUpstream) ? 'Contact your upstream supplier to send documents, or start an inquiry yourself.'
     : (!isPlatform) ? 'Get started by creating your first inquiry.'
-    : 'Cross-tenant documents are visible for oversight.';
+    : 'Cross-merchant documents are visible for oversight.';
   const docEmptyAction = filtersActive ? undefined
     : !isPlatform ? (
       <button className="btn primary" onClick={() => goPage && goPage('inquiry')} style={{ marginTop: 12 }}>
@@ -1116,7 +1116,7 @@ function DocCenterPage({ openDoc, goPage }) {
         </div>}
       </div>
       {isPlatform ? (
-        <Banner tone="warning" icon="lock"><b>Platform read-only view.</b> Cross-tenant documents are visible for oversight, but write actions (edit / submit / ship / receive / invoice) are hidden — MVP platform accounts have no write access to business data.</Banner>
+        <Banner tone="warning" icon="lock"><b>Platform read-only view.</b> Cross-merchant documents are visible for oversight, but write actions (edit / submit / ship / receive / invoice) are hidden — MVP platform accounts have no write access to business data.</Banner>
       ) : (
         <Banner tone="info" icon="lock"><b>MVP data scope — personal records only by default.</b> Switch scope to "All visible" to include documents from linked business partners.</Banner>
       )}
@@ -1240,15 +1240,15 @@ function AccountMgmtPage() {
         <div>
           <div className="page-title">Accounts</div>
           <div className="page-desc">{isPlatform
-            ? 'Platform admins can create platform accounts, accounts of any tenant (optionally master), supplier / agent tenants with their master accounts, and establish supply relations; business data remains read-only.'
+            ? 'Platform admins can create platform accounts, accounts of any merchant (optionally master), supplier / agent merchants with their master accounts, and establish supply relations; business data remains read-only.'
             : isAgent
-              ? 'Agent member management — create and manage sub-accounts of your own tenant; permissions are flattened in MVP, differences come from data scope and business relations.'
-              : 'Create and manage accounts of your own tenant (and develop sub-agent tenants where your level allows); permissions are flattened in MVP — no roles, no resource config.'}{' '}<span className="mini-chip mvp">MVP</span></div>
+              ? 'Agent member management — create and manage sub-accounts of your own merchant; permissions are flattened in MVP, differences come from data scope and business relations.'
+              : 'Create and manage accounts of your own merchant (and develop sub-agent merchants where your level allows); permissions are flattened in MVP — no roles, no resource config.'}{' '}<span className="mini-chip mvp">MVP</span></div>
         </div>
         {canManage && <div className="page-actions">
           {isPlatform && <React.Fragment>
             <button className="btn" onClick={() => setTenantDlg('relation')}><Icon name="link" size={14} />Establish Supply Relation</button>
-            <button className="btn" onClick={() => setTenantDlg('tenant')}><Icon name="building" size={14} />Create Tenant</button>
+            <button className="btn" onClick={() => setTenantDlg('tenant')}><Icon name="building" size={14} />Create Merchant</button>
           </React.Fragment>}
           {canCreateSubAgent ? (
             <button className="btn" onClick={() => setDialog({ subAgent: true })}><Icon name="whatsapp" size={14} />New Sub-Agent Master Account</button>
@@ -1264,16 +1264,16 @@ function AccountMgmtPage() {
         </div>}
       </div>
       {isPlatform ? (
-        <Banner tone="info" icon="shield"><b>Platform view.</b> Platform admins can create platform accounts and accounts for any tenant (optionally master), create supplier / agent tenants with their master accounts, and suspend violating tenants; business data remains read-only.</Banner>
+        <Banner tone="info" icon="shield"><b>Platform view.</b> Platform admins can create platform accounts and accounts for any merchant (optionally master), create supplier / agent merchants with their master accounts, and suspend violating merchants; business data remains read-only.</Banner>
       ) : isAgent ? (
-        <Banner tone="info" icon="lock"><b>Agent member management.</b> You can create sub-accounts of your own tenant; permissions are flattened in MVP — every account shares the same action set, differences come from data scope and business relations.</Banner>
+        <Banner tone="info" icon="lock"><b>Agent member management.</b> You can create sub-accounts of your own merchant; permissions are flattened in MVP — every account shares the same action set, differences come from data scope and business relations.</Banner>
       ) : (
-        <Banner tone="info" icon="lock">You can create and manage accounts of your own tenant (and develop sub-agent tenants where your level allows). All tenant accounts share the same flattened permissions — differences come from data scope and business relations, not roles.</Banner>
+        <Banner tone="info" icon="lock">You can create and manage accounts of your own merchant (and develop sub-agent merchants where your level allows). All merchant accounts share the same flattened permissions — differences come from data scope and business relations, not roles.</Banner>
       )}
       <div className="card">
         <div className="filter-bar">
           <SearchBox value={q} onChange={setQ} placeholder="Search name / phone" width={240} />
-          {!isPlatform && <span className="label">Tenant: {(db.tenants.find(t => t.id === account.tenantId) || {}).name}</span>}
+          {!isPlatform && <span className="label">Merchant: {(db.tenants.find(t => t.id === account.tenantId) || {}).name}</span>}
           <span className="label" style={{ marginLeft: 'auto' }}>{rows.length} accounts</span>
         </div>
         <Table loading={loading} columns={[
@@ -1286,7 +1286,7 @@ function AccountMgmtPage() {
               </div>
             </div>
           )},
-          { key: 'tenant', label: 'Tenant', render: a => a.tenantId ? tenantName(db, a.tenantId) : <Tag tone="purple">Platform</Tag> },
+          { key: 'tenant', label: 'Merchant', render: a => a.tenantId ? tenantName(db, a.tenantId) : <Tag tone="purple">Platform</Tag> },
           { key: 'wa', label: 'WhatsApp', width: 150, render: a => a.whatsapp ? <span className="mono small"><Icon name="whatsapp" size={12} /> {a.whatsapp}</span> : <span className="muted">—</span> },
           { key: 'scope', label: 'Data Scope', width: 120, render: () => <Tag tone="info">Personal only</Tag> },
           { key: 'status', label: 'Status', width: 100, render: a => a.status === 'Active' ? <Tag tone="success" dot>Active</Tag> : <Tag tone="danger" dot>Disabled</Tag> },
@@ -1305,11 +1305,11 @@ function AccountMgmtPage() {
       {isPlatform && (
         <div className="card">
           <div className="card-pad" style={{ paddingBottom: 4 }}>
-            <div className="card-title">Tenant Management <span className="hint">platform admin only — create, relate and deactivate tenants</span></div>
+            <div className="card-title">Merchant Management <span className="hint">platform admin only — create, relate and deactivate merchants</span></div>
           </div>
           <Table columns={[
             { key: 'code', label: 'Code', width: 80, render: t => <span className="mono small">{t.code}</span> },
-            { key: 'name', label: 'Tenant', render: t => <div><span className="bold" style={{ fontSize: 13 }}>{t.name}</span><div className="cell-sub">{t.country}</div></div> },
+            { key: 'name', label: 'Merchant', render: t => <div><span className="bold" style={{ fontSize: 13 }}>{t.name}</span><div className="cell-sub">{t.country}</div></div> },
             { key: 'type', label: 'Type', width: 100, render: t => <TenantTag type={t.type} /> },
             { key: 'maxLevel', label: 'Max Agent Levels', width: 120, align: 'center', render: t => ifnull(t.maxLevel, '—') },
             { key: 'rel', label: 'Relations', width: 130, render: t => {
@@ -1322,7 +1322,7 @@ function AccountMgmtPage() {
               <div className="row-actions">
                 {t.status === 'Active'
                   ? <button className="btn sm text error-text" onClick={() => setDeactivate(t)}><Icon name="lock" size={13} />Deactivate</button>
-                  : <button className="btn sm text success-text" onClick={() => toast(`Tenant ${t.name} reactivated`, 'success')}><Icon name="refresh" size={13} />Reactivate</button>}
+                  : <button className="btn sm text success-text" onClick={() => toast(`Merchant ${t.name} reactivated`, 'success')}><Icon name="refresh" size={13} />Reactivate</button>}
               </div>
             )},
           ]} rows={db.tenants} rowKey="id" />
@@ -1338,8 +1338,8 @@ function AccountMgmtPage() {
           onConfirm={() => toast(`Account ${confirmDisable.name} disabled`, 'success')} onClose={() => setConfirmDisable(null)} />
       )}
       {deactivate && (
-        <ConfirmDialog title={`Deactivate ${deactivate.name}`} danger confirmText="Deactivate Tenant" requireText={deactivate.code}
-          message={`Deactivate tenant "${deactivate.name}"? Are you sure? This tenant will be banned from login but data will be retained.`}
+        <ConfirmDialog title={`Deactivate ${deactivate.name}`} danger confirmText="Deactivate Merchant" requireText={deactivate.code}
+          message={`Deactivate merchant "${deactivate.name}"? Are you sure? This merchant will be banned from login but data will be retained.`}
           onConfirm={() => act.suspendTenant(deactivate.id)} onClose={() => setDeactivate(null)} />
       )}
     </div>
@@ -1348,7 +1348,7 @@ function AccountMgmtPage() {
 
 function TenantMgmtPage() {
   const { db, act, toast } = useApp();
-  const [tab, setTab] = useState('tenants');
+  const [tab, setTab] = useState('merchants');
   const [q, setQ] = useState('');
   const [typeF, setTypeF] = useState('');
   const [statusF, setStatusF] = useState('');
@@ -1370,23 +1370,23 @@ function TenantMgmtPage() {
     <div>
       <div className="page-header">
         <div>
-          <div className="page-title">Tenants & Relations</div>
-          <div className="page-desc">Platform operations: create tenants (type / country / max agent levels), establish supply relations (unique per pair), suspend violating tenants (login blocked, data retained). <span className="mini-chip mvp">MVP</span></div>
+          <div className="page-title">Merchants & Relations</div>
+          <div className="page-desc">Platform operations: create merchants (type / country / max agent levels), establish supply relations (unique per pair), suspend violating merchants (login blocked, data retained). <span className="mini-chip mvp">MVP</span></div>
         </div>
         <div className="page-actions">
-          {tab === 'tenants'
-            ? <button className="btn primary" onClick={() => setDialog({ tenant: true })}><Icon name="plus" size={14} />New Tenant</button>
+          {tab === 'merchants'
+            ? <button className="btn primary" onClick={() => setDialog({ tenant: true })}><Icon name="plus" size={14} />New Merchant</button>
             : <button className="btn primary" onClick={() => setDialog({ relation: true })}><Icon name="plus" size={14} />New Relation</button>}
         </div>
       </div>
       <div className="card">
         <div className="filter-bar">
           <div className="segments">
-            <button className={`segment${tab === 'tenants' ? ' active' : ''}`} onClick={() => setTab('tenants')}>Tenants</button>
+            <button className={`segment${tab === 'merchants' ? ' active' : ''}`} onClick={() => setTab('merchants')}>Merchants</button>
             <button className={`segment${tab === 'relations' ? ' active' : ''}`} onClick={() => setTab('relations')}>Supply Relations</button>
           </div>
         </div>
-        {tab === 'tenants' ? (
+        {tab === 'merchants' ? (
           <React.Fragment>
             <div className="filter-bar" style={{ borderTop: '1px solid var(--border-light)' }}>
               <SearchBox value={q} onChange={setQ} placeholder="Search name / code" width={220} />
@@ -1397,7 +1397,7 @@ function TenantMgmtPage() {
             </div>
             <Table loading={loading} columns={[
               { key: 'code', label: 'Code', width: 80, render: t => <span className="mono small">{t.code}</span> },
-              { key: 'name', label: 'Tenant', render: t => <div><span className="bold" style={{ fontSize: 13 }}>{t.name}</span><div className="cell-sub">{t.country}</div></div> },
+              { key: 'name', label: 'Merchant', render: t => <div><span className="bold" style={{ fontSize: 13 }}>{t.name}</span><div className="cell-sub">{t.country}</div></div> },
               { key: 'type', label: 'Type', width: 100, render: t => <TenantTag type={t.type} /> },
               { key: 'maxLevel', label: 'Max Agent Levels', width: 120, align: 'center', render: t => ifnull(t.maxLevel, '—') },
               { key: 'rel', label: 'Relations', render: t => {
@@ -1412,7 +1412,7 @@ function TenantMgmtPage() {
                   <button className="btn sm text info" onClick={() => setDialog({ edit: t })}><Icon name="edit" size={13} />Edit</button>
                   {t.status === 'Active'
                     ? <button className="btn sm text error-text" onClick={() => setSuspend(t)}><Icon name="lock" size={13} />Suspend</button>
-                    : <button className="btn sm text success-text" onClick={() => toast(`Tenant ${t.name} reactivated`, 'success')}><Icon name="refresh" size={13} />Reactivate</button>}
+                    : <button className="btn sm text success-text" onClick={() => toast(`Merchant ${t.name} reactivated`, 'success')}><Icon name="refresh" size={13} />Reactivate</button>}
                 </div>
               )},
             ]} rows={rows} rowKey="id" />
@@ -1422,7 +1422,7 @@ function TenantMgmtPage() {
             { key: 'up', label: 'Upstream (Supplier)', render: r => <span className="bold" style={{ fontSize: 13 }}>{tenantName(db, r.upstream)}</span> },
             { key: 'down', label: 'Downstream (Agent)', render: r => <span className="bold" style={{ fontSize: 13 }}>{tenantName(db, r.downstream)}</span> },
             { key: 'since', label: 'Established', width: 130, render: r => <span className="small muted">{r.createdAt}</span> },
-            { key: 'uniqueness', label: 'Uniqueness', width: 220, render: () => <span className="small muted">One relation per tenant pair (same-type unique)</span> },
+            { key: 'uniqueness', label: 'Uniqueness', width: 220, render: () => <span className="small muted">One relation per merchant pair (same-type unique)</span> },
             { key: 'act', label: 'Actions', width: 110, render: r => (
               <div className="row-actions">
                 <button className="btn sm text error-text" onClick={() => setDissolve(r)}><Icon name="close" size={13} />Dissolve</button>
@@ -1436,13 +1436,13 @@ function TenantMgmtPage() {
       {dialog && dialog.edit && <TenantFormDialog editTenant={dialog.edit} onClose={() => setDialog(null)} />}
       {dialog && dialog.detail && <TenantDetailDialog tenant={dialog.detail} onClose={() => setDialog(null)} />}
       {suspend && (
-        <ConfirmDialog title={`Suspend ${suspend.name}`} danger confirmText="Suspend Tenant" requireText={suspend.code}
-          message={`Suspend tenant "${suspend.name}"? All of its users will be blocked from signing in immediately. Business data is retained for audit. This is a two-step confirmation.`}
+        <ConfirmDialog title={`Suspend ${suspend.name}`} danger confirmText="Suspend Merchant" requireText={suspend.code}
+          message={`Suspend merchant "${suspend.name}"? All of its users will be blocked from signing in immediately. Business data is retained for audit. This is a two-step confirmation.`}
           onConfirm={() => act.suspendTenant(suspend.id)} onClose={() => setSuspend(null)} />
       )}
       {dissolve && (
         <ConfirmDialog title="Dissolve Supply Relation" danger confirmText="Dissolve"
-          message={`Dissolve the supply relation ${tenantName(db, dissolve.upstream)} → ${tenantName(db, dissolve.downstream)}? The downstream tenant immediately loses visibility of upstream products. Historical documents are retained.`}
+          message={`Dissolve the supply relation ${tenantName(db, dissolve.upstream)} → ${tenantName(db, dissolve.downstream)}? The downstream merchant immediately loses visibility of upstream products. Historical documents are retained.`}
           onConfirm={() => act.removeRelation(dissolve.upstream, dissolve.downstream)} onClose={() => setDissolve(null)} />
       )}
     </div>

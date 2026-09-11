@@ -42,7 +42,7 @@ function WebInquiryPanel({ onInquired }) {
   const [date, setDate] = useState('');
   const lines = carts.inquiry || [];
   const totalQty = lines.reduce((s, l) => s + (Number(l.qty) || 0), 0);
-  // 按供货方（商品归属租户）分组：提交时每个供货方生成一张询价单，
+  // 按供货方（商品归属商户）分组：提交时每个供货方生成一张询价单，
   // 提交后逐个进入该供货方的 WhatsApp 对话（桌面端为弹窗）
   const groups = [];
   lines.forEach((l, i) => {
@@ -212,7 +212,7 @@ function WebInboundPanel({ onDone }) {
 function WebOutboundPanel({ onDone }) {
   const { db, account, carts, cartApi, toast } = useApp();
   const [note, setNote] = useState('');
-  // 收货方：可从下游租户选择（显示联系电话），也可手动输入名称＋手机号；提交后随出库流水留痕
+  // 收货方：可从下游商户选择（显示联系电话），也可手动输入名称＋手机号；提交后随出库流水留痕
   const [recvId, setRecvId] = useState('');
   const [recvName, setRecvName] = useState('');
   const [recvPhone, setRecvPhone] = useState('');

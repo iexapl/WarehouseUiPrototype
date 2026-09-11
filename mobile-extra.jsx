@@ -242,7 +242,7 @@ function H5CategoriesPage() {
   const [name, setName] = useState('');
   return (
     <div className="h5-pad">
-      <Banner tone="info" icon="tag">Platform-unified flat taxonomy — every tenant picks from the same top-level categories; a product may belong to several.</Banner>
+      <Banner tone="info" icon="tag">Platform-unified flat taxonomy — every merchant picks from the same top-level categories; a product may belong to several.</Banner>
       <div className="h5-card mt12 flex gap8">
         <input className="input" style={{ height: 34, flex: 1 }} value={name} onChange={e => setName(e.target.value)} placeholder="New category name" />
         <button className="btn primary" style={{ height: 34 }} title={window.t('Add')} aria-label={window.t('Add')} onClick={() => { if (!name.trim()) { toast('Category name is required', 'error'); return; } act.saveCategory(name); setName(''); }}><Icon name="plus" size={14} />{window.t('Add')}</button>
@@ -627,7 +627,7 @@ function H5GuestDocPage({ docNo, onExit }) {
 // ---------- platform admin (MVP #41/#42/#43/#44) ----------
 function H5AdminPage({ setConfirm }) {
   const { db, act, toast } = useApp();
-  const [tab, setTab] = useState('tenants');
+  const [tab, setTab] = useState('merchants');
   const [tenantForm, setTenantForm] = useState({ name: '', code: '', type: 'Agent', country: 'Nigeria', maxLevel: '1', masterName: '', masterPhone: '', masterPassword: '', whatsapp: '' });
   const [relForm, setRelForm] = useState({ upstream: '', downstream: '' });
   const [accForm, setAccForm] = useState({ name: '', tenant: '', phone: '', whatsapp: '', accountType: 'tenant', main: false });
@@ -635,15 +635,15 @@ function H5AdminPage({ setConfirm }) {
   const active = db.tenants.filter(t => t.status === 'Active');
   return (
     <div className="h5-pad">
-      <Banner tone="warning" icon="shield">Platform admin — tenant lifecycle, supply relations and account provisioning. Business documents stay read-only for platform accounts.</Banner>
+      <Banner tone="warning" icon="shield">Platform admin — merchant lifecycle, supply relations and account provisioning. Business documents stay read-only for platform accounts.</Banner>
       <div className="h5-segments mt12">
-        {[['tenants', 'Tenants'], ['relation', 'Relations'], ['accounts', 'Accounts']].map(([id, label]) => (
+        {[['merchants', 'Merchants'], ['relation', 'Relations'], ['accounts', 'Accounts']].map(([id, label]) => (
           <button key={id} className={`h5-segment${tab === id ? ' active' : ''}`} onClick={() => setTab(id)}>{label}</button>
         ))}
       </div>
-      {tab === 'tenants' && (
+      {tab === 'merchants' && (
         <React.Fragment>
-          <div className="h5-section-title">All Tenants</div>
+          <div className="h5-section-title">All Merchants</div>
           {db.tenants.map(t => (
             <div key={t.id} className="h5-cell">
               <span className="cell-icon" style={{ background: t.type === 'Supplier' ? 'var(--purple-light)' : 'var(--primary-light)', color: t.type === 'Supplier' ? 'var(--purple)' : 'var(--primary)' }}><Icon name="building" size={17} /></span>
@@ -652,11 +652,11 @@ function H5AdminPage({ setConfirm }) {
                 <div className="muted" style={{ fontSize: 11.5 }}>{t.code} · {t.type === 'Supplier' ? 'Supplier' : `Agent · max level ${ifnull(t.maxLevel, '—')}`} · {t.country}</div>
               </div>
               {t.status === 'Active'
-                ? <button className="h5-item-act error" onClick={() => setConfirm({ title: 'Suspend Tenant', message: `Suspend ${t.name}? Related accounts will be blocked from login immediately; data is retained.`, confirmText: 'Suspend', requireText: t.code, tone: 'error', onConfirm: () => act.suspendTenant(t.id) })}><Icon name="lock" size={12} />Suspend</button>
+                ? <button className="h5-item-act error" onClick={() => setConfirm({ title: 'Suspend Merchant', message: `Suspend ${t.name}? Related accounts will be blocked from login immediately; data is retained.`, confirmText: 'Suspend', requireText: t.code, tone: 'error', onConfirm: () => act.suspendTenant(t.id) })}><Icon name="lock" size={12} />Suspend</button>
                 : <Tag tone="dark">Suspended</Tag>}
             </div>
           ))}
-          <div className="h5-section-title">{t('Create Tenant')} · {t('Tenant Info')}</div>
+          <div className="h5-section-title">{t('Create Merchant')} · {t('Merchant Info')}</div>
           <div className="h5-card">
             <div className="h5-form-row"><span className="k">{t('Company *')}</span><input className="input" style={{ height: 32, flex: 1 }} value={tenantForm.name} onChange={e => setT('name', e.target.value)} placeholder="e.g. Port Harcourt Agent" /></div>
             <div className="h5-form-row"><span className="k">{t('Code')}</span><input className="input" style={{ height: 32, flex: 1 }} value={tenantForm.code} onChange={e => setT('code', e.target.value)} placeholder="auto T-00x if empty" /></div>
@@ -681,7 +681,7 @@ function H5AdminPage({ setConfirm }) {
             if (!tenantForm.masterName.trim() || !tenantForm.masterPhone.trim() || !tenantForm.masterPassword) { toast('Master name, phone and password are required', 'error'); return; }
             act.createTenant({ ...tenantForm, name: tenantForm.name.trim(), code: tenantForm.code.trim() || undefined, maxLevel: tenantForm.type === 'Supplier' ? '' : tenantForm.maxLevel, status: 'Active', master: { name: tenantForm.masterName.trim(), phone: tenantForm.masterPhone.trim(), password: tenantForm.masterPassword, whatsapp: tenantForm.whatsapp.trim() || null } });
             setTenantForm({ name: '', code: '', type: 'Agent', country: 'Nigeria', maxLevel: '1', masterName: '', masterPhone: '', masterPassword: '', whatsapp: '' });
-          }}><Icon name="plus" size={14} />{t('Create Tenant & Master Account')}</button>
+          }}><Icon name="plus" size={14} />{t('Create Merchant & Master Account')}</button>
         </React.Fragment>
       )}
       {tab === 'relation' && (
@@ -693,7 +693,7 @@ function H5AdminPage({ setConfirm }) {
                 <div style={{ fontSize: 13, fontWeight: 600 }}>{tenantName(db, r.upstream)} <Icon name="chevronRight" size={12} /> {tenantName(db, r.downstream)}</div>
                 <div className="muted" style={{ fontSize: 11.5, marginTop: 4 }}>Established {r.createdAt} · {t('same-type pair is unique')}</div>
               </div>
-              <button className="h5-item-act error" onClick={() => setConfirm({ title: 'Dissolve Relation', message: `Remove the supply relation ${tenantName(db, r.upstream)} → ${tenantName(db, r.downstream)}? The downstream tenant loses visibility of upstream products. Data is retained.`, confirmText: 'Dissolve', tone: 'error', onConfirm: () => act.removeRelation(r.upstream, r.downstream) })}><Icon name="close" size={12} />Dissolve</button>
+              <button className="h5-item-act error" onClick={() => setConfirm({ title: 'Dissolve Relation', message: `Remove the supply relation ${tenantName(db, r.upstream)} → ${tenantName(db, r.downstream)}? The downstream merchant loses visibility of upstream products. Data is retained.`, confirmText: 'Dissolve', tone: 'error', onConfirm: () => act.removeRelation(r.upstream, r.downstream) })}><Icon name="close" size={12} />Dissolve</button>
             </div>
           ))}
           <div className="h5-section-title">Establish Relation</div>
@@ -702,7 +702,7 @@ function H5AdminPage({ setConfirm }) {
             <div className="h5-form-row"><span className="k">Downstream</span><div style={{ flex: 1 }}><Select value={relForm.downstream} onChange={v => setRelForm(s => ({ ...s, downstream: v }))} options={[{ value: '', label: 'Select agent' }, ...active.map(t => ({ value: t.id, label: t.name }))]} style={{ height: 30 }} /></div></div>
           </div>
           <button className="h5-btn primary mt12" style={{ width: '100%' }} onClick={() => {
-            if (!relForm.upstream || !relForm.downstream || relForm.upstream === relForm.downstream) { toast('Select two different tenants', 'error'); return; }
+            if (!relForm.upstream || !relForm.downstream || relForm.upstream === relForm.downstream) { toast('Select two different merchants', 'error'); return; }
             if (db.relations.some(r => (r.upstream === relForm.upstream && r.downstream === relForm.downstream))) { toast('This relation already exists (unique per pair)', 'error'); return; }
             act.createRelation(relForm.upstream, relForm.downstream);
             setRelForm({ upstream: '', downstream: '' });
@@ -724,18 +724,18 @@ function H5AdminPage({ setConfirm }) {
           ))}
           <div className="h5-section-title">Create Account</div>
           <div className="h5-card">
-            <div className="h5-form-row"><span className="k">Account Type</span><div style={{ flex: 1 }}><Select value={accForm.accountType} onChange={v => setAccForm(s => ({ ...s, accountType: v, main: false }))} options={[{ value: 'tenant', label: 'Tenant Account' }, { value: 'platform', label: 'Platform Account' }]} style={{ height: 30 }} /></div></div>
+            <div className="h5-form-row"><span className="k">Account Type</span><div style={{ flex: 1 }}><Select value={accForm.accountType} onChange={v => setAccForm(s => ({ ...s, accountType: v, main: false }))} options={[{ value: 'tenant', label: 'Merchant Account' }, { value: 'platform', label: 'Platform Account' }]} style={{ height: 30 }} /></div></div>
             <div className="h5-form-row"><span className="k">Name *</span><input className="input" style={{ height: 32, flex: 1 }} value={accForm.name} onChange={e => setAccForm(s => ({ ...s, name: e.target.value }))} placeholder="e.g. Ada Obi" /></div>
             {accForm.accountType === 'tenant' && <React.Fragment>
-              <div className="h5-form-row"><span className="k">Tenant *</span><div style={{ flex: 1 }}><Select value={accForm.tenant} onChange={v => setAccForm(s => ({ ...s, tenant: v }))} options={[{ value: '', label: 'Select tenant' }, ...active.map(t => ({ value: t.id, label: t.name }))]} style={{ height: 30 }} /></div></div>
-              <div className="h5-form-row"><span className="k">Master</span><div style={{ flex: 1 }}><Select value={accForm.main ? 'yes' : 'no'} onChange={v => setAccForm(s => ({ ...s, main: v === 'yes' }))} options={[{ value: 'no', label: 'No — regular sub-account' }, { value: 'yes', label: 'Yes — master of the tenant' }]} style={{ height: 30 }} /></div></div>
+              <div className="h5-form-row"><span className="k">Merchant *</span><div style={{ flex: 1 }}><Select value={accForm.tenant} onChange={v => setAccForm(s => ({ ...s, tenant: v }))} options={[{ value: '', label: 'Select merchant' }, ...active.map(t => ({ value: t.id, label: t.name }))]} style={{ height: 30 }} /></div></div>
+              <div className="h5-form-row"><span className="k">Master</span><div style={{ flex: 1 }}><Select value={accForm.main ? 'yes' : 'no'} onChange={v => setAccForm(s => ({ ...s, main: v === 'yes' }))} options={[{ value: 'no', label: 'No — regular sub-account' }, { value: 'yes', label: 'Yes — master of the merchant' }]} style={{ height: 30 }} /></div></div>
             </React.Fragment>}
             <div className="h5-form-row"><span className="k">Phone *</span><input className="input" style={{ height: 32, flex: 1 }} value={accForm.phone} onChange={e => setAccForm(s => ({ ...s, phone: e.target.value }))} placeholder="+234 ..." /></div>
             {accForm.accountType === 'tenant' && <div className="h5-form-row"><span className="k">WhatsApp</span><input className="input" style={{ height: 32, flex: 1 }} value={accForm.whatsapp} onChange={e => setAccForm(s => ({ ...s, whatsapp: e.target.value }))} placeholder="optional push binding" /></div>}
           </div>
           <button className="h5-btn primary mt12" style={{ width: '100%' }} onClick={() => {
             if (!accForm.name.trim() || !accForm.phone.trim()) { toast('Name and phone are required', 'error'); return; }
-            if (accForm.accountType === 'tenant' && !accForm.tenant) { toast('Select a tenant', 'error'); return; }
+            if (accForm.accountType === 'tenant' && !accForm.tenant) { toast('Select a merchant', 'error'); return; }
             act.createAccount({ ...accForm, name: accForm.name.trim(), phone: accForm.phone.trim(), whatsapp: accForm.whatsapp.trim() || null });
             setAccForm({ name: '', tenant: '', phone: '', whatsapp: '', accountType: 'tenant', main: false });
           }}><Icon name="plus" size={14} />Create Account</button>
@@ -829,7 +829,7 @@ function H5MembersPage() {
       ) : shown.map(a => (
         <div key={a.id} className="h5-cell" role="button" tabIndex={0} onClick={() => setDetail(a)}
           onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') setDetail(a); }}>
-          <span className="avatar tenant" style={{ width: 34, height: 34, fontSize: 12, flexShrink: 0 }}>{a.name.split(' ').map(w => w[0]).slice(0, 2).join('')}</span>
+          <span className="avatar merchant" style={{ width: 34, height: 34, fontSize: 12, flexShrink: 0 }}>{a.name.split(' ').map(w => w[0]).slice(0, 2).join('')}</span>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 13.5, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.name}</span>
@@ -934,7 +934,7 @@ function H5MembersPage() {
           <div className="h5-form-row" style={{ borderBottom: 'none' }}><span className="k">Password *</span><input className="input" type="password" style={{ height: 32, flex: 1 }} value={f.password} onChange={e => set('password', e.target.value)} placeholder="set a login password" /></div>
           <div className="muted" style={{ fontSize: 11, marginTop: 8 }}>demo password — hashed at rest in the real system</div>
           <div className="muted" style={{ fontSize: 11, marginTop: 8 }}>Master accounts receive document push links</div>
-          <div className="muted" style={{ fontSize: 11, marginTop: 12 }}>Creates the agent tenant, its master account (WhatsApp bound) and the supply relation in one step.</div>
+          <div className="muted" style={{ fontSize: 11, marginTop: 12 }}>Creates the agent merchant, its master account (WhatsApp bound) and the supply relation in one step.</div>
         </Dialog>
       )}
     </div>
