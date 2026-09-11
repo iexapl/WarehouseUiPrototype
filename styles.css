@@ -1205,7 +1205,7 @@ button { font-family: inherit; }
 .h5-cart-seg.on .h5-cart-seg-n { background: var(--primary-light); color: var(--primary); }
 /* 面板高度固定：三个页签内容常驻渲染，隐藏 pane 绝对定位参与测高；
    body 高度由 JS 设为三页签内容最大值（封顶 2/3 屏），切换页签高度不变 */
-.h5-cart-body { position: relative; overflow: hidden; padding: 0; flex-shrink: 1; background: #fff; }
+.h5-cart-body { position: relative; overflow: hidden; padding: 0; flex-shrink: 1; background: #f5f6f8; }
 .h5-cart-pane {
   position: absolute; top: 0; left: 0; right: 0; box-sizing: border-box;
   padding: 4px 12px calc(10px + var(--ios-safe-bottom, 0px));
@@ -1648,7 +1648,8 @@ body:has(.mobile-stage) .toast {
   box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.1);
 }
 .h5-app .h5-cart-grip { background: #dcdfe6; }
-.h5-app .h5-cart-body { background: #fff; }
+/* R119 — 暂存面板 body 区背景与主页 .h5-app 画布同色（#f5f6f8），行卡 .h5-card 保持白底形成灰底白卡层次 */
+.h5-app .h5-cart-body { background: #f5f6f8; }
 .h5-app .h5-cart-pane .h5-act-row { box-shadow: none; border-top: 1px solid var(--border-light); }
 
 /* ---------- 9. 扫码页：去光晕去毛玻璃，克制表达 ---------- */
@@ -2032,8 +2033,8 @@ body:has(.mobile-stage) .toast {
   position: absolute; left: 0; right: 0; height: 16px;
   opacity: 0; transition: opacity 0.28s ease; pointer-events: none;
 }
-.h5-app .h5-fsb-top { top: 0; background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 255, 255, 0)); }
-.h5-app .h5-fsb-bot { bottom: 0; background: linear-gradient(0deg, rgba(255, 255, 255, 0.96), rgba(255, 255, 255, 0)); }
+.h5-app .h5-fsb-top { top: 0; background: linear-gradient(180deg, rgba(245, 246, 248, 0.96), rgba(245, 246, 248, 0)); }
+.h5-app .h5-fsb-bot { bottom: 0; background: linear-gradient(0deg, rgba(245, 246, 248, 0.96), rgba(245, 246, 248, 0)); }
 .h5-app .h5-fsb.show.can-top .h5-fsb-top { opacity: 1; }
 .h5-app .h5-fsb.show.can-bot .h5-fsb-bot { opacity: 1; }
 
