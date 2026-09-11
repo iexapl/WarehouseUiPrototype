@@ -2073,3 +2073,21 @@ body:has(.mobile-stage) .toast {
 .h5-app .h5-upload-thumb img { border-radius: 8px; }
 .h5-app .h5-upload-edit { border-radius: 0 0 8px 8px; }
 .h5-app .h5-upload-re { border-radius: 8px !important; }
+
+/* ============================================================
+   R117 — 暂存单面板页签改页面级分段风格（对齐「仓库/交易/扫码」
+   .h5-segments 白底胶囊分段）：容器白底 9px 圆角 · 内衬 3px ·
+   子项 gap 6px · 内嵌为面板内容条（margin 8px 12px）；普通页签
+   透明底深字 7px 圆角，激活 #2979ff 蓝底白字加粗；角标普通态
+   红底白字（未处理数量语义），激活态改半透明白底白字保持可读。
+   仅覆盖视觉，不触碰面板测高/632 封顶/吸底双钮结构。
+   ============================================================ */
+.h5-app .h5-cart-segs { background: #fff; border-radius: 9px; padding: 3px; gap: 6px; margin: 8px 12px 6px; border-bottom: none; }
+.h5-app .h5-cart-seg {
+  border-radius: 7px; border-bottom: none; margin-bottom: 0; height: 30px;
+  background: transparent; color: var(--text-2); font-weight: 500; padding: 0 6px; gap: 4px;
+  transition: background-color 0.18s var(--h5-press), color 0.18s var(--h5-press);
+}
+.h5-app .h5-cart-seg.on { background: var(--primary); color: #fff; font-weight: 600; }
+.h5-app .h5-cart-seg-n { background: #E5566D; color: #fff; }
+.h5-app .h5-cart-seg.on .h5-cart-seg-n { background: rgba(255, 255, 255, 0.24); color: #fff; }

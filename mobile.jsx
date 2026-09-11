@@ -333,6 +333,86 @@ function H5Confirm({ confirm, onClose }) {
 }
 
 // ---------- home ----------
+// R117 — 功能导航图标体系：13 项（+供应商/平台复用）统一重设的线性图标，
+// 24 viewBox · 1.8 描边 · 圆角线帽，currentColor 随条目配色前景色描边；
+// 未收录的键回退到通用 Icon 库（如平台管理的 shield）。
+const NAV_ICONS = {
+  inquiry: <g>
+    <path d="M21 11.6a8.6 8.6 0 01-12.4 7.7L3.5 20.5l1.3-4.9A8.6 8.6 0 1121 11.6z" />
+    <path d="M10 9.7a2.3 2.3 0 014.5.7c0 1.5-1.9 1.7-1.9 3" />
+    <circle cx="12.6" cy="16.1" r="1" fill="currentColor" stroke="none" />
+  </g>,
+  stockIn: <g>
+    <path d="M12 3v5.4" /><path d="M9.2 5.6 12 8.4l2.8-2.8" />
+    <path d="M12 9.4l-7 3v6l7 3 7-3v-6z" />
+    <path d="M5 12.4l7 3 7-3M12 15.4v6" />
+  </g>,
+  stockOut: <g>
+    <path d="M12 8.4V2.6" /><path d="M9.2 5.2 12 2.4l2.8 2.8" />
+    <path d="M12 9.4l-7 3v6l7 3 7-3v-6z" />
+    <path d="M5 12.4l7 3 7-3M12 15.4v6" />
+  </g>,
+  confirm: <g>
+    <path d="M9 3.6h6v3H9z" />
+    <path d="M9 5.1H6.8A1.3 1.3 0 005.5 6.4v13a1.3 1.3 0 001.3 1.3h10.4a1.3 1.3 0 001.3-1.3v-13a1.3 1.3 0 00-1.3-1.3H15" />
+    <path d="M9 13.6l2.3 2.3 4.2-4.4" />
+  </g>,
+  receive: <g>
+    <path d="M4.5 6.5h15v13h-15z" />
+    <path d="M12 6.5v4.3" />
+    <path d="M8.4 14.2l2.5 2.5 4.7-5" />
+  </g>,
+  warehouse: <g>
+    <path d="M3 10.6 12 4l9 6.6" />
+    <path d="M5.5 9.3V20h13V9.3" />
+    <path d="M9.7 20v-5.4h4.6V20" />
+  </g>,
+  iqList: <g>
+    <path d="M14.5 3h-8v18h11V7.5z" />
+    <path d="M14.5 3v4.5h3" />
+    <path d="M10.2 11.2a2.3 2.3 0 014.6.3c0 1.5-2.2 1.9-2.2 3.1" />
+    <circle cx="12.6" cy="17.2" r="1" fill="currentColor" stroke="none" />
+  </g>,
+  quote: <g>
+    <path d="M13.5 3h-7v18h11V7.5z" />
+    <path d="M13.5 3v3.8h3.7" />
+    <path d="M12.6 13.8h3.4l4.6 4.6a1.8 1.8 0 01-2.5 2.5l-4.6-4.6z" />
+    <circle cx="14.6" cy="15.8" r="0.85" fill="currentColor" stroke="none" />
+  </g>,
+  orders: <g>
+    <path d="M14.5 3h-8v18h11V7.5z" />
+    <path d="M14.5 3v4.5h3" />
+    <path d="M9.6 9.8h4.8" />
+    <path d="M9.2 14.6l2.4 2.4 4.4-4.6" />
+  </g>,
+  invoices: <g>
+    <path d="M6 3h12v18l-2-1.4-2 1.4-2-1.4-2 1.4-2-1.4L6 21z" />
+    <path d="M9.5 8h5M9.5 11.5h5" />
+  </g>,
+  myStock: <g>
+    <path d="M8.5 7.5h7V12h-7z" />
+    <path d="M3.5 14h7v4.5h-7z" />
+    <path d="M13.5 14h7v4.5h-7z" />
+  </g>,
+  movements: <g>
+    <path d="M3.5 8.5h13.5" /><path d="M13.8 5l4.2 3.5-4.2 3.5" />
+    <path d="M20.5 15.5H7" /><path d="M10.2 12l-4.2 3.5 4.2 3.5" />
+  </g>,
+  team: <g>
+    <circle cx="9.3" cy="7.2" r="3.2" />
+    <path d="M3.5 20.3c.4-3.2 2.9-5.6 5.8-5.6s5.4 2.4 5.8 5.6" />
+    <path d="M17 4.6a3.2 3.2 0 010 5.2" />
+    <path d="M16.3 15.2c2.6.6 4.4 2.6 4.7 5.1" />
+  </g>,
+};
+function NavIcon({ name, size = 18 }) {
+  const g = NAV_ICONS[name];
+  if (!g) return <Icon name={name} size={size} />;
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{g}</svg>
+  );
+}
 function H5Home({ openDoc, push, platform, noPerm, setTab }) {
   const { db, account, toast } = useApp();
   const isTenant = account.type === 'tenant';
@@ -389,33 +469,35 @@ function H5Home({ openDoc, push, platform, noPerm, setTab }) {
   // Icons share a fresh coordinated palette (light block bg + saturated fg)
   // tuned to the #2979ff uView theme; entries flagged `true` (5th slot) are
   // trade-lifecycle tiles hidden for fresh tenants without partners.
+  // R117 — 新一套协调色板（浅底深字，贴 #2979ff uView 主题与 hero 渐变），
+  // 13 项可区分；图标重设为 NAV_ICONS 体系（语义造型见各条目）。
   const NAV_C = {
-    inquiry: ['#EAF2FE', '#2979FF'],
-    stockIn: ['#E5F8EE', '#18A558'],
-    stockOut: ['#FFF2E2', '#EF8B00'],
-    confirm: ['#E5F6FB', '#12A5B4'],
-    receive: ['#F0F7E2', '#82B102'],
-    warehouse: ['#E9EDFF', '#5867CC'],
-    iqList: ['#EFEAFF', '#7C5CD6'],
-    quote: ['#F6EDFF', '#9C4DE0'],
-    orders: ['#E6ECFB', '#3D5AC8'],
-    invoices: ['#FFECEF', '#E5566D'],
-    myStock: ['#E3F8F4', '#0FA07E'],
-    movements: ['#EDF1F5', '#5A7296'],
-    team: ['#FFEBF3', '#D64C87'],
-    admin: ['#EDF1F5', '#5A7296'],
+    inquiry: ['#E8F1FF', '#2B7DE0'],
+    stockIn: ['#E2F6EB', '#1B9E52'],
+    stockOut: ['#FEF0DF', '#E2760C'],
+    confirm: ['#E0F4FB', '#0FA3C0'],
+    receive: ['#EFF6DC', '#79A50B'],
+    warehouse: ['#E8EAFE', '#5B67D9'],
+    iqList: ['#F0EAFF', '#7A4FD6'],
+    quote: ['#F9E9F4', '#BE3D96'],
+    orders: ['#E9F0FB', '#3B5BC4'],
+    invoices: ['#FDEBEE', '#DE4B62'],
+    myStock: ['#E0F5F0', '#0D9E7E'],
+    movements: ['#EAEFF5', '#52709B'],
+    team: ['#FDEAF1', '#CC4E83'],
+    admin: ['#EAEFF5', '#52709B'],
   };
   const navShared = [
-    ['Inquiry', 'edit', NAV_C.inquiry, () => openProductsTab('channel')],
-    ['Stock In', 'download', NAV_C.stockIn, () => push({ name: 'scan' })],
-    ['Stock Out', 'truck', NAV_C.stockOut, () => push({ name: 'scan', mode: 'out' })],
+    ['Inquiry', 'inquiry', NAV_C.inquiry, () => openProductsTab('channel')],
+    ['Stock In', 'stockIn', NAV_C.stockIn, () => push({ name: 'scan' })],
+    ['Stock Out', 'stockOut', NAV_C.stockOut, () => push({ name: 'scan', mode: 'out' })],
     ['My Warehouse', 'warehouse', NAV_C.warehouse, () => openProductsTab('mine')],
-    ['Inquiry List', 'file', NAV_C.iqList, () => { ordersSeg = 'IQ'; ordersStatus = 'ALL'; setTab('orders'); }],
-    ['Orders', 'cart', NAV_C.orders, () => { ordersSeg = 'PO'; ordersStatus = 'ALL'; setTab('orders'); }],
-    ['Invoices', 'receipt', NAV_C.invoices, () => { ordersSeg = 'FP'; ordersStatus = 'ALL'; setTab('orders'); }],
-    ['My Stock', 'box', NAV_C.myStock, () => push({ name: 'stock' })],
-    ['Movements', 'swap', NAV_C.movements, () => push({ name: 'movements' })],
-    ['Team Members', 'users', NAV_C.team, () => push({ name: 'members' })],
+    ['Inquiry List', 'iqList', NAV_C.iqList, () => { ordersSeg = 'IQ'; ordersStatus = 'ALL'; setTab('orders'); }],
+    ['Orders', 'orders', NAV_C.orders, () => { ordersSeg = 'PO'; ordersStatus = 'ALL'; setTab('orders'); }],
+    ['Invoices', 'invoices', NAV_C.invoices, () => { ordersSeg = 'FP'; ordersStatus = 'ALL'; setTab('orders'); }],
+    ['My Stock', 'myStock', NAV_C.myStock, () => push({ name: 'stock' })],
+    ['Movements', 'movements', NAV_C.movements, () => push({ name: 'movements' })],
+    ['Team Members', 'team', NAV_C.team, () => push({ name: 'members' })],
   ];
   const tradeReady = !(isTenant && !hasPartners);
   const grid = platform
@@ -427,17 +509,17 @@ function H5Home({ openDoc, push, platform, noPerm, setTab }) {
       ]
     : (isSupplier
       ? [
-          ['To Quote', 'ai', NAV_C.iqList, () => openFirst(() => db.docs.find(d => d.type === 'IQ' && d.seller === account.tenantId && d.status === 'Submitted'), 'No inquiries awaiting your quote'), true],
-          ['Ship', 'truck', NAV_C.stockOut, () => openFirst(() => db.docs.find(d => d.type === 'PO' && d.seller === account.tenantId && d.status === 'Pending Outbound' && d.paid), 'No orders awaiting shipment'), true],
-          ['Invoice', 'receipt', NAV_C.invoices, () => openFirst(() => db.docs.find(d => d.type === 'PO' && d.seller === account.tenantId && ['Received', 'Partially Received'].includes(d.status)), 'No received orders to invoice'), true],
+          ['To Quote', 'quote', NAV_C.iqList, () => openFirst(() => db.docs.find(d => d.type === 'IQ' && d.seller === account.tenantId && d.status === 'Submitted'), 'No inquiries awaiting your quote'), true],
+          ['Ship', 'stockOut', NAV_C.stockOut, () => openFirst(() => db.docs.find(d => d.type === 'PO' && d.seller === account.tenantId && d.status === 'Pending Outbound' && d.paid), 'No orders awaiting shipment'), true],
+          ['Invoice', 'invoices', NAV_C.invoices, () => openFirst(() => db.docs.find(d => d.type === 'PO' && d.seller === account.tenantId && ['Received', 'Partially Received'].includes(d.status)), 'No received orders to invoice'), true],
           ...navShared,
         ]
       : [
           navShared[0], navShared[1], navShared[2],
-          ['To Confirm', 'checkDouble', NAV_C.confirm, () => { const qt = db.docs.find(d => d.type === 'QT' && d.buyer === account.tenantId && d.status === 'Sent'); qt ? openDoc(qt.id) : toast('No quotes awaiting your confirmation'); }, true],
-          ['Receive', 'check', NAV_C.receive, () => { const ck = db.docs.find(d => d.type === 'CK' && d.buyer === account.tenantId && d.status === 'Shipped'); ck ? push({ name: 'receive', docId: ck.id }) : toast('No shipments awaiting receipt'); }, true],
+          ['To Confirm', 'confirm', NAV_C.confirm, () => { const qt = db.docs.find(d => d.type === 'QT' && d.buyer === account.tenantId && d.status === 'Sent'); qt ? openDoc(qt.id) : toast('No quotes awaiting your confirmation'); }, true],
+          ['Receive', 'receive', NAV_C.receive, () => { const ck = db.docs.find(d => d.type === 'CK' && d.buyer === account.tenantId && d.status === 'Shipped'); ck ? push({ name: 'receive', docId: ck.id }) : toast('No shipments awaiting receipt'); }, true],
           navShared[3], navShared[4],
-          ['Quote', 'tag', NAV_C.quote, () => { ordersSeg = 'QT'; ordersStatus = 'ALL'; setTab('orders'); }, true],
+          ['Quote', 'quote', NAV_C.quote, () => { ordersSeg = 'QT'; ordersStatus = 'ALL'; setTab('orders'); }, true],
           navShared[5], navShared[6], navShared[7], navShared[8], navShared[9],
         ]
       ).filter(x => tradeReady || !x[4]);
@@ -521,7 +603,7 @@ function H5Home({ openDoc, push, platform, noPerm, setTab }) {
       <div className="h5-actions">
         {grid.map(([label, icon, [bg, color], handler]) => (
           <div key={label} className="h5-action" onClick={handler}>
-            <span className="a-icon" style={{ background: bg, color }}><Icon name={icon} size={18} /></span>
+            <span className="a-icon" style={{ background: bg, color }}><NavIcon name={icon} size={18} /></span>
             <span className="a-label">{label}</span>
           </div>
         ))}

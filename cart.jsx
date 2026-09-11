@@ -14,9 +14,9 @@
 // ============================================================
 
 const CART_MODULES = [
-  { id: 'inquiry', label: 'Inquiry', icon: 'edit' },
   { id: 'inbound', label: 'Inbound', icon: 'download' },
   { id: 'outbound', label: 'Outbound', icon: 'truck' },
+  { id: 'inquiry', label: 'Inquiry', icon: 'edit' },
 ];
 
 // 入库暂存每行可独立设置的币种（采购价 = 成本价；行金额按行币种显示）
@@ -264,7 +264,9 @@ function WebCartFab({ count, onClick }) {
 
 function H5CartSheet({ onClose, push }) {
   const { carts } = useApp();
-  const [seg, setSeg] = useState(() => (carts.inquiry.length ? 'inquiry' : carts.inbound.length ? 'inbound' : 'outbound'));
+  // R117 — 页签重排（入库→出库→询价）：高频仓配作业在前，询价选品低频在后。
+  // 默认落在第一个非空模块（与页签顺序一致），全空落在首项「入库」。
+  const [seg, setSeg] = useState(() => (carts.inbound.length ? 'inbound' : carts.outbound.length ? 'outbound' : 'inquiry'));
   const sheetRef = useRef(null);
   const bodyRef = useRef(null);
   // 面板高度规则：三个页签内容都常驻渲染（未激活 pane 隐藏但仍参与测高，
@@ -315,14 +317,14 @@ function H5CartSheet({ onClose, push }) {
         <div className="h5-cart-body" ref={bodyRef} style={bodyH ? { height: bodyH } : null}>
           {/* 三个页签全部常驻渲染：隐藏 pane 绝对定位（宽度一致、高度自然），
               供 useEffect 测量真实内容高度；未激活不可交互 */}
-          <div className={`h5-cart-pane${seg === 'inquiry' ? ' on' : ''}`} style={bodyH ? { maxHeight: bodyH } : null}>
-            <InquiryCartEditor onDone={onClose} push={push} />
-          </div>
           <div className={`h5-cart-pane${seg === 'inbound' ? ' on' : ''}`} style={bodyH ? { maxHeight: bodyH } : null}>
             <InboundCartEditor onDone={onClose} />
           </div>
           <div className={`h5-cart-pane${seg === 'outbound' ? ' on' : ''}`} style={bodyH ? { maxHeight: bodyH } : null}>
             <OutboundCartEditor onDone={onClose} />
+          </div>
+          <div className={`h5-cart-pane${seg === 'inquiry' ? ' on' : ''}`} style={bodyH ? { maxHeight: bodyH } : null}>
+            <InquiryCartEditor onDone={onClose} push={push} />
           </div>
         </div>
       </div>
