@@ -842,7 +842,7 @@ function H5Orders({ openDoc, platform, push, setConfirm, skReady = true }) {
       {/* R99e — segment tabs + filter bar pinned; the document list below scrolls */}
       <div className="h5-tabhead tight">
         <div className="h5-segments mb12">
-          {[['IQ', 'Inquiry'], ['QT', 'Quote'], ['PO', 'Order'], ['FP', 'Invoice']].map(([id, label]) => (
+          {[['IQ', 'Inquiry List'], ['QT', 'Quote'], ['PO', 'Order'], ['FP', 'Invoice']].map(([id, label]) => (
             <button key={id} className={`h5-segment${seg === id ? ' active' : ''}`} onClick={() => { setSeg(id); setStatus('ALL'); ordersSeg = id; ordersStatus = 'ALL'; }}>{label}</button>
           ))}
         </div>
