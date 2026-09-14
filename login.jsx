@@ -97,7 +97,7 @@ function LoginPage() {
           </button>
           <div className="lc-note">
             <Icon name="info" size={13} />
-            <span>Demo only — no real credentials. Suspended merchants (e.g. Ibadan Sub-Distributor) are blocked from login, matching the MVP rule “suspend → login disabled, data retained”.</span>
+            <span>Demo only — no real credentials. Suspended merchants (e.g. Abuja Retail Chain) are blocked from login, matching the MVP rule “suspend → login disabled, data retained”.</span>
           </div>
         </div>
         <div className="login-foot">TierLink Warehouse · MVP · EN / 中文</div>

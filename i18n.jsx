@@ -1249,7 +1249,7 @@ const ZH = {
   'Disabled': '已停用',
   'Suspended — login blocked': '已停用 — 禁止登录',
   'Select an account above': '请先在上方选择账号',
-  'Demo only — no real credentials. Suspended merchants (e.g. Ibadan Sub-Distributor) are blocked from login, matching the MVP rule “suspend → login disabled, data retained”.': '仅演示 — 无真实凭证。已停用商户（如 Ibadan Sub-Distributor）禁止登录，符合 MVP 规则“停用 → 禁登、数据保留”。',
+  'Demo only — no real credentials. Suspended merchants (e.g. Abuja Retail Chain) are blocked from login, matching the MVP rule “suspend → login disabled, data retained”.': '仅演示 — 无真实凭证。已停用商户（如 Abuja Retail Chain）禁止登录，符合 MVP 规则“停用 → 禁登、数据保留”。',
 
   // ---- H5 MVP completion ----
   'Team Members': '团队成员',
