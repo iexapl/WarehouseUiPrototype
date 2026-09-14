@@ -498,14 +498,25 @@ function ProductListPage() {
           { key: 'model', label: 'Model', width: 110, render: p => <span className="mono small">{p.model}</span> },
           { key: 'brand', label: 'Brand', width: 90 },
           { key: 'cats', label: 'Categories', render: p => (
-            <div className="flex gap8" style={{ flexWrap: 'wrap' }}>
-              {p.categories.map(cid => { const c = db.categories.find(x => x.id === cid); return c ? <Tag key={cid} tone="info">{t(c.name)}</Tag> : null; })}
+            <div>
+              <div className="flex gap8" style={{ flexWrap: 'wrap' }}>
+                {p.categories.map(cid => { const c = db.categories.find(x => x.id === cid); return c ? <Tag key={cid} tone="info">{t(c.name)}</Tag> : null; })}
+              </div>
+              {/* 渠道页签：归属商户与类目分行（与移动端采购渠道列表同构） */}
+              {isTenant && tab === 'channel' && (
+                <div className="flex" style={{ alignItems: 'center', gap: 4, marginTop: 6 }}>
+                  <Icon name="building" size={12} />
+                  <span className="muted small">{tenantName(db, p.ownerId)}</span>
+                </div>
+              )}
             </div>
           )},
           { key: 'unit', label: 'Unit', width: 60, align: 'center' },
-          { key: 'owner', label: 'Owner', width: 150, render: p => p.ownerId === account.tenantId
+          // 渠道页签下归属商户已分行入 Categories 单元格，独立 Owner 列仅
+          // 在其余视图（自建目录 / 平台全局列表）显示
+          ...(isTenant && tab === 'channel' ? [] : [{ key: 'owner', label: 'Owner', width: 150, render: p => p.ownerId === account.tenantId
             ? <Tag tone="teal" dot>Ours</Tag>
-            : <span className="muted small">{tenantName(db, p.ownerId)}</span> },
+            : <span className="muted small">{tenantName(db, p.ownerId)}</span> }]),
           { key: 'price', label: 'Prices', width: 210, align: 'right', render: p => (
             // R78 — stacked price set with currency codes: own products show
             // cost/market/sale, upstream (channel) products market/sale only
