@@ -687,15 +687,17 @@ function H5Products({ push, platform, skReady = true }) {
                 </div>
               </div>
               <div className="p-spec mono">{p.model} · {p.spec}</div>
-              {/* R100p — 物料分类 chips（含渠道供应商/锁定提示），价格收尾 */}
-              {(p.categories && p.categories.length > 0) || (effTab === 'channel' && showChannelTab) ? (
+              {/* R100p — 物料分类 chips，价格收尾；渠道页归属商户另起一行（与类目分行显示） */}
+              {p.categories && p.categories.length > 0 ? (
                 <div className="p-meta">
                   {(p.categories || []).map(cid => { const c = db.categories.find(x => x.id === cid); return c ? <span key={cid} className="p-chip"><Icon name="tag" size={10} />{t(c.name)}</span> : null; })}
-                  {effTab === 'channel' && showChannelTab && (
-                    <span className="p-chip"><Icon name="building" size={10} />{productOwnerName(db, p)}</span>
-                  )}
                 </div>
               ) : null}
+              {effTab === 'channel' && showChannelTab && (
+                <div className="p-meta">
+                  <span className="p-chip"><Icon name="building" size={10} />{productOwnerName(db, p)}</span>
+                </div>
+              )}
               {/* R78 — list-item prices: own products show cost/market/sale,
                   upstream (channel) products show market/sale only (cost is the
                   owner's procurement record, hidden across the tenant boundary) */}
