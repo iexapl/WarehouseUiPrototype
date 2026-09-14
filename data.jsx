@@ -713,6 +713,17 @@ function downstreamChain(db, tid) {
 
 function docVisible(db, account, doc) {
   if (account.type === 'platform') return true;
+  // P2 — a Draft document is the drafting side's private work-in-progress:
+  // counterparties (and observers) must not see it before submission (a draft
+  // inquiry leaked to the supplier would expose the buyer's intent).
+  // Owner = the drafting tenant, resolved via the creator's account record,
+  // falling back to the doc's originating side (buyer for IQ/PO/CK/RK, seller
+  // for QT/FP) when the creator can't be resolved (e.g. AI-drafted quotes).
+  if (doc.status === 'Draft') {
+    const creator = (db.accounts || []).find(a => a.name === doc.createdBy);
+    const ownerTenant = creator ? creator.tenantId : (doc.type === 'QT' || doc.type === 'FP' ? doc.seller : doc.buyer);
+    return ownerTenant === account.tenantId || doc.createdBy === account.name;
+  }
   // R89 — order-type documents (PO / CK / RK) are listed only when THIS tenant
   // is the buyer or the seller; related-tenant "observer" orders no longer
   // appear in the order list
@@ -842,7 +853,20 @@ function docListCompare(db, account, a, b) {
   const tb = b.createdAt || '';
   return ta < tb ? 1 : ta > tb ? -1 : 0;
 }
+// P1 — a Sent quote past its Valid Until reads as Expired everywhere
+// (status tag, status chips, list filters)
+function quoteExpired(doc) {
+  if (!doc || !doc.validUntil) return false;
+  const n = new Date();
+  const today = n.getFullYear() + '-' + String(n.getMonth() + 1).padStart(2, '0') + '-' + String(n.getDate()).padStart(2, '0');
+  return doc.validUntil < today;
+}
+function docStatusOf(doc) {
+  if (doc && doc.type === 'QT' && doc.status === 'Sent' && quoteExpired(doc)) return 'Expired';
+  return doc && doc.status;
+}
 function orderDisplayStatus(doc) {
+  if (doc.type === 'QT' && doc.status === 'Sent' && quoteExpired(doc)) return 'Expired';
   if (doc.type === 'PO' && PO_ORDER_LABEL[doc.status]) return PO_ORDER_LABEL[doc.status];
   if ((doc.type === 'CK' || doc.type === 'RK') && CK_RK_ORDER_LABEL[doc.status]) return CK_RK_ORDER_LABEL[doc.status];
   return doc.status;
@@ -909,7 +933,11 @@ function docActions(db, account, doc) {
       if (doc.status === 'Draft') a.push('Edit', 'Confirm Quote');
       if (doc.status === 'Sent') a.push('Edit');
     }
-    if (side === 'buyer' && doc.status === 'Sent') a.push('Accept', 'Reject');
+    if (side === 'buyer' && doc.status === 'Sent') {
+      // P1 — an expired Sent quote is no longer acceptable; the buyer may
+      // still reject it to close the flow
+      a.push(...(quoteExpired(doc) ? [] : ['Accept']), 'Reject');
+    }
   }
   if (doc.type === 'PO') {
     if (side === 'buyer') {
@@ -1048,6 +1076,6 @@ function downloadOutboundFile(db, doc) {
 }
 
 Object.assign(window, {
-  makeInitialDb, money, tenantName, tenantCode, accountById, productName, relatedTenantIds, upstreamTenantIds, downstreamChain, canInquireProduct, canManageProduct, productOwnerName, docVisible, docSide, docAmount, nextNo,
+  makeInitialDb, money, tenantName, tenantCode, accountById, productName, relatedTenantIds, upstreamTenantIds, downstreamChain, canInquireProduct, canManageProduct, productOwnerName, docVisible, docSide, docAmount, nextNo, quoteExpired, docStatusOf,
   STATUS_META, statusLabel, statusTagClass, orderDisplayStatus, tabStatusOptions, docActions, parentPoOf, csvEscape, downloadFile, downloadProductTemplate, downloadInvoiceFile, downloadOutboundFile,
 });

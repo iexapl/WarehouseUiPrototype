@@ -303,7 +303,7 @@ function docColumns(db, account, openDoc, opts = {}) {
     }},
     { key: 'items', label: 'Items', width: 60, align: 'center', render: r => r.items.length },
     { key: 'amount', label: 'Amount', width: 150, align: 'right', render: r => <Money amount={docAmount(r)} currency={r.currency} /> },
-    { key: 'status', label: 'Status', width: 130, render: r => <StatusTag type={r.type} status={r.status} /> },
+    { key: 'status', label: 'Status', width: 130, render: r => <StatusTag type={r.type} status={docStatusOf(r)} /> },
     { key: 'createdBy', label: 'Created By', width: 120, render: r => <span className="small">{r.createdBy}</span> },
     { key: 'createdAt', label: 'Created', width: 130, render: r => <span className="small muted">{r.createdAt}</span> },
   );
@@ -325,7 +325,11 @@ function ActionButtons({ doc, openDoc, size = 'sm', extraAction }) {
     // R81 — rejection (quote by buyer / order by supplier) needs a written reason
     if (verb === 'Reject') { setRejectReason(''); return setRejectOpen(true); }
     // quote accept stays a plain confirm; PO accept opens the R94 form below
-    if (verb === 'Accept' && doc.type !== 'PO') return setConfirm({ verb, message: `Accept ${doc.no}? A purchase order will be generated automatically and submitted to ${tenantName(db, doc.seller)} for review.` });
+    // P1 — an expired quote cannot be accepted; block with a clear notice
+    if (verb === 'Accept' && doc.type !== 'PO') {
+      if (quoteExpired(doc)) return setConfirm({ verb: 'OK', title: 'Accept', message: `Quote ${doc.no} expired on ${doc.validUntil} — it can no longer be accepted. Ask the supplier to send a new quote.` });
+      return setConfirm({ verb, message: `Accept ${doc.no}? A purchase order will be generated automatically and submitted to ${tenantName(db, doc.seller)} for review.` });
+    }
     if (verb === 'Submit') return setConfirm({ verb, message: `Submit ${doc.no}? It will be sent to ${tenantName(db, doc.seller)} and cannot be edited afterwards.` });
     if (verb === 'Approve') return setConfirm({ verb, message: `Approve ${doc.no}? Stock availability has been validated.` });
     if (verb === 'Cancel') return setConfirm({ verb, message: `Cancel ${doc.no}? This cannot be undone.`, danger: true });
@@ -371,8 +375,9 @@ function ActionButtons({ doc, openDoc, size = 'sm', extraAction }) {
         )}
       </div>
       {confirm && (
-        <ConfirmDialog title={`${confirm.verb} ${doc.no}`} message={confirm.message} confirmText={confirm.verb} danger={confirm.danger}
+        <ConfirmDialog title={`${confirm.title || confirm.verb + ' ' + doc.no}`} message={confirm.message} confirmText={confirm.verb} danger={confirm.danger}
           onConfirm={() => {
+            if (confirm.verb === 'OK') return setConfirm(null);
             if (confirm.verb === 'Dispatch') return act.dispatch(doc);
             return act.docVerb(confirm.verb, doc);
           }} onClose={() => setConfirm(null)} />
@@ -773,7 +778,7 @@ function POPage({ openDoc }) {
   }, [seg, fulfillCount]);
   let rows = [];
   if (isTenant && seg === 'mine') rows = db.docs.filter(d => d.type === 'PO' && d.buyer === account.tenantId && (scope === 'all' || d.createdBy === account.name));
-  if (isTenant && seg === 'fulfill') rows = db.docs.filter(d => d.type === 'PO' && d.seller === account.tenantId);
+  if (isTenant && seg === 'fulfill') rows = db.docs.filter(d => d.type === 'PO' && d.seller === account.tenantId && ['Pending Acceptance', 'Pending Payment', 'Pending Outbound'].includes(d.status));
   const paged = usePaged(rows);
   return (
     <div>

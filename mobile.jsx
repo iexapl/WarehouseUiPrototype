@@ -368,7 +368,7 @@ function H5Home({ openDoc, push, platform, noPerm, setTab }) {
         { label: 'Orders to Invoice', icon: 'invoices', tone: 'warning', goDocs: ['PO', 'ALL'], match: d => d.type === 'PO' && d.seller === ATT_TID && ['Received', 'Partially Received'].includes(d.status) },
       ]
     : [
-        { label: 'Quotes to Confirm', icon: 'confirm', tone: 'warning', goDocs: ['QT', 'Sent'], match: d => d.type === 'QT' && d.buyer === ATT_TID && d.status === 'Sent' },
+        { label: 'Quotes to Confirm', icon: 'confirm', tone: 'warning', goDocs: ['QT', 'Sent'], match: d => d.type === 'QT' && d.buyer === ATT_TID && d.status === 'Sent' && !quoteExpired(d) },
         { label: 'Shipments to Receive', icon: 'receive', tone: 'success', goDocs: ['PO', 'Shipped'], match: d => d.type === 'CK' && d.buyer === ATT_TID && d.status === 'Shipped' },
         { label: 'Pending Orders', icon: 'orders', tone: 'primary', goDocs: ['PO', 'ALL'], match: d => d.type === 'PO' && d.buyer === ATT_TID && ['Pending Acceptance', 'Pending Payment', 'Pending Outbound', 'Pending Shipment', 'Pending Receipt'].includes(d.status) },
       ];
@@ -438,7 +438,7 @@ function H5Home({ openDoc, push, platform, noPerm, setTab }) {
         ]
       : [
           navShared[0], navShared[1], navShared[2],
-          ['To Confirm', 'confirm', NAV_C.confirm, () => { const qt = db.docs.find(d => d.type === 'QT' && d.buyer === account.tenantId && d.status === 'Sent'); qt ? openDoc(qt.id) : toast('No quotes awaiting your confirmation'); }, true],
+          ['To Confirm', 'confirm', NAV_C.confirm, () => { const qt = db.docs.find(d => d.type === 'QT' && d.buyer === account.tenantId && d.status === 'Sent' && !quoteExpired(d)); qt ? openDoc(qt.id) : toast('No quotes awaiting your confirmation'); }, true],
           ['Receive', 'receive', NAV_C.receive, () => { const ck = db.docs.find(d => d.type === 'CK' && d.buyer === account.tenantId && d.status === 'Shipped'); ck ? push({ name: 'receive', docId: ck.id }) : toast('No shipments awaiting receipt'); }, true],
           navShared[3], navShared[4],
           ['Quote', 'quote', NAV_C.quote, () => { ordersSeg = 'QT'; ordersStatus = 'ALL'; setTab('orders'); }, true],
@@ -899,6 +899,17 @@ function h5DocVerb(verb, doc, ctx) {
     if (verb === 'Accept' && doc.type === 'PO') return push({ name: 'accept', docId: doc.id });
     if (verb === 'Record Payment') return push({ name: 'pay', docId: doc.id });
     if (verb === 'Replenish') return push({ name: 'replenish', docId: po.id });
+    // P1 — accepting a quote past its validity is blocked with a clear notice
+    if (verb === 'Accept' && doc.type === 'QT' && quoteExpired(doc)) {
+      setConfirm({
+        title: 'Accept',
+        message: `Quote ${doc.no} expired on ${doc.validUntil} — it can no longer be accepted. Ask the supplier to send a new quote.`,
+        confirmText: 'OK',
+        tone: 'error',
+        onConfirm: () => {},
+      });
+      return;
+    }
     if (verb === 'Terminate Receiving') {
       setConfirm({
         title: 'Terminate Receiving',
@@ -972,7 +983,7 @@ function H5DocCard({ doc, onClick, showRole, onVerb }) {
     <div className="h5-doc" onClick={onClick}>
       <div className="d-head">
         <span className="d-no"><span className="mono" style={{ color: 'var(--primary)', fontWeight: 700 }}>{doc.no}</span></span>
-        <StatusTag type={doc.type} status={doc.status} />
+        <StatusTag type={doc.type} status={docStatusOf(doc)} />
       </div>
       <div className="d-body">
         <span>{cp}</span>
@@ -1161,7 +1172,7 @@ function H5DocPage({ docId, push, setConfirm, platform, noPerm }) {
       <div className="h5-card">
         <div className="flex" style={{ justifyContent: 'space-between' }}>
           <span className="mono" style={{ fontWeight: 700, fontSize: 13 }}>{doc.no}</span>
-          <StatusTag type={doc.type} status={doc.status} />
+          <StatusTag type={doc.type} status={docStatusOf(doc)} />
         </div>
         <div className="h5-desc mt12">
           <div className="h5-desc-row"><div className="k">{side === 'seller' ? 'Buyer' : 'Seller'}</div><div className="v">{tenantName(db, cp)}</div></div>
@@ -1331,7 +1342,7 @@ function H5WhatsAppPage({ docId, push, setConfirm, platform, noPerm }) {
       <div className="h5-card mt12">
         <div className="flex" style={{ justifyContent: 'space-between' }}>
           <span className="mono" style={{ fontWeight: 700, fontSize: 13 }}>{doc.no}</span>
-          <StatusTag type={doc.type} status={doc.status} />
+          <StatusTag type={doc.type} status={docStatusOf(doc)} />
         </div>
         <div className="muted" style={{ fontSize: 12, marginTop: 8 }}>{doc.items.length} items · {money(docAmount(doc), doc.currency).full}</div>
         {doc.waybill && <div className="muted mono" style={{ fontSize: 11.5, marginTop: 4 }}>Waybill {doc.waybill.no} · {doc.waybill.carrier} · {doc.waybill.plate}</div>}

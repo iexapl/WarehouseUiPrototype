@@ -120,6 +120,7 @@ const ZH = {
   'Ship Order': '发货',
   'Quote': '报价',
   'Accept': '接受',
+  'OK': '知道了',
   'Reject': '拒绝',
   'Dispatch': '发运',
   'Submit': '提交',
@@ -1859,6 +1860,8 @@ const PATTERNS = [
   [/^Confirm Receipt · ((?:PO|CK)-\S+)$/, '确认收货 · $1'],
   [/^Edit Merchant (.+)$/, '编辑商户 $1'],
   [/^Accept quote (.+)\? A purchase order will be auto-generated\.$/, '接受报价 $1？将自动生成采购订单。'],
+  // P1 — expired-quote accept block notice (mobile H5Confirm + Web ConfirmDialog)
+  [/^Quote (.+) expired on (\d{4}-\d{2}-\d{2}) — it can no longer be accepted\. Ask the supplier to send a new quote\.$/, '报价 $1 已于 $2 过期——无法再接受，请要求供应商重新报价。'],
   [/^Submit (.+)\? It will be sent to (.+) and becomes non-editable\.$/, '提交 $1？将发送给 $2，之后不可再编辑。'],
   [/^(\d+) \((\d+) master\)$/, '$1 个（$2 个主账号）'],
   [/^(.+) · Agent$/, '$1 · 代理商'],
