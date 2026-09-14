@@ -1624,7 +1624,7 @@ const ZH = {
   'Add to Inquiry Staging': '加入询价暂存',
   'Stock Out': '出库',
   'Inquiry staging is empty': '询价暂存是空的',
-  'Browse channel products in Inquiry and tap Inquire to add them to the inquiry staging': '在「询价」中浏览上游渠道商品，点「询价」加入询价暂存',
+  'Browse channel products in Inquiry and tap Inquire to add them to the inquiry staging': '在「询价」中浏览上游渠道物料，点「询价」加入询价暂存',
   'Inbound staging is empty': '入库暂存是空的',
   'Scan barcodes on Scan / Stock In, or enter a Material Barcode and tap Add, or tap Stock In on the My Warehouse list': '在「扫码」/「入库」页扫码，或在「物料条码」输入框录入条码后点「添加」，或在「我的仓库」列表点「入库」',
   'Outbound staging is empty': '出库暂存是空的',
@@ -1666,11 +1666,11 @@ const ZH = {
   'Ref Price': '参考价',
   'Add to Inbound Staging': '加入入库暂存',
   'Add to Outbound Staging': '加入出库暂存',
-  'Add upstream products from the Sourcing Channel tab': '在采购渠道页把上游商品加入暂存',
-  'Stock In on the My Products list adds items here': '在「我的商品」列表点入库即可把物料加入入库暂存',
-  'Stock Out on the My Products list adds items here': '在「我的商品」列表点出库即可把物料加入出库暂存',
+  'Add upstream products from the Sourcing Channel tab': '在采购渠道页把上游物料加入暂存',
+  'Stock In on the My Products list adds items here': '在「我的物料」列表点入库即可把物料加入入库暂存',
+  'Stock Out on the My Products list adds items here': '在「我的物料」列表点出库即可把物料加入出库暂存',
   '1 inquiry sent': '已发送 1 张询价单',
-  'Select the products you want to inquire about, then add them to the inquiry staging — quantities default to 1 and can be adjusted in the staging before submitting. Only upstream supplier products can be picked; own and downstream products are locked.': '勾选要询价的物料后加入询价暂存——数量默认为 1，可在暂存单内提交前调整。仅上游供应商商品可勾选；自有与下游商品锁定。',
+  'Select the products you want to inquire about, then add them to the inquiry staging — quantities default to 1 and can be adjusted in the staging before submitting. Only upstream supplier products can be picked; own and downstream products are locked.': '勾选要询价的物料后加入询价暂存——数量默认为 1，可在暂存单内提交前调整。仅上游供应商物料可勾选；自有与下游物料锁定。',
 };
 
 // ---------- pattern-based translation for dynamic strings ----------
@@ -2062,8 +2062,8 @@ const PATTERNS = [
   [/^(.+) \((Draft|draft)\)$/, '$1（草稿）'],
   // ---- 暂存单（询价 / 入库 / 出库）dynamic strings ----
   [/^(.+) added to the inquiry staging$/, '已加入询价暂存：$1'],
-  [/^1 product added to the inquiry staging$/, '已加入询价暂存：1 个商品'],
-  [/^(\d+) products added to the inquiry staging$/, '已加入询价暂存：$1 个商品'],
+  [/^1 product added to the inquiry staging$/, '已加入询价暂存：1 个物料'],
+  [/^(\d+) products added to the inquiry staging$/, '已加入询价暂存：$1 个物料'],
   [/^Inquiry staging submitted — 1 inquiry created$/, '询价暂存已提交——已生成 1 张询价单'],
   [/^Inquiry staging submitted — (\d+) inquiries created$/, '询价暂存已提交——已生成 $1 张询价单'],
   // ---- 入库单价/金额、出库收货方、询价 WhatsApp 发送 ----
