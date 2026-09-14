@@ -114,6 +114,9 @@ function AccountSwitcher() {
       </span>
     }>
       <div className="dropdown-group-label">Switch demo account <span className="switch-badge">DEMO</span></div>
+      {/* P12 — the switcher filters by data scope; say so instead of letting a
+          first-time user misread a shorter list as missing accounts */}
+      {!isPlatform && <div className="dropdown-scope-note">Showing accounts within your data scope — own merchant, linked partners and platform</div>}
       {order.map(g => groups[g] && (
         <React.Fragment key={g}>
           <div className="dropdown-group-label">{g}</div>
@@ -796,7 +799,14 @@ function POPage({ openDoc }) {
         </div>
       </div>
       {isTenant && seg === 'mine' && (
-        <Banner tone="info" icon="lock"><b>MVP data scope — personal records only.</b> Drafts created by colleagues (e.g. Ngozi Eze) stay invisible until you switch scope or a record is submitted to a counterparty.</Banner>
+        <Banner tone="info" icon="lock"><b>MVP data scope — personal records only.</b> {(() => {
+          // P4 — the colleague example must come from THIS merchant, not a
+          // counterparty (the old hardcoded name leaked a buyer-side name)
+          const colleague = db.accounts.find(a => a.tenantId === account.tenantId && a.name !== account.name);
+          return colleague
+            ? `Drafts created by colleagues (e.g. ${colleague.name}) stay invisible until you switch scope or a record is submitted to a counterparty.`
+            : 'Your drafts stay invisible to colleagues until a record is submitted to a counterparty.';
+        })()}</Banner>
       )}
       {isTenant && seg === 'fulfill' && (
         <Banner tone="warning" icon="warehouse">Supply-side worklist: approve reviewed orders, then ship — shipping decrements your stock, generates an outbound doc + waybill, and pushes a WhatsApp link to the buyer.</Banner>
@@ -1245,7 +1255,7 @@ function AccountMgmtPage() {
         <div>
           <div className="page-title">Accounts</div>
           <div className="page-desc">{isPlatform
-            ? 'Platform admins can create platform accounts, accounts of any merchant (optionally master), supplier / agent merchants with their master accounts, and establish supply relations; business data remains read-only.'
+            ? 'Platform admins can create platform accounts, accounts of any merchant (optionally master), supplier / agent merchants with their master accounts, and establish supply relations; business data remains read-only. The account list includes the platform admin account — the mobile platform overview counts merchant accounts only.'
             : isAgent
               ? 'Agent member management — create and manage sub-accounts of your own merchant; permissions are flattened in MVP, differences come from data scope and business relations.'
               : 'Create and manage accounts of your own merchant (and develop sub-agent merchants where your level allows); permissions are flattened in MVP — no roles, no resource config.'}{' '}<span className="mini-chip mvp">MVP</span></div>
@@ -1338,8 +1348,10 @@ function AccountMgmtPage() {
       {tenantDlg === 'relation' && <RelationDialog onClose={() => setTenantDlg(null)} />}
       {bindAcc && <BindWhatsAppDialog acc={bindAcc} onClose={() => setBindAcc(null)} />}
       {confirmDisable && (
-        <ConfirmDialog title="Disable Account" danger confirmText="Disable"
-          message={`Disable account "${confirmDisable.name}"? The user will no longer be able to sign in. Related data is retained.`}
+        <ConfirmDialog title={confirmDisable.main ? 'Disable Main Account' : 'Disable Account'} danger confirmText="Disable"
+          message={confirmDisable.main
+            ? `"${confirmDisable.name}" is the MAIN account of ${(db.tenants.find(t => t.id === confirmDisable.tenantId) || {}).name}. Disabling it blocks merchant-wide sign-in and WhatsApp push delivery for every member — double-check before confirming.`
+            : `Disable account "${confirmDisable.name}"? The user will no longer be able to sign in. Related data is retained.`}
           onConfirm={() => toast(`Account ${confirmDisable.name} disabled`, 'success')} onClose={() => setConfirmDisable(null)} />
       )}
       {deactivate && (

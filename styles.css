@@ -214,6 +214,7 @@ button { font-family: inherit; }
 }
 @keyframes dropIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
 .dropdown-group-label { font-size: 11px; color: var(--text-3); padding: 8px 10px 4px; text-transform: uppercase; letter-spacing: 0.6px; }
+.dropdown-scope-note { font-size: 11px; color: var(--text-3); padding: 0 11px 6px; line-height: 1.45; }
 .dropdown-item {
   display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: 6px; cursor: pointer;
   font-size: 13px; color: var(--text-2); transition: background 0.12s;

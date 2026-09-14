@@ -449,7 +449,7 @@ function H5Home({ openDoc, push, platform, noPerm, setTab }) {
   // fix #22 — platform admin home: replace tenant-scoped blocks with platform-wide stats
   const platformStats = platform ? [
     { label: 'Total Merchants', value: db.tenants.length },
-    { label: 'Total Accounts', value: db.accounts.filter(a => a.type === 'tenant').length },
+    { label: 'Merchant Accounts', value: db.accounts.filter(a => a.type === 'tenant').length },
     { label: 'Total Products', value: db.products.length },
     { label: 'Total Documents', value: db.docs.length },
   ] : null;
@@ -465,7 +465,7 @@ function H5Home({ openDoc, push, platform, noPerm, setTab }) {
             <span className="avatar" style={{ background: 'rgba(255,255,255,0.25)', width: 44, height: 44, fontSize: 15 }}>{account.name.split(' ').map(w => w[0]).slice(0, 2).join('')}</span>
             <div>
               <div style={{ fontWeight: 700, fontSize: 15 }}>{account.name}</div>
-              <div style={{ fontSize: 11.5, opacity: 0.85, marginTop: 2 }}>{platform ? 'Platform Admin' : `${(tenant || {}).name} · ${roleLabel}`}</div>
+              <div style={{ fontSize: 11.5, opacity: 0.85, marginTop: 2 }}>{platform ? 'Platform Admin' : (roleLabel && (tenant || {}).name && tenant.name.toLowerCase().endsWith(roleLabel.toLowerCase()) ? tenant.name : `${(tenant || {}).name} · ${roleLabel}`)}</div>
             </div>
             <span style={{ marginLeft: 'auto', fontSize: 10.5, background: 'rgba(255,255,255,0.2)', padding: '3px 8px', borderRadius: 10 }}>MVP · 中英</span>
           </div>
@@ -523,7 +523,11 @@ function H5Home({ openDoc, push, platform, noPerm, setTab }) {
         </div>
       )}
       <div className="h5-actions">
-        {grid.map(([label, icon, [bg, color], handler]) => (
+        {/* P6 — an unbound fresh merchant keeps only warehouse/team tiles: the
+            trade-lifecycle entries (inquiry, quotes, orders, invoices, confirm,
+            receive) stay hidden until a supply partner is bound, matching the
+            "Bind a partner to unlock" card above */}
+        {(isFreshTenant ? grid.filter(g => !g[4] && !['Inquiry', 'Inquiry List', 'Quote', 'Orders', 'Invoices'].includes(g[0])) : grid).map(([label, icon, [bg, color], handler]) => (
           <div key={label} className="h5-action" onClick={handler}>
             <span className="a-icon" style={{ background: bg, color }}><NavIcon name={icon} size={18} /></span>
             <span className="a-label">{label}</span>
@@ -584,7 +588,7 @@ let ordersStatus = 'ALL';
 // stock) and Sourcing Channel (upstream suppliers' catalog — inquiry entries live
 // here). Platform accounts get a single read-only list instead of tabs.
 function H5Products({ push, platform, skReady = true }) {
-  const { db, account, act, toast, cartApi } = useApp();
+  const { db, account, act, toast, cartApi, setView } = useApp();
   const [q, setQ] = useState('');
   const [tab, setTabState] = useState(productsTab); // 'mine' = My Products, 'channel' = Sourcing Channel
   const [supplier, setSupplier] = useState('ALL');
@@ -593,6 +597,11 @@ function H5Products({ push, platform, skReady = true }) {
   const [refreshing, setRefreshing] = useState(false);
   const tenant = account.tenantId ? db.tenants.find(t => t.id === account.tenantId) : null;
   const showTabs = !platform && !!account.tenantId;
+  // P9 — suppliers have no upstream of their own: the Sourcing Channel tab
+  // (and its always-empty state) stays hidden for them; a stray 'channel'
+  // tab preference is forced back to 'mine' via effTab
+  const showChannelTab = showTabs && !(tenant && tenant.type === 'Supplier');
+  const effTab = showChannelTab ? tab : 'mine';
   // upstream suppliers / parent agents — the only source for the channel tab
   const upstream = platform ? [] : [...upstreamTenantIds(db, account.tenantId)]
     .map(id => db.tenants.find(t => t.id === id)).filter(t => t && t.status === 'Active');
@@ -601,8 +610,8 @@ function H5Products({ push, platform, skReady = true }) {
   const canInquire = showTabs && !(tenant && tenant.type === 'Supplier') && upstream.length > 0;
   const switchTab = (id) => { productsTab = id; setTabState(id); setQ(''); setCat(''); setSupplier('ALL'); };
   const rows = db.products.filter(p => {
-    if (showTabs && (tab === 'mine' ? p.ownerId !== account.tenantId : !upstreamIds.has(p.ownerId))) return false;
-    if (showTabs && tab === 'channel' && supplier !== 'ALL' && p.ownerId !== supplier) return false;
+    if (showTabs && (effTab === 'mine' ? p.ownerId !== account.tenantId : !upstreamIds.has(p.ownerId))) return false;
+    if (showTabs && effTab === 'channel' && supplier !== 'ALL' && p.ownerId !== supplier) return false;
     if (cat && !p.categories.includes(cat)) return false;
     if (q && !(p.name + p.model + p.brand).toLowerCase().includes(q.toLowerCase())) return false;
     return true;
@@ -610,27 +619,27 @@ function H5Products({ push, platform, skReady = true }) {
   // round 36 — single first header row: the filter toggle pinned to the far
   // right. (The inquiry multi-select mode was removed: per-item Inquire now
   // adds the product to the inquiry staging directly.)
-  const hasFilterRow = showTabs && tab === 'channel' ? upstream.length > 0 : true;
+  const hasFilterRow = showTabs && effTab === 'channel' ? upstream.length > 0 : true;
   return (
     <div className="h5-tabpage">
       {/* R99e — segment tabs + action/filter row pinned; the product list below scrolls */}
       <div className="h5-tabhead tight">
-        {showTabs && (
+        {showChannelTab && (
           <div className="h5-segments mb12">
-            <button className={`h5-segment${tab === 'mine' ? ' active' : ''}`} onClick={() => switchTab('mine')}>My Warehouse</button>
-            <button className={`h5-segment${tab === 'channel' ? ' active' : ''}`} onClick={() => switchTab('channel')}>Sourcing Channel</button>
+            <button className={`h5-segment${effTab === 'mine' ? ' active' : ''}`} onClick={() => switchTab('mine')}>My Warehouse</button>
+            <button className={`h5-segment${effTab === 'channel' ? ' active' : ''}`} onClick={() => switchTab('channel')}>Sourcing Channel</button>
           </div>
         )}
         {hasFilterRow ? (
           <H5FilterBar open={showFilters} onToggle={() => setShowFilters(v => !v)}
-            activeCount={(q ? 1 : 0) + (tab === 'channel' && supplier !== 'ALL' ? 1 : 0) + (cat ? 1 : 0)}
+            activeCount={(q ? 1 : 0) + (effTab === 'channel' && supplier !== 'ALL' ? 1 : 0) + (cat ? 1 : 0)}
             onReset={() => { setQ(''); setSupplier('ALL'); setCat(''); }}
             left={null}
             values={{ q, supplier, cat }}
             onChange={(k, v) => { if (k === 'q') setQ(v); else if (k === 'supplier') setSupplier(v); else setCat(v); }}
             onSearch={() => setShowFilters(false)}
             fields={[
-              ...(showTabs && tab === 'channel' ? [{ type: 'select', key: 'supplier', label: 'Supplier', icon: 'building',
+              ...(showChannelTab && effTab === 'channel' ? [{ type: 'select', key: 'supplier', label: 'Supplier', icon: 'building',
                 options: [{ value: 'ALL', label: `All Suppliers (${upstream.length})` }].concat(upstream.map(u => ({ value: u.id, label: `${u.name} (${u.code})` }))) }] : []),
               { type: 'select', key: 'cat', label: 'Category', icon: 'tag', labelWidth: 72, placeholder: 'All categories',
                 options: db.categories.map(c => ({ value: c.id, label: t(c.name) })) },
@@ -641,7 +650,7 @@ function H5Products({ push, platform, skReady = true }) {
             moved OUT of the scrolling body into the PINNED head so only the
             product list scrolls. Channel tab shows the upstream-catalog note;
             platform accounts (single read-only list) keep their note too. */}
-        {(platform || (showTabs && tab === 'channel')) && (
+        {(platform || (showChannelTab && effTab === 'channel')) && (
           <div className="h5-card" style={{ padding: '6px 10px', marginTop: 8, display: 'flex', alignItems: 'center', gap: 8, fontSize: 11.5, color: 'var(--text-3)' }}>
             <Icon name="lock" size={12} />
             <span>{platform
@@ -679,10 +688,10 @@ function H5Products({ push, platform, skReady = true }) {
               </div>
               <div className="p-spec mono">{p.model} · {p.spec}</div>
               {/* R100p — 物料分类 chips（含渠道供应商/锁定提示），价格收尾 */}
-              {(p.categories && p.categories.length > 0) || (tab === 'channel' && showTabs) ? (
+              {(p.categories && p.categories.length > 0) || (effTab === 'channel' && showChannelTab) ? (
                 <div className="p-meta">
                   {(p.categories || []).map(cid => { const c = db.categories.find(x => x.id === cid); return c ? <span key={cid} className="p-chip"><Icon name="tag" size={10} />{t(c.name)}</span> : null; })}
-                  {tab === 'channel' && showTabs && (
+                  {effTab === 'channel' && showChannelTab && (
                     <span className="p-chip"><Icon name="building" size={10} />{productOwnerName(db, p)}</span>
                   )}
                 </div>
@@ -697,7 +706,7 @@ function H5Products({ push, platform, skReady = true }) {
               </div>
             </div>
             </div>
-            {tab === 'channel' && showTabs && inq && (
+            {effTab === 'channel' && showChannelTab && inq && (
               <div className="p-foot">
                 <div className="row-actions" onClick={e => e.stopPropagation()}>
                   {/* 询价 = 直接加入询价暂存：已在车中则数量 +1，不在则新增且数量默认 1 */}
@@ -705,7 +714,7 @@ function H5Products({ push, platform, skReady = true }) {
                 </div>
               </div>
             )}
-            {(tab === 'mine' || !showTabs) && !platform && mine && (
+            {(effTab === 'mine' || !showTabs) && !platform && mine && (
               <div className="p-foot">
                 <div className="row-actions" onClick={e => e.stopPropagation()}>
                   <button className="h5-item-act" title={t('Adjust Price')} aria-label={t('Adjust Price')} onClick={() => push({ name: 'adjustPrice', productId: p.id })}><Icon name="tag" size={12} />{t('Adjust Price')}</button>
@@ -719,13 +728,18 @@ function H5Products({ push, platform, skReady = true }) {
           </div>
           );
         })}
-      {rows.length === 0 && (tab === 'channel' && showTabs && upstream.length === 0 && !q
+      {rows.length === 0 && (effTab === 'channel' && showChannelTab && upstream.length === 0 && !q
         ? <H5Empty icon="building" message="No upstream suppliers" hint="This tab lists products from your upstream suppliers / parent agents. Suppliers and unlinked merchants have no channel products." />
         : (q || cat)
           ? <H5Empty icon="search" message="No products match the search" />
-          : (showTabs && tab === 'channel'
+            : (showChannelTab && effTab === 'channel'
             ? <H5Empty icon="search" message="No channel products" hint="Adjust the supplier filter or search keywords." />
-            : <H5Empty icon="box" message="No products yet" hint="Products you create or import appear here." />))}
+            : <div>
+              {/* P11 — guide fresh merchants straight to creation: the Web
+                  console lands on Product List by default */}
+              <H5Empty icon="box" message="No products yet" hint="Products you create or import appear here." />
+              <button className="h5-btn" style={{ width: '100%', marginTop: 8 }} onClick={() => setView('web')}><Icon name="desktop" size={13} />{t('Create a product in the Web console')}</button>
+            </div>))}
       <div className="muted h5-loadmore" style={{ textAlign: 'center', fontSize: 11, marginTop: 16 }}>Pull down to refresh · pull up to load more</div>
 
       </React.Fragment>)}
@@ -1064,6 +1078,9 @@ function H5Mine({ push }) {
       </div>
       <div className="h5-tabbody">
       <div className="h5-section-title">Switch Demo Account <span className="mini-chip demo">DEMO</span></div>
+      {/* P12 — the switcher filters by data scope; say so instead of letting a
+          first-time user misread a shorter list as missing accounts */}
+      <div className="muted" style={{ fontSize: 11.5, marginBottom: 8 }}>{t('Showing accounts within your data scope — own merchant, linked partners and platform')}</div>
       {switchable.map(a => (
         <div key={a.id} className={`h5-cell${a.id === account.id ? '' : ''}`} onClick={() => switchAccount(a.id)} style={a.id === account.id ? { outline: '2px solid var(--primary)' } : null}>
           <span className="cell-icon" style={{ background: a.type === 'platform' ? 'var(--purple-light)' : 'var(--primary-light)', color: a.type === 'platform' ? 'var(--purple)' : 'var(--primary)' }}>
