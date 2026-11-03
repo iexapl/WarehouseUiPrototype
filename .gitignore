@@ -30,3 +30,22 @@ temp/
 
 # Agent files
 .agent/
+
+# ---- platform / packaging residue (must never reach the repo) ----
+# The Miaoda (妙搭) container drops these into the app directory and they were
+# previously baked into the shipped zip; they are not part of the prototype.
+.agent-memory/
+.spark/
+.upgrade-manifest.json
+source_package/
+rt/
+
+# Stray files written by mis-quoted shell commands while packaging
+# (e.g. curl's "--full-page" style arguments landing as file names)
+--full-page
+*-full-page
+
+# Screenshots / local capture output
+/screenshot*.png
+/full-page*.png
+screenshots/

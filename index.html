@@ -7,6 +7,11 @@
   <meta name="creative-medium" content="interactive-prototype" />
   <meta name="description" content="Tiered agent warehouse system — MVP-stage multi-endpoint permission-adaptive high-fidelity UI prototype (Web console + mobile), bilingual EN/中文 interface, demo login page with mobile-first entry." />
   <link rel="preconnect" href="https://miaoda.feishu.cn" />
+  <!-- the SDK scripts below are classic (non-CORS) requests, so the preconnect
+       must NOT carry crossorigin — that would open a separate CORS connection
+       pool which the plain script requests can never reuse -->
+  <link rel="preconnect" href="https://sf3-scmcdn-cn.feishucdn.com" />
+  <link rel="dns-prefetch" href="https://sf3-scmcdn-cn.feishucdn.com" />
   <link rel="stylesheet" href="https://miaoda.feishu.cn/fonts/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" />
   <link rel="stylesheet" href="styles.css" />
   <style>
@@ -52,10 +57,17 @@
     // shows a loading state, watches the boot, surfaces global errors and
     // offers retry/keep-waiting instead of a silent white screen.
     (function () {
-      var BOOT_TIMEOUT = 20000;    // first chance: 20s (slow phones compile JSX slowly)
-      var EXTEND_TIMEOUT = 30000;  // "keep waiting" grants another 30s
+      var BOOT_TIMEOUT = 45000;    // first chance: 45s (slow phones compile JSX slowly)
+      var EXTEND_TIMEOUT = 60000;  // "keep waiting" grants another 60s
+      var HARD_CAP = 300000;       // absolute ceiling: 5 min — never wait forever
+      var SLOW_HINT_AFTER = 15000; // after 15s, tell the user a slow network is expected
       var errors = [];
       var watchdog = null;
+      var softDeadline = 0;        // rolling window: extended while progress is seen
+      var hardDeadline = 0;        // absolute ceiling for the current attempt
+      var slowHintShown = false;
+      var lastProgressCount = -1;
+      var netProgressSeen = false;
       window.__APP_BOOTED = false;
       window.__bootErrors = errors;
 
@@ -68,13 +80,75 @@
       function clearWatchdog() {
         if (watchdog) { clearTimeout(watchdog); watchdog = null; }
       }
+      // Objective "has the network delivered anything yet?" signal. Resource
+      // Timing entries appear as each resource completes, so this needs no
+      // cooperation from the app scripts and works while they are still
+      // arriving. It is deliberately sticky: once the browser has proven it can
+      // download from this network, we keep waiting up to HARD_CAP rather than
+      // interrupting a user who is simply on a slow link. Genuine breakage is
+      // caught immediately by the explicit error paths (CDN onerror,
+      // window.__showBootError, the boot script's own throw).
+      function progressMark() {
+        try {
+          if (window.performance && performance.getEntriesByType) {
+            return performance.getEntriesByType('resource').length;
+          }
+        } catch (e) { /* noop */ }
+        return 0;
+      }
+      function showSlowHint() {
+        if (slowHintShown) { return; }
+        slowHintShown = true;
+        var t = document.querySelector('.boot-loading-text');
+        if (t) {
+          t.textContent = '正在加载原型 · Loading prototype… 网络较慢，首次加载可能需要几分钟，请保持本页打开 · Slow network detected — the first load may take a few minutes, please keep this page open.';
+        }
+      }
       function arm(ms) {
         clearWatchdog();
-        watchdog = setTimeout(function () {
-          if (window.__APP_BOOTED) { return; }
-          errors.push('Boot watchdog: app did not render within ' + Math.round(ms / 1000) + 's');
-          showPanel();
-        }, ms);
+        var now = Date.now();
+        var windowMs = ms;
+        softDeadline = now + windowMs;
+        if (!hardDeadline) { hardDeadline = now + HARD_CAP; }
+        lastProgressCount = progressMark();
+
+        watchdog = setInterval(function () {
+          if (window.__APP_BOOTED) { clearWatchdog(); return; }
+          var t = Date.now();
+
+          // Any newly finished resource is objective evidence that the network
+          // is still delivering — extend the window quietly instead of alarming
+          // someone who is merely on a slow link.
+          var marks = progressMark();
+          if (marks > lastProgressCount) {
+            netProgressSeen = true;
+            lastProgressCount = marks;
+          }
+
+          if (!slowHintShown && t - now >= SLOW_HINT_AFTER) { showSlowHint(); }
+
+          if (t >= hardDeadline) {
+            clearWatchdog();
+            errors.push('Boot watchdog: still not rendered after ' +
+                        Math.round(HARD_CAP / 1000) + 's — giving up');
+            showPanel();
+            return;
+          }
+
+          if (t >= softDeadline) {
+            if (netProgressSeen && errors.length === 0) {
+              // Downloads are in flight and nothing has failed yet: this is a
+              // slow connection, not a broken one. Keep waiting to the hard cap.
+              softDeadline = Math.min(t + windowMs, hardDeadline);
+              return;
+            }
+            clearWatchdog();
+            errors.push('Boot watchdog: app did not render within ' +
+                        Math.round(windowMs / 1000) +
+                        's and no download progress was observed');
+            showPanel();
+          }
+        }, 1000);
       }
       function showPanel() {
         var p = document.getElementById('boot-error-panel');
@@ -84,9 +158,9 @@
           card.appendChild(el('div', 'boot-icon', '!'));
           card.appendChild(el('div', 'boot-title', '原型加载失败 · Failed to load the prototype'));
           var desc = el('div', 'boot-desc');
-          desc.appendChild(document.createTextNode('长时间未见界面渲染，通常是网络受限导致核心脚本或浏览器内编译器未能加载。可重试加载，或继续等待慢速网络。'));
+          desc.appendChild(document.createTextNode('长时间未见界面渲染，通常是网络受限导致核心脚本或浏览器内编译器未能加载。可重试加载，或继续等待慢速网络（首次加载在慢速网络下可能需要几分钟）。'));
           desc.appendChild(el('br'));
-          desc.appendChild(document.createTextNode('The page did not render in time — most likely the core scripts or the in-browser compiler could not load over this network. Retry, or keep waiting on a slow connection.'));
+          desc.appendChild(document.createTextNode('The page did not render in time — most likely the core scripts or the in-browser compiler could not load over this network. Retry, or keep waiting: on a slow connection the first load can take several minutes.'));
           card.appendChild(desc);
           var btns = el('div', 'boot-btns');
           var retry = el('button', 'boot-btn boot-btn-primary', '重试 · Reload');
@@ -97,6 +171,11 @@
           wait.onclick = function () {
             var panel = document.getElementById('boot-error-panel');
             if (panel && panel.parentNode) { panel.parentNode.removeChild(panel); }
+            // A manual "keep waiting" grants a fresh hard cap too — otherwise a
+            // user who is on a very slow link would be trapped at the old ceiling.
+            hardDeadline = Math.max(hardDeadline, Date.now() + HARD_CAP);
+            errors.length = 0;   // the user has acknowledged the situation
+            netProgressSeen = true;
             arm(EXTEND_TIMEOUT);
           };
           btns.appendChild(retry);
