@@ -1803,7 +1803,7 @@ function H5SettingsPage({ onDone }) {
         <div className="h5-section-title">{t('AI discount boundary')}</div>
         <div className="muted small" style={{ marginBottom: 8 }}>{t('Defaults when not configured: 3% floor / 1% per round / up to 3 rounds')}</div>
         <div className="h5-form-row">
-          <span className="k">{t('Lowest allowed discount (0.97 = 3% off)')}</span>
+          <span className="k">{t('Lowest allowed discount (0.97 = 3% off = 97% of list price)')}</span>
           <div style={{ flex: 1 }}>
             <input className="input mono" style={{ height: 32, width: '100%' }} type="number" step="0.01" min="0.5" max="1" value={ai.floorDiscount}
               onChange={e => setAi({ ...ai, floorDiscount: e.target.value })} />

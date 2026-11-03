@@ -1774,7 +1774,7 @@ function SettingsPage() {
         <div className="card-title">{t('AI discount boundary')}</div>
         <div className="muted small" style={{ marginBottom: 10 }}>{t('Defaults when not configured: 3% floor / 1% per round / up to 3 rounds')}</div>
         <div className="flex gap10" style={{ alignItems: 'center', marginBottom: 10 }}>
-          <span className="k" style={{ width: 150 }}>{t('Lowest allowed discount (0.97 = 3% off)')}</span>
+          <span className="k" style={{ width: 150 }}>{t('Lowest allowed discount (0.97 = 3% off = 97% of list price)')}</span>
           <input className="input mono" style={{ width: 120, height: 32 }} type="number" step="0.01" min="0.5" max="1" value={ai.floorDiscount}
             onChange={e => setAi({ ...ai, floorDiscount: e.target.value })} />
         </div>
