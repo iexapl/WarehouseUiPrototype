@@ -8,19 +8,24 @@
 // ---------- new product (MVP #1 商品录入) ----------
 function H5ProductFormPage({ onDone }) {
   const { db, account, act, toast } = useApp();
-  const [f, setF] = useState({ name: '', spec: '', model: '', brand: '', unit: 'pcs', price: '', currency: 'USD', stock: '', onSale: true, images: [] });
+  const [f, setF] = useState({ name: '', spec: '', model: '', brand: '', unit: 'pcs', price: '', currency: 'USD', stock: '', onSale: true, images: [], barcodeBody: '' });
   const [cats, setCats] = useState([]);
   const [errs, setErrs] = useState({});
   const set = (k, v) => setF(s => ({ ...s, [k]: v }));
+  // R05 — 前缀只读（商户属性），主体码可编辑
+  const prefix = ownBarcodePrefix(db, account);
   const save = () => {
     const e = {};
     if (!f.name.trim()) e.name = 'Required';
     if (f.price === '' || isNaN(Number(f.price)) || Number(f.price) <= 0) e.price = 'Enter a price > 0';
     if (f.stock !== '' && (isNaN(Number(f.stock)) || Number(f.stock) < 0)) e.stock = 'Enter stock >= 0';
     if (f.model && db.products.some(p => p.model && p.model.toLowerCase() === f.model.trim().toLowerCase())) e.model = 'Model already exists';
+    // AC-05-04 — 全平台条码唯一，空条码放行
+    const barcode = composeBarcode(prefix, f.barcodeBody);
+    if (barcode && findBarcodeConflict(db, barcode, null)) e.barcode = 'Barcode already used';
     setErrs(e);
     if (Object.keys(e).length) { toast('Please fix the highlighted fields', 'error'); return; }
-    act.createProduct({ ...f, name: f.name.trim(), model: f.model.trim(), categories: cats, onSale: f.onSale });
+    act.createProduct({ ...f, name: f.name.trim(), model: f.model.trim(), barcode, barcodeBody: String(f.barcodeBody || '').trim(), categories: cats, onSale: f.onSale });
     onDone();
   };
   return (
@@ -32,6 +37,14 @@ function H5ProductFormPage({ onDone }) {
         <div className="h5-form-row"><span className="k">Spec</span><input className="input" style={{ height: 32, flex: 1 }} value={f.spec} onChange={e => set('spec', e.target.value)} placeholder="e.g. 5kW / MPPT / 48V" /></div>
         <div className="h5-form-row"><span className="k">Model</span><div style={{ flex: 1 }}><input className="input" style={{ height: 32, width: '100%' }} value={f.model} onChange={e => set('model', e.target.value)} placeholder="unique, e.g. SK-INV-5K" />{errs.model && <div className="field-error">{errs.model}</div>}</div></div>
         <div className="h5-form-row"><span className="k">Brand</span><input className="input" style={{ height: 32, flex: 1 }} value={f.brand} onChange={e => set('brand', e.target.value)} placeholder="e.g. SunKing" /></div>
+        {/* R05 — 条码与型号互不替代（AC-05-01）；前缀只读 + 主体码可编辑（AC-05-02） */}
+        <div className="h5-form-row"><span className="k">Barcode</span>
+          <div style={{ flex: 1, display: 'flex' }}>
+            {prefix ? <span className="h5-prefix-chip">{prefix}</span> : null}
+            <input className="input" style={{ height: 32, flex: 1, minWidth: 0 }} value={f.barcodeBody} onChange={e => set('barcodeBody', e.target.value)} placeholder="e.g. INV5K01" />
+          </div>
+          {errs.barcode && <span className="field-error">{errs.barcode}</span>}
+        </div>
         <div className="h5-form-row"><span className="k">Unit</span><div style={{ flex: 1 }}><Select value={f.unit} onChange={v => set('unit', v)} options={['pcs', 'set', 'box', 'kg'].map(u => ({ value: u, label: u }))} style={{ height: 32 }} /></div></div>
         <div className="h5-form-row"><span className="k">Price *</span><div style={{ flex: 1, display: 'flex', gap: 8, alignItems: 'center' }}><Select value={f.currency} onChange={v => set('currency', v)} options={['USD', 'CNY', 'NGN'].map(c => ({ value: c, label: c }))} style={{ height: 32, width: 88 }} /><input className="input" style={{ height: 32, flex: 1 }} type="number" value={f.price} onChange={e => set('price', e.target.value)} placeholder="0.00" /></div>{errs.price && <span className="field-error">{errs.price}</span>}</div>
         <div className="h5-form-row"><span className="k">Stock</span><div style={{ flex: 1 }}><input className="input" style={{ height: 32, width: '100%' }} type="number" value={f.stock} onChange={e => set('stock', e.target.value)} placeholder="initial stock, e.g. 100" />{errs.stock && <div className="field-error">{errs.stock}</div>}</div></div>
@@ -60,25 +73,166 @@ function H5ProductFormPage({ onDone }) {
 // 对应暂存单（入库暂存 / 出库暂存，跨页面保留），遵循既有 +1 规则与
 // 表单能力（入库含单价/币种/供货方，出库含收货方）。模式反馈：
 // segment 高亮 + 扫码框取景器随模式变色 + 每次扫码 toast 提示去向。
+// R04 — 扫码预览卡片（独立于扫描页，六字段 + 三动作）
+// 既有商品走「复用 / 另建」二选；新商品路径的字段在卡片里即可编辑，
+// 确认填入后再落到入库暂存单的行表单里继续可改（AC-04-04）。
+function ScanPreviewCard({ pv, onPatch, onReuse, onConfirm, onAsNew, onRescan, onManual }) {
+  const { t } = window;
+  const existing = !!pv.hit && !pv.asNew;
+  const f = pv.f || {};
+  const setF = (k, v) => onPatch({ ...pv, f: { ...f, [k]: v } });
+  const rows = [
+    { k: 'name', label: t('Name'), ph: t('e.g. Solar Inverter 5kW') },
+    { k: 'spec', label: t('Specification'), ph: t('e.g. 5kW / MPPT / 48V') },
+    { k: 'model', label: t('Model'), ph: t('e.g. SK-INV-5K') },
+    { k: 'brand', label: t('Brand'), ph: t('e.g. SunKing') },
+  ];
+  return (
+    <div className="h5-card mt12">
+      <div className="flex" style={{ alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+        <div className="flex gap6" style={{ alignItems: 'center', minWidth: 0 }}>
+          <Icon name={existing ? 'check' : 'scan'} size={15} />
+          <span style={{ fontSize: 13.5, fontWeight: 600 }}>{existing ? t('Existing product') : t('Scan result')}</span>
+        </div>
+        {existing ? <Tag tone="teal" dot>{t('Existing product')}</Tag>
+          : (pv.hit ? <Tag tone="warning">{t('Create as a new product')}</Tag> : <Tag tone="warning">{t('Not recognized')}</Tag>)}
+      </div>
+      {/* AC-04-07 — 命中已建档商品；AC-04-09 — 已在暂存中则提示数量 +1 */}
+      {pv.hit && (
+        <div className="h5-scan-preview-note info">
+          <Icon name="info" size={12} />
+          <span>{t('Already in your catalog')}{pv.inStaging ? ' — ' + t('already in staging, confirming adds +1') : ''}</span>
+        </div>
+      )}
+      {!pv.hit && (
+        <div className="h5-scan-preview-note warn">
+          <Icon name="error" size={12} />
+          <span>{t('Not recognized — please fill in manually')}</span>
+        </div>
+      )}
+      {/* AC-04-08 — 条码归属：本商户码 / 非本商户编码 */}
+      {pv.prefixKind === 'foreign' ? (
+        <div className="h5-scan-preview-note warn">
+          <Icon name="error" size={12} />
+          <span>{t('Not a barcode of this merchant')}{pv.prefixTenant ? ' — ' + pv.prefixTenant.name : ''}</span>
+        </div>
+      ) : pv.prefixKind === 'own' ? (
+        <div className="h5-scan-preview-note info">
+          <Icon name="check" size={12} />
+          <span>{t('Barcode of this merchant')}</span>
+        </div>
+      ) : null}
+      {/* 六字段：名称 / 规格 / 型号 / 品牌 / 单位 / 条码 */}
+      <div className="mt8">
+        {rows.map(r => (
+          <div className="h5-form-row" key={r.k}>
+            <span className="k h5-k-fit">{r.label}</span>
+            {existing
+              ? <div style={{ flex: 1, fontSize: 12.5 }}>{String((pv.hit || {})[r.k] || '—')}</div>
+              : <input className="input" style={{ height: 32, width: '100%' }} value={f[r.k] || ''} placeholder={r.ph} onChange={e => setF(r.k, e.target.value)} />}
+          </div>
+        ))}
+        <div className="h5-form-row">
+          <span className="k h5-k-fit">{t('Unit')}</span>
+          {existing
+            ? <div style={{ flex: 1, fontSize: 12.5 }}>{String((pv.hit || {}).unit || '—')}</div>
+            : <div style={{ flex: 1 }}><Select value={f.unit || 'pcs'} onChange={v => setF('unit', v)} options={['pcs', 'set', 'box', 'kg'].map(u => ({ value: u, label: u }))} style={{ height: 32 }} /></div>}
+        </div>
+        <div className="h5-form-row">
+          <span className="k h5-k-fit">{t('Barcode')}</span>
+          <div style={{ flex: 1, display: 'flex' }}>
+            {pv.prefix && pv.prefixKind !== 'none' ? <span className="h5-prefix-chip">{pv.prefix}</span> : null}
+            {existing
+              ? <div style={{ flex: 1, fontSize: 12.5, fontFamily: 'var(--mono)' }}>{String(pv.barcode || '—')}</div>
+              : <input className="input" style={{ height: 32, flex: 1, minWidth: 0 }} value={f.barcodeBody || ''} placeholder={t('e.g. INV5K01')} onChange={e => setF('barcodeBody', e.target.value)} />}
+          </div>
+        </div>
+      </div>
+      {/* AC-04-03 — 三个明确动作；既有商品额外给「复用 / 另建」二选 */}
+      <div className="flex gap8 mt12" style={{ flexWrap: 'wrap' }}>
+        {existing ? (
+          <React.Fragment>
+            <button type="button" className="h5-btn primary" style={{ flex: 1, minWidth: 150 }} onClick={onReuse}><Icon name="check" size={14} />{t('Reuse and add to staging')}</button>
+            <button type="button" className="h5-btn" style={{ flex: 1, minWidth: 120 }} onClick={onAsNew}><Icon name="plus" size={14} />{t('Create as a new product')}</button>
+          </React.Fragment>
+        ) : (
+          <button type="button" className="h5-btn primary" style={{ flex: 1, minWidth: 150 }} onClick={onConfirm}><Icon name="check" size={14} />{t('Confirm and fill in')}</button>
+        )}
+        <button type="button" className="h5-btn" style={{ flex: 1, minWidth: 110 }} onClick={onRescan}><Icon name="scan" size={14} />{t('Scan again')}</button>
+        <button type="button" className="h5-btn" style={{ flex: 1, minWidth: 110 }} onClick={onManual}><Icon name="edit" size={14} />{t('Fill in manually')}</button>
+      </div>
+    </div>
+  );
+}
+
 function H5ScanPage({ onDone, initialMode = 'inbound' }) {
   const { db, account, toast, cartApi, carts } = useApp();
   const [mode, setMode] = useState(initialMode === 'outbound' ? 'outbound' : 'inbound'); // 'inbound' | 'outbound'
   const [manual, setManual] = useState('');
+  // R04 — 三态：idle → recognizing → preview。识别阶段绝不写 carts（AC-04-05）。
+  const [phase, setPhase] = useState('idle'); // 'idle' | 'recognizing' | 'preview'
+  const [pv, setPv] = useState(null);
   const own = db.products.filter(p => p.ownerId === account.tenantId);
   const stockOf = pid => (db.stock[account.tenantId] || {})[pid] || 0;
+  const ownPrefix = ownBarcodePrefix(db, account);
+
+  // R04 — 识别来源是本地商品库（原型不做真 AI）：条码 → 商品
+  const matchOwn = (code) => {
+    const key = String(code || '').trim().toLowerCase();
+    if (!key) return null;
+    return own.find(p => String(p.barcode || '').trim().toLowerCase() === key)
+      || own.find(p => String(p.barcodeBody || '').trim().toLowerCase() === key)
+      || own.find(p => (p.model || '').toLowerCase() === key)
+      || own.find(p => (p.model || '').toLowerCase().includes(key) || (p.name || '').toLowerCase().includes(key))
+      || null;
+  };
+  // R05 前缀归属判定：本商户 / 他商户 / 无前缀
+  const prefixOwner = (code) => {
+    const pre = splitBarcode(code).prefix.toUpperCase();
+    if (!pre) return { kind: 'none', prefix: '' };
+    if (pre === String(ownPrefix || '').toUpperCase()) return { kind: 'own', prefix: pre };
+    const other = db.tenants.find(t => String(t.barcodePrefix || '').toUpperCase() === pre);
+    return { kind: 'foreign', prefix: pre, tenant: other || null };
+  };
+
+  // R04 — 进入识别过渡态；900ms 后出预览卡片
+  const startRecognize = (rawCode) => {
+    const code = String(rawCode || '').trim();
+    if (!code) { toast('Enter a barcode / product code / name first', 'error'); return; }
+    setPhase('recognizing');
+    setPv({ code });
+    setTimeout(() => {
+      const hit = matchOwn(code);
+      const po = prefixOwner(code);
+      const bar = splitBarcode(code);
+      // 本商户码原样保留；他商户码按外部条码处理（AC-04-08）；
+      // 无前缀则补上本商户前缀（R05）
+      const barcode = po.kind === 'none' ? composeBarcode(ownPrefix, code) : code;
+      const inStaging = hit ? inLines(carts).some(l => l.kind === 'exist' && l.pid === hit.id) : false;
+      setPv({
+        code, hit: hit || null, asNew: false,
+        prefix: po.kind === 'none' ? String(ownPrefix || '') : po.prefix,
+        prefixKind: po.kind, prefixTenant: po.tenant || null,
+        barcode, barcodeBody: bar.body, inStaging,
+        f: {
+          name: hit ? hit.name : '', spec: hit ? hit.spec : '', model: hit ? hit.model : '',
+          brand: hit ? hit.brand : '', unit: hit ? hit.unit : 'pcs',
+          barcodeBody: bar.body,
+        },
+      });
+      setPhase('preview');
+    }, 900);
+  };
 
   const addExisting = (pid, label) => {
-    cartApi.add('inbound', { kind: 'exist', pid, qty: 1 });
-    if (label) toast(`Scanned ${label} — added to inbound staging`, 'success');
-  };
-  const addNew = (code) => {
-    const c = String(code || '').trim();
-    cartApi.add('inbound', { kind: 'new', code: c, name: '', unit: 'pcs', price: '', qty: 1 });
-    toast(`Unknown code ${c || '(blank)'} — stock in as a new product`, 'info');
+    // R07 — 未选供应商时 cartApi.add 拦截并提示（AC-07-03）
+    const ok = cartApi.add('inbound', { kind: 'exist', pid, qty: 1 });
+    if (ok && label) toast(`Scanned ${label} — added to inbound staging`, 'success');
   };
   const addOut = (pid, label) => {
-    cartApi.add('outbound', { pid, qty: 1 });
-    if (label) toast(`Scanned ${label} — added to outbound staging`, 'success');
+    // R11 — 无活跃车或未绑收货方时 cartApi.add 拦截并提示（AC-11-02）
+    const ok = cartApi.add('outbound', { pid, qty: 1 });
+    if (ok && label) toast(`Scanned ${label} — added to outbound staging`, 'success');
   };
 
   // demo scans — inbound: any own product (existing) or an unknown barcode
@@ -87,23 +241,49 @@ function H5ScanPage({ onDone, initialMode = 'inbound' }) {
   const scanDemoExist = () => {
     if (!own.length) { toast('No products in your warehouse yet', 'error'); return; }
     const p = own[Math.floor(Math.random() * own.length)];
-    addExisting(p.id, p.model || p.name);
+    startRecognize(p.barcode || p.barcodeBody || p.model || p.name);
   };
-  const scanDemoNew = () => addNew('SKU-NEW-' + String(1000 + Math.floor(Math.random() * 9000)));
+  const scanDemoNew = () => startRecognize('SKU-NEW-' + String(1000 + Math.floor(Math.random() * 9000)));
   const scanDemoOut = () => {
     if (!outPool.length) { toast('No products in stock to outbound', 'error'); return; }
     const p = outPool[Math.floor(Math.random() * outPool.length)];
     addOut(p.id, p.model || p.name);
   };
-  // manual entry (inbound): exact/substring match against own products
-  // (model first, then name); unknown code joins as a new-product line
+  // manual entry (inbound) — 进识别流程，不再直接入车（AC-04-01）
   const addManual = () => {
-    const key = String(manual || '').trim().toLowerCase();
+    const key = String(manual || '').trim();
     if (!key) { toast('Enter a barcode / product code / name first', 'error'); return; }
-    const hit = own.find(p => (p.model || '').toLowerCase() === key) || own.find(p => (p.model || '').toLowerCase().includes(key) || (p.name || '').toLowerCase().includes(key));
-    if (hit) addExisting(hit.id, hit.model || hit.name);
-    else addNew(manual.trim());
     setManual('');
+    startRecognize(key);
+  };
+
+  // ---- 预览动作 ----
+  const confirmPreview = () => {
+    const f = pv.f || {};
+    const barcode = pv.prefixKind === 'foreign'
+      ? pv.barcode
+      : composeBarcode(ownPrefix, f.barcodeBody);
+    const ok = cartApi.add('inbound', {
+      kind: 'new', code: pv.code, barcode, barcodeBody: String(f.barcodeBody || '').trim(),
+      name: String(f.name || '').trim(), spec: String(f.spec || '').trim(), model: String(f.model || '').trim(),
+      brand: String(f.brand || '').trim(), unit: f.unit || 'pcs', price: '', qty: 1,
+    });
+    if (ok) toast(`Barcode ${barcode || pv.code} — added to inbound staging`, 'success');
+    setPhase('idle'); setPv(null);
+  };
+  const reusePreview = () => {
+    const pid = pv.hit && pv.hit.id;
+    if (pid) addExisting(pid, pv.hit.model || pv.hit.name);
+    setPhase('idle'); setPv(null);
+  };
+  const asNewPreview = () => setPv({ ...pv, asNew: true });
+  const rescan = () => { setPhase('idle'); setPv(null); };
+  const manualFill = () => {
+    setPv({
+      ...pv, hit: null, asNew: true,
+      prefix: String(ownPrefix || ''), prefixKind: 'none', prefixTenant: null,
+      f: { name: '', spec: '', model: '', brand: '', unit: 'pcs', barcodeBody: pv.barcodeBody || '' },
+    });
   };
 
   return (
@@ -122,6 +302,33 @@ function H5ScanPage({ onDone, initialMode = 'inbound' }) {
         <Icon name="scan" size={34} style={{ color: 'rgba(255,255,255,0.85)' }} />
         <div style={{ color: 'rgba(255,255,255,0.75)', fontSize: 12.5, textAlign: 'center', padding: '0 40px' }}>{t('Align the product barcode with the viewfinder')}</div>
       </div>
+      {/* AC-04-01 — 识别过渡态：明确 loading 表现，不直接入车 */}
+      {phase === 'recognizing' && (
+        <div className="h5-card mt12" aria-busy="true">
+          <div className="flex gap10" style={{ alignItems: 'center' }}>
+            <span className="h5-spinner" />
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: 13, fontWeight: 600 }}>{t('Recognizing…')}</div>
+              <div className="muted mono" style={{ fontSize: 11 }}>{String(pv && pv.code || '')}</div>
+            </div>
+          </div>
+          <div className="skeleton h5-skel-line" style={{ width: '72%' }} />
+          <div className="skeleton h5-skel-line" style={{ width: '54%' }} />
+          <div className="skeleton h5-skel-line" style={{ width: '63%' }} />
+        </div>
+      )}
+      {/* AC-04-02/03 — 预览卡片 */}
+      {phase === 'preview' && pv && (
+        <ScanPreviewCard
+          pv={pv}
+          onPatch={setPv}
+          onConfirm={confirmPreview}
+          onReuse={reusePreview}
+          onAsNew={asNewPreview}
+          onRescan={rescan}
+          onManual={manualFill}
+        />
+      )}
       {mode === 'inbound' ? (
         <React.Fragment>
           <div className="flex gap10 mt12">
@@ -145,10 +352,11 @@ function H5ScanPage({ onDone, initialMode = 'inbound' }) {
           <div className="h5-card mt12 muted" style={{ fontSize: 11.5, lineHeight: 1.6 }}><Icon name="info" size={12} /> {t('An inbound item may already be in your warehouse (matched automatically — stock accumulates) or brand new (quick-profiled below, then stocked in)')}</div>
         </React.Fragment>
       ) : (
+        // AC-04-10 — 出库模式完全绕过预览，直接入车
         <button className="h5-btn mt12" style={{ width: '100%' }} onClick={scanDemoOut} disabled={!outPool.length}><Icon name="scan" size={14} />{t('Demo: scan an item')}</button>
       )}
 
-      <div className="h5-section-title mt12">{t(mode === 'inbound' ? 'Inbound Staging' : 'Outbound Staging')} · {(mode === 'inbound' ? (carts.inbound || []) : (carts.outbound || [])).length}</div>
+      <div className="h5-section-title mt12">{t(mode === 'inbound' ? 'Inbound Staging' : 'Outbound Staging')} · {mode === 'inbound' ? inLines(carts).length : outLineCount(carts)}</div>
       {mode === 'inbound' ? <InboundCartEditor onDone={onDone} /> : <OutboundCartEditor onDone={onDone} />}
     </div>
   );
@@ -476,7 +684,7 @@ function H5PrintPage({ docId }) {
           <div><span className="muted">Date:</span> {doc.createdAt}</div>
         </div>
         <table className="table" style={{ marginTop: 12, fontSize: 10 }}>
-          <thead><tr><th>Product</th><th>Spec</th><th>Qty</th><th className="right">Unit Price</th><th className="right">Amount</th></tr></thead>
+          <thead><tr><th>Product</th><th>Spec</th><th>Qty</th><th className="right">Channel Sales Price</th><th className="right">Amount</th></tr></thead>
           <tbody>
             {doc.items.map((it, i) => (
               <tr key={i}><td>{it.name}</td><td className="mono small">{it.spec}</td><td className="mono">{it.qty}</td>
@@ -553,6 +761,8 @@ function GuestDocStage({ docNo, onExit }) {
 function H5GuestDocPage({ docNo, onExit }) {
   const { db, act, toast } = useApp();
   const doc = db.docs.find(d => d.no === docNo);
+  // R16 — 访客录单页签名（手写 / 点选确认）
+  const [signature, setSignature] = useState(null);
   if (!doc) {
     return (
       <div className="h5-app">
@@ -605,10 +815,12 @@ function H5GuestDocPage({ docNo, onExit }) {
           {canConfirm ? (
             <React.Fragment>
               <div className="h5-card mt12 muted" style={{ fontSize: 11.5, lineHeight: 1.6 }}><Icon name="info" size={13} /> Confirming here increases your stock and generates the inbound record (RK-) — attributed to {buyerMain ? buyerMain.name : t('the buyer main account')} (demo).</div>
+              <div className="h5-section-title mt12">{t('Signature (optional)')}</div>
+              <div className="h5-card"><SignatureBox value={signature} onChange={setSignature} /></div>
               <div className="h5-actionbar">
                 <button className="h5-btn" onClick={onExit}><Icon name="user" size={14} />Sign In</button>
                 <button className="h5-btn success" onClick={() => {
-                  act.receive(doc, 'accept', null, '', buyerMain || null);
+                  act.receive(doc, 'accept', null, '', buyerMain || null, signature);
                 }}><Icon name="checkDouble" size={14} />Confirm Receipt</button>
               </div>
             </React.Fragment>
@@ -747,18 +959,20 @@ function H5AdminPage({ setConfirm }) {
 }
 
 // ---------- team members + sub-agent + WhatsApp binding (MVP #45/#46, round 41 overhaul) ----------
-function H5MembersPage() {
+// ---------- R02 — H5 Team page (accounts of my own merchant) ----------
+// The sub-agent / distributor half moved to H5DistributorPage; both pages read
+// the SAME derivation helpers as the Web console (data.jsx deriveTeam /
+// deriveDistributors) so the two ends can never disagree on scope.
+function H5TeamPage() {
   const { db, account, tenant, act, toast } = useApp();
   const isTenant = account.type === 'tenant';
-  const members = isTenant ? db.accounts.filter(a => a.tenantId === account.tenantId) : [];
-  const subAgents = isTenant ? db.tenants.filter(t => db.relations.some(r => r.upstream === account.tenantId && r.downstream === t.id)) : [];
+  const members = deriveTeam(db, account);
   const canCreateSub = isTenant && tenant && (tenant.type === 'Supplier' || tenant.maxLevel > 1);
   const [q, setQ] = useState('');
   const kw = q.trim().toLowerCase();
   const shown = kw ? members.filter(a => (a.name || '').toLowerCase().includes(kw) || (a.phone || '').includes(kw)) : members;
   const waBound = members.filter(a => a.whatsapp).length;
   const [sfOpen, setSfOpen] = useState(false);
-  const [fOpen, setFOpen] = useState(false);
   const [detail, setDetail] = useState(null);
   const [edit, setEdit] = useState(null);
   const [ef, setEf] = useState({ name: '', phone: '', email: '', whatsapp: '', password: '' });
@@ -774,8 +988,6 @@ function H5MembersPage() {
     act.updateAccount(edit.id, { name: ef.name.trim(), phone: ef.phone.trim(), email: ef.email.trim() || null, whatsapp: ef.whatsapp.trim() || null, password: ef.password });
     setEdit(null);
   };
-  const [f, setF] = useState({ company: '', contact: '', phone: '', email: '', whatsapp: '', password: '', maxSubLevel: '1' });
-  const set = (k, v) => setF(s => ({ ...s, [k]: v }));
   const [sf, setSf] = useState({ name: '', phone: '', whatsapp: '', password: '' });
   const createSubAccount = () => {
     if (!sf.name.trim() || !sf.phone.trim()) { toast('Name and phone are required', 'error'); return; }
@@ -786,18 +998,6 @@ function H5MembersPage() {
     setSf({ name: '', phone: '', whatsapp: '', password: '' });
     setSfOpen(false);
   };
-  const createSubAgent = () => {
-    if (!f.company.trim() || !f.contact.trim() || !f.phone.trim()) { toast('Company, contact and phone are required', 'error'); return; }
-    if (!/^\+?[\d\s-]{7,}$/.test(f.phone.trim())) { toast('Enter a valid phone number', 'error'); return; }
-    if (!f.whatsapp.trim()) { toast('WhatsApp number is required for master accounts', 'error'); return; }
-    if (!/^\+?[\d\s-]{7,}$/.test(f.whatsapp.trim())) { toast('Enter a valid WhatsApp number', 'error'); return; }
-    if (f.email.trim() && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(f.email.trim())) { toast('Enter a valid email address', 'error'); return; }
-    if (!f.password) { toast('Password is required', 'error'); return; }
-    if (f.password.length < 6) { toast('At least 6 characters', 'error'); return; }
-    act.createSubAgent({ ...f, company: f.company.trim(), contact: f.contact.trim(), phone: f.phone.trim(), email: f.email.trim() || null, whatsapp: f.whatsapp.trim() || null });
-    setF({ company: '', contact: '', phone: '', email: '', whatsapp: '', password: '', maxSubLevel: '1' });
-    setFOpen(false);
-  };
   return (
     <div className="h5-pad">
       <div className="h5-section-title">{isTenant ? tenant.name : 'Platform'} · Members</div>
@@ -806,7 +1006,6 @@ function H5MembersPage() {
         <div className="h5-stat"><div className="l">Members</div><div className="v">{members.length}</div></div>
         <div className="h5-stat"><div className="l">Main account</div><div className="v">{members.filter(a => a.main).length}</div></div>
         <div className="h5-stat"><div className="l">WhatsApp bound</div><div className="v">{waBound}/{members.length}</div></div>
-        <div className="h5-stat"><div className="l">Sub-agents</div><div className="v">{subAgents.length}</div></div>
       </div>
 
       <div className="h5-filter-head" style={{ margin: '14px 0 10px' }}>
@@ -844,37 +1043,6 @@ function H5MembersPage() {
         </div>
       ))}
 
-      {isTenant && (
-        <React.Fragment>
-          <div className="h5-section-title">My Sub-Agents{subAgents.length > 0 && <span className="mini-chip" style={{ marginLeft: 6 }}>{subAgents.length}</span>}</div>
-          {subAgents.length === 0 ? (
-            <div className="h5-card" style={{ padding: '20px 14px', textAlign: 'center' }}>
-              <div className="muted" style={{ fontSize: 12.5 }}>No sub-agents yet</div>
-            </div>
-          ) : subAgents.map(t => (
-            <div key={t.id} className="h5-cell">
-              <span className="cell-icon" style={{ background: 'var(--success-light)', color: 'var(--success)', flexShrink: 0 }}><Icon name="users" size={16} /></span>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13.5, fontWeight: 600 }}>{t.name}</div>
-                <div className="muted" style={{ fontSize: 11.5 }}>{window.t(`${t.code} · max level ${t.maxLevel} · since ${t.createdAt}`)}</div>
-              </div>
-              {t.status === 'Suspended' ? <Tag tone="danger">Suspended</Tag> : <Tag tone="teal">Active</Tag>}
-            </div>
-          ))}
-          {canCreateSub ? (
-            <button type="button" className="h5-btn primary mt12" style={{ width: '100%' }} onClick={() => setFOpen(true)}>
-              <Icon name="plus" size={14} />Add Sub-Agent
-            </button>
-          ) : (tenant && tenant.maxLevel != null && (
-            <React.Fragment>
-              <button type="button" className="h5-btn primary mt12" style={{ width: '100%', opacity: 0.55, cursor: 'not-allowed' }} disabled>
-                <Icon name="plus" size={14} />Add Sub-Agent
-              </button>
-              <div className="muted" style={{ fontSize: 11, padding: '4px 0 8px 4px' }}>{window.t(`You can develop up to ${tenant.maxLevel} levels of sub-agents`)}</div>
-            </React.Fragment>
-          ))}
-        </React.Fragment>
-      )}
 
       {detail && (
         <Dialog title="Member details" width="92%" onClose={() => setDetail(null)}
@@ -918,14 +1086,118 @@ function H5MembersPage() {
         </Dialog>
       )}
 
+    </div>
+  );
+}
+
+
+// ---------- R02 — H5 Distributors page (downstream merchants) ----------
+// Distributors are merchants in the relation graph, NOT accounts of mine.
+// Creating one registers the merchant + its master account + the relation in
+// one step (act.createSubAgent writes all three into the same db).
+function H5DistributorPage() {
+  const { db, account, tenant, act, toast } = useApp();
+  const isTenant = account.type === 'tenant';
+  const list = deriveDistributors(db, account);
+  const canCreateSub = isTenant && tenant && (tenant.type === 'Supplier' || Number(tenant.maxLevel) > 1);
+  const [q, setQ] = useState('');
+  const [fOpen, setFOpen] = useState(false);
+  const [invOpen, setInvOpen] = useState(false);   // R09 邀请分销商弹窗
+  const [labelFor, setLabelFor] = useState(null);
+  const [labelText, setLabelText] = useState('');
+  const [f, setF] = useState({ company: '', contact: '', phone: '', email: '', whatsapp: '', password: '', maxSubLevel: '1', levelLabel: '' });
+  const set = (k, v) => setF(s => ({ ...s, [k]: v }));
+  const kw = q.trim().toLowerCase();
+  const shown = kw ? list.filter(t => (t.name || '').toLowerCase().includes(kw) || (t.code || '').toLowerCase().includes(kw)) : list;
+  const createSubAgent = () => {
+    if (!f.company.trim() || !f.contact.trim() || !f.phone.trim()) { toast('Company, contact and phone are required', 'error'); return; }
+    if (!/^\+?[\d\s-]{7,}$/.test(f.phone.trim())) { toast('Enter a valid phone number', 'error'); return; }
+    if (!f.whatsapp.trim()) { toast('WhatsApp number is required for master accounts', 'error'); return; }
+    if (!/^\+?[\d\s-]{7,}$/.test(f.whatsapp.trim())) { toast('Enter a valid WhatsApp number', 'error'); return; }
+    if (f.email.trim() && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(f.email.trim())) { toast('Enter a valid email address', 'error'); return; }
+    if (!f.password) { toast('Password is required', 'error'); return; }
+    if (f.password.length < 6) { toast('At least 6 characters', 'error'); return; }
+    act.createSubAgent({ ...f, company: f.company.trim(), contact: f.contact.trim(), phone: f.phone.trim(), email: f.email.trim() || null, whatsapp: f.whatsapp.trim() || null });
+    setF({ company: '', contact: '', phone: '', email: '', whatsapp: '', password: '', maxSubLevel: '1', levelLabel: '' });
+    setFOpen(false);
+  };
+  const saveLabel = () => {
+    if (!labelFor) return;
+    act.setLevelLabel(labelFor.id, labelText);
+    setLabelFor(null);
+  };
+  return (
+    <div className="h5-pad">
+      <div className="h5-section-title">{isTenant ? (tenant ? tenant.name : '') : 'Platform'} · Distributors</div>
+      <div className="h5-stats">
+        <div className="h5-stat"><div className="l">Distributors</div><div className="v">{list.length}</div></div>
+        <div className="h5-stat"><div className="l">Active</div><div className="v">{list.filter(t => t.status === 'Active').length}</div></div>
+        <div className="h5-stat"><div className="l">Labelled</div><div className="v">{list.filter(t => !!t.levelLabel).length}</div></div>
+      </div>
+      <div className="h5-desc mt12">
+        <div className="h5-desc-row"><div className="k">Scope</div><div className="v">Downstream merchants of your own merchant</div></div>
+        <div className="h5-desc-row"><div className="k">Not listed here</div><div className="v">Sub-accounts of your own merchant — see Team</div></div>
+      </div>
+      <div className="h5-filter-head" style={{ margin: '14px 0 10px' }}>
+        <div className="search-box" style={{ flex: 1 }}>
+          <Icon name="search" size={14} />
+          <input className="input" value={q} onChange={e => setQ(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Escape') setQ(''); }} placeholder="Search distributors" aria-label="Search distributors" />
+        </div>
+        {isTenant && (
+          <React.Fragment>
+            {/* R09 — 邀请分销商：发邀请码建立关系 */}
+            <button type="button" className="btn" style={{ height: 30, flexShrink: 0 }} onClick={() => setInvOpen(true)}>
+              <Icon name="link" size={12} />Invite
+            </button>
+            <button type="button" className="btn primary" style={{ height: 30, flexShrink: 0 }} onClick={() => setFOpen(true)} disabled={!canCreateSub}>
+              <Icon name="plus" size={12} />Add Distributor
+            </button>
+          </React.Fragment>
+        )}
+      </div>
+      {shown.length === 0 ? (
+        <div className="h5-card" style={{ padding: '26px 14px', textAlign: 'center' }}>
+          <div className="muted" style={{ fontSize: 12.5 }}>{kw ? 'No matching distributors' : 'No distributors yet'}</div>
+        </div>
+      ) : shown.map(t => (
+        <div key={t.id} className="h5-cell">
+          <span className="cell-icon" style={{ background: 'var(--success-light)', color: 'var(--success)', flexShrink: 0 }}><Icon name="users" size={16} /></span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 13.5, fontWeight: 600 }}>{t.name}</div>
+            <div className="muted" style={{ fontSize: 11.5 }}>{window.t(`${t.code} · max level ${t.maxLevel} · since ${t.createdAt}`)}</div>
+            <div className="muted" style={{ fontSize: 11.5, marginTop: 2 }}>Level: {t.levelLabel || 'default'}</div>
+          </div>
+          <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexShrink: 0 }}>
+            <button type="button" className="btn sm" onClick={() => { setLabelFor(t); setLabelText(t.levelLabel || ''); }}>Label</button>
+            {t.status === 'Suspended' ? <Tag tone="danger">Suspended</Tag> : <Tag tone="teal">Active</Tag>}
+          </div>
+        </div>
+      ))}
+      {isTenant && !canCreateSub && tenant && tenant.maxLevel != null ? (
+        <div className="muted" style={{ fontSize: 11, padding: '4px 0 8px 4px' }}>{window.t(`You can develop up to ${tenant.maxLevel} levels of sub-agents`)}</div>
+      ) : null}
+
+      {labelFor && (
+        <Dialog title={`Level Label — ${labelFor.name}`} width="92%" onClose={() => setLabelFor(null)}
+          footer={<React.Fragment>
+            <button className="btn" onClick={() => setLabelFor(null)}><Icon name="close" size={13} />Cancel</button>
+            <button className="btn primary" onClick={saveLabel}><Icon name="check" size={13} />Save Label</button>
+          </React.Fragment>}>
+          <div className="muted" style={{ fontSize: 11.5, marginBottom: 8 }}>Display only — the numeric sub-agent depth and all permissions stay unchanged.</div>
+          <div className="h5-form-row" style={{ borderBottom: 'none' }}><span className="k">Level label</span><input className="input" style={{ height: 32, flex: 1 }} value={labelText} onChange={e => setLabelText(e.target.value)} placeholder="e.g. North Region Wholesale" /></div>
+        </Dialog>
+      )}
+
       {fOpen && (
-        <Dialog title="Create Sub-Agent" width="92%" onClose={() => setFOpen(false)}
+        <Dialog title="Create Distributor" width="92%" onClose={() => setFOpen(false)}
           footer={<React.Fragment>
             <button className="btn" onClick={() => setFOpen(false)}><Icon name="close" size={13} />Cancel</button>
-            <button className="btn primary" onClick={createSubAgent}><Icon name="plus" size={13} />Create Sub-Agent + Master Account</button>
+            <button className="btn primary" onClick={createSubAgent}><Icon name="plus" size={13} />Create Distributor + Master Account</button>
           </React.Fragment>}>
           <div className="h5-form-row"><span className="k">Company *</span><input className="input" style={{ height: 32, flex: 1 }} value={f.company} onChange={e => set('company', e.target.value)} placeholder="e.g. Enugu Distributor" /></div>
-          <div className="h5-form-row" style={{ borderBottom: 'none' }}><span className="k">Max level</span><div style={{ flex: 1 }}><Select value={f.maxSubLevel} onChange={v => set('maxSubLevel', v)} options={[{ value: '1', label: '1 (sub-distributor, no further downstream)' }]} style={{ height: 30 }} /></div></div>
+          <div className="h5-form-row"><span className="k">Max level *</span><div style={{ flex: 1 }}><Select value={f.maxSubLevel} onChange={v => set('maxSubLevel', v)} options={[{ value: '1', label: '1 (sub-distributor, no further downstream)' }]} style={{ height: 30 }} /></div></div>
+          <div className="h5-form-row" style={{ borderBottom: 'none' }}><span className="k">Level label</span><input className="input" style={{ height: 32, flex: 1 }} value={f.levelLabel} onChange={e => set('levelLabel', e.target.value)} placeholder="optional custom label" /></div>
           <div className="muted" style={{ fontSize: 11, fontWeight: 700, margin: '12px 0 2px', letterSpacing: 0.2 }}>Master Account</div>
           <div className="h5-form-row"><span className="k">Account name *</span><input className="input" style={{ height: 32, flex: 1 }} value={f.contact} onChange={e => set('contact', e.target.value)} placeholder="master account name" /></div>
           <div className="h5-form-row"><span className="k">Phone *</span><input className="input" type="tel" style={{ height: 32, flex: 1 }} value={f.phone} onChange={e => set('phone', e.target.value)} placeholder="+234 ..." /></div>
@@ -937,6 +1209,8 @@ function H5MembersPage() {
           <div className="muted" style={{ fontSize: 11, marginTop: 12 }}>Creates the agent merchant, its master account (WhatsApp bound) and the supply relation in one step.</div>
         </Dialog>
       )}
+      {/* R09 — 邀请分销商弹窗 */}
+      {invOpen && <InviteDialog role="distributor" onClose={() => setInvOpen(false)} />}
     </div>
   );
 }
@@ -998,16 +1272,16 @@ function H5PriceFormPage({ productId, onDone }) {
       <div className="h5-section-title">Prices</div>
       <div className="h5-card">
         <div className="h5-form-row" style={{ background: '#FAFBFC', borderRadius: '10px 10px 0 0' }}>
-          <span className="k">Cost Price</span>
+          <span className="k">Purchase Price</span>
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'space-between' }}>
-            <span className="mono bold" style={{ fontSize: 14 }}>{money(ifnull(p.cost, p.price), saleCur).text}</span>
+            <span className="mono bold" style={{ fontSize: 14 }}>{money(purchasePriceOf(p), purchaseCurrencyOf(p)).text}</span>
             <Tag tone="dark">Read-only</Tag>
           </div>
         </div>
         <div className="h5-form-row"><span className="k">Market Reference Price *</span><div style={{ flex: 1, display: 'flex', gap: 8 }}><Select value={mktCur} onChange={setMktCur} options={CUR_OPTS} style={{ width: 84, height: 32 }} /><input className="input" style={{ height: 32, flex: 1, minWidth: 0 }} type="number" value={market} onChange={e => setMarket(e.target.value)} placeholder="0.00" />{errs.market && <div className="field-error">{errs.market}</div>}</div></div>
         <div className="h5-form-row"><span className="k">Channel Sales Price *</span><div style={{ flex: 1, display: 'flex', gap: 8 }}><Select value={saleCur} onChange={setSaleCur} options={CUR_OPTS} style={{ width: 84, height: 32 }} /><input className="input" style={{ height: 32, flex: 1, minWidth: 0 }} type="number" value={sale} onChange={e => setSale(e.target.value)} placeholder="0.00" />{errs.sale && <div className="field-error">{errs.sale}</div>}</div></div>
       </div>
-      <div className="h5-card mt12 muted" style={{ fontSize: 11.5, lineHeight: 1.6 }}><Icon name="info" size={12} /> Cost price is the procurement record and cannot be edited here. The adjustment updates the channel sales price / market reference price on your catalog and is logged in the operation events. Each price field keeps its own currency code — they are set independently.</div>
+      <div className="h5-card mt12 muted" style={{ fontSize: 11.5, lineHeight: 1.6 }}><Icon name="info" size={12} /> Purchase price is the procurement record and cannot be edited here. The adjustment updates the channel sales price / market reference price on your catalog and is logged in the operation events. Each price field keeps its own currency code — they are set independently.</div>
       <div className="flex gap10 mt16">
         <button className="h5-btn" style={{ flex: 1 }} onClick={onDone}><Icon name="close" size={14} />Cancel</button>
         <button className="h5-btn primary" style={{ flex: 1 }} onClick={save}><Icon name="check" size={14} />Save Prices</button>
@@ -1183,6 +1457,21 @@ function H5PayPage({ poId, onDone }) {
   const [method, setMethod] = useState('Bank Transfer');
   const [ref, setRef] = useState('');
   const [note, setNote] = useState('');
+  // R15 — structured voucher (demo parse from the file name, Q35 演示态)
+  const [voucher, setVoucher] = useState(null);
+  const [mismatchNote, setMismatchNote] = useState('');
+  const parsedAmt = voucher && voucher.parsed && voucher.parsed.amount !== '' && voucher.parsed.amount != null ? Number(voucher.parsed.amount) : null;
+  const mismatch = !!po && parsedAmt !== null && !isNaN(parsedAmt) && parsedAmt !== docAmount(po);
+  const onVoucher = (e) => {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    const parsed = parseVoucherDemo(f.name);
+    setVoucher({ fileName: f.name, fileType: /\.pdf$/i.test(f.name) ? 'pdf' : 'image', dataUrl: '', parsed, parseConfidence: 'demo', confirmedBy: null, confirmedAt: null });
+    if (parsed.ref) setRef(parsed.ref);
+    if (parsed.date) setDate(parsed.date);
+    if (parsed.amount !== '') setAmount(parsed.amount);
+    if (parsed.method) setMethod(parsed.method);
+  };
   if (!po) return null;
   const METHODS = ['Bank Transfer', 'Cash', 'POS', 'Cheque'];
   return (
@@ -1221,14 +1510,27 @@ function H5PayPage({ poId, onDone }) {
         </div>
         <textarea className="textarea" rows={2} value={note} onChange={e => setNote(e.target.value)} placeholder="Note (optional) — e.g. branch deposit confirmed by call" style={{ border: 'none', padding: 0, marginTop: 8 }}></textarea>
       </div>
-      <button className="h5-btn primary mt16" style={{ width: '100%' }} onClick={() => {
+      <div className="h5-card" style={{ marginTop: 8, padding: 12 }}>
+        <div className="muted" style={{ fontSize: 12.5, marginBottom: 8 }}>{t('Payment Voucher')} <span style={{ fontSize: 11 }}>({t('Demo parse — fields filled from the file name')})</span></div>
+        <input type="file" accept="image/*,.pdf" onChange={onVoucher} style={{ fontSize: 12 }} />
+        {voucher && (
+          <div className="flex gap8 mt8" style={{ alignItems: 'center', flexWrap: 'wrap' }}>
+            <span className="mini-chip">{voucher.fileType === 'pdf' ? 'PDF' : 'IMAGE'}</span>
+            <span className="mono" style={{ fontSize: 12 }}>{voucher.fileName}</span>
+            <span className="mini-chip ai">DEMO PARSE</span>
+          </div>
+        )}
+        {mismatch && <div className="field-error" style={{ marginTop: 8 }}>{t('Voucher amount differs from the order total')}</div>}
+        {mismatch && <textarea className="textarea" rows={2} value={mismatchNote} onChange={e => setMismatchNote(e.target.value)} placeholder={t('Mismatch note') + ' (required)'} style={{ marginTop: 8 }}></textarea>}
+      </div>
+      <button className="h5-btn primary mt16" style={{ width: '100%' }} disabled={mismatch && !mismatchNote.trim()} onClick={() => {
         const n = Number(amount);
         if (!n || n <= 0) { toast('Enter a valid payment amount', 'error'); return; }
-        act.docVerb('Record Payment', po, null, null, { amount, date, method, ref, note });
+        act.docVerb('Record Payment', po, null, null, { amount, date, method, ref, note, voucher, mismatchNote: mismatchNote.trim() });
         onDone();
-        toast(`Payment recorded for ${po.no} — order moves to Pending Outbound`, 'success');
+        toast(`Payment recorded for ${po.no} — awaiting confirmation`, 'success');
       }}><Icon name="wallet" size={14} />Record Payment</button>
-      <div className="muted" style={{ fontSize: 11, marginTop: 12, textAlign: 'center' }}>Recording payment moves the order to Pending Outbound, ready for shipment</div>
+      <div className="muted" style={{ fontSize: 11, marginTop: 12, textAlign: 'center' }}>Recording payment moves the order to payment review before shipment</div>
     </div>
   );
 }
@@ -1286,9 +1588,309 @@ function H5ReplenishPage({ poId, onDone }) {
   );
 }
 
+// ---------- R21 purchase price history (H5) ----------
+// Read-only procurement record trail — newest first, grouped by currency,
+// never converted or compared across currencies (Q27). Owner-only view.
+function H5PurchaseHistoryPage({ productId }) {
+  const { db, account } = useApp();
+  const p = db.products.find(x => x.id === productId);
+  if (!p) return null;
+  const hist = p.purchaseHistory || [];
+  const own = p.ownerId === account.tenantId;
+  const byCur = {};
+  hist.forEach(r => { const c = r.currency || 'USD'; (byCur[c] = byCur[c] || []).push(r); });
+  const isSelf = r => r.selfProduced || r.supplierId === 'self' || r.supplierLabel === 'Self-produced';
+  const supName = r => isSelf(r) ? t('Self-produced') : (r.supplierName || r.supplierLabel || (r.supplierId ? tenantName(db, r.supplierId) : '—'));
+  return (
+    <div className="h5-pad">
+      <div className="h5-card flex gap10">
+        <img src={prodImg(p)} alt="" style={{ width: 46, height: 46, borderRadius: 8, objectFit: 'cover' }} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 13.5, fontWeight: 700 }}>{p.name}</div>
+          <div className="muted mono" style={{ fontSize: 11, marginTop: 2 }}>{p.model} · {p.spec}</div>
+        </div>
+      </div>
+      <div className="h5-section-title">Latest Purchase Price</div>
+      <div className="h5-card h5-desc">
+        <div className="h5-desc-row"><div className="k">Purchase Price</div><div className="v mono bold">{money(purchasePriceOf(p), purchaseCurrencyOf(p)).text}</div></div>
+        <div className="h5-desc-row"><div className="k">Updated</div><div className="v mono small">{p.purchaseUpdatedAt || '—'}{p.purchaseRefNo ? ` · ${p.purchaseRefNo}` : ''}</div></div>
+        <div className="h5-desc-row"><div className="k">Records</div><div className="v mono">{hist.length}</div></div>
+      </div>
+      {!own ? (
+        <div className="h5-card muted" style={{ fontSize: 11.5, lineHeight: 1.6, marginTop: 12 }}>
+          <Icon name="lock" size={12} /> Purchase history is the owner&rsquo;s procurement record and is not visible to other merchants.
+        </div>
+      ) : !hist.length ? (
+        <div className="h5-card muted" style={{ fontSize: 11.5, lineHeight: 1.6, marginTop: 12, textAlign: 'center', padding: '20px 14px' }}>
+          <Icon name="receipt" size={14} />
+          <div style={{ marginTop: 6 }}>No purchase history yet — it appears after your first stock-in.</div>
+        </div>
+      ) : Object.keys(byCur).map(cur => (
+        <React.Fragment key={cur}>
+          <div className="h5-section-title">{t('Purchase Price History')} ({cur})</div>
+          {byCur[cur].map((r, i) => (
+            <div key={i} className="h5-card h5-desc" style={{ marginBottom: 8 }}>
+              <div className="h5-desc-row"><div className="k">Purchase Price</div><div className="v mono bold">{money(r.price, cur).text}</div></div>
+              <div className="h5-desc-row"><div className="k">Qty</div><div className="v mono">{r.qty} {p.unit}</div></div>
+              <div className="h5-desc-row"><div className="k">Amount</div><div className="v mono">{money(Math.round(r.price * r.qty * 100) / 100, cur).text}</div></div>
+              <div className="h5-desc-row"><div className="k">Supplier</div><div className="v">{isSelf(r) ? <Tag tone="teal" dot>{t('Self-produced')}</Tag> : supName(r)}</div></div>
+              <div className="h5-desc-row"><div className="k">Time</div><div className="v mono small">{r.ts}</div></div>
+              <div className="h5-desc-row"><div className="k">Source Doc</div><div className="v mono small">{r.refNo || '—'}</div></div>
+            </div>
+          ))}
+        </React.Fragment>
+      ))}
+      {own && hist.length ? <div className="h5-card mt12 muted" style={{ fontSize: 11.5, lineHeight: 1.6 }}><Icon name="info" size={12} /> Records are grouped by currency — amounts are never converted or compared across currencies. History is read-only and written automatically by stock-ins.</div> : null}
+    </div>
+  );
+}
+
+// ============================================================
+// R16 —— H5 拣货页（扫码优先，与 Web 版 PickingDialog 同一套校验）
+// ============================================================
+function H5PickingPage({ ckId, onDone }) {
+  const { db, act, toast } = useApp();
+  const ck = db.docs.find(d => d.id === ckId);
+  const lines = (ck && ck.picking && ck.picking.lines) || [];
+  const [picked, setPicked] = useState(() => Object.fromEntries(lines.map(l => [l.pid, String(l.pickedQty || 0)])));
+  const [confirmed, setConfirmed] = useState(() => Object.fromEntries(lines.map(l => [l.pid, !!l.scanConfirmed])));
+  const [manual, setManual] = useState(() => Object.fromEntries(lines.map(l => [l.pid, false])));
+  const [shortReasons, setShortReasons] = useState(() => Object.fromEntries(lines.map(l => [l.pid, l.shortReason || ''])));
+  useEffect(() => { if (ck && ck.status === 'Picking' && !(ck.picking && ck.picking.startedAt)) act.startPicking(ck); }, []);
+  if (!ck) return null;
+  const doneCount = lines.filter(l => confirmed[l.pid] || manual[l.pid]).length;
+  return (
+    <div className="h5-pad">
+      <div className="h5-card">
+        <div className="flex" style={{ justifyContent: 'space-between' }}>
+          <span className="mono" style={{ fontWeight: 700, fontSize: 13 }}>{ck.no}</span>
+          <StatusTag type="CK" status={ck.status} />
+        </div>
+        <div className="muted" style={{ fontSize: 12, marginTop: 8 }}>To {tenantName(db, ck.buyer)} · {lines.length} lines</div>
+        <div style={{ marginTop: 10, height: 6, borderRadius: 3, background: '#F0F2F5', overflow: 'hidden' }}>
+          <div style={{ width: (lines.length ? Math.round(doneCount / lines.length * 100) : 0) + '%', height: '100%', background: doneCount === lines.length ? '#1E8449' : '#E67E22', transition: 'width .2s' }}></div>
+        </div>
+        <div className="flex" style={{ justifyContent: 'space-between', marginTop: 6, fontSize: 12 }}>
+          <span style={{ color: doneCount === lines.length ? '#1E8449' : '#C0392B', fontWeight: 600 }}>{doneCount === lines.length ? <React.Fragment><Icon name="check" size={12} /> All lines picked</React.Fragment> : <React.Fragment><Icon name="alertCircle" size={12} /> Confirm every line</React.Fragment>}</span>
+          <span className="mono bold">{t('Picked')} {doneCount} / {lines.length}</span>
+        </div>
+      </div>
+      <div className="h5-section-title mt12">{t('Pick List')}</div>
+      {lines.map((l, i) => {
+        const prod = db.products.find(p => p.id === l.pid) || {};
+        const done = confirmed[l.pid] || manual[l.pid];
+        const short = Number(picked[l.pid] || 0) < l.expectedQty;
+        return (
+          <div key={l.pid} className="h5-card" style={{ marginTop: i ? 10 : 0, padding: 12, borderLeft: done ? '3px solid #1E8449' : '3px solid #E67E22' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13.5, fontWeight: 600 }}>{done && <Icon name="check" size={12} color="#1E8449" />} {prod.name || l.pid}</div>
+                <div className="muted" style={{ fontSize: 11.5, marginTop: 2 }}>{t('Expected')} {l.expectedQty} {prod.unit || ''}</div>
+              </div>
+              <input className="input" type="number" value={picked[l.pid] != null ? String(picked[l.pid]) : ''} onChange={e => { const v = e.target.value; setPicked(s => ({ ...s, [l.pid]: v })); setConfirmed(s => ({ ...s, [l.pid]: false })); }} style={{ height: 32, width: 76, textAlign: 'center' }} />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10 }}>
+              <button className="h5-btn plain" style={{ flex: 1, height: 34 }} onClick={() => { setPicked(s => ({ ...s, [l.pid]: String(l.expectedQty) })); setConfirmed(s => ({ ...s, [l.pid]: true })); setManual(s => ({ ...s, [l.pid]: false })); toast(`${prod.name || l.pid} — barcode scanned, ${l.expectedQty} picked`, 'success'); }}><Icon name="scan" size={14} />{confirmed[l.pid] ? t('Scanned') : t('Scan')}</button>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>
+                <input type="checkbox" checked={!!manual[l.pid]} onChange={e => { setManual(s => ({ ...s, [l.pid]: e.target.checked })); if (e.target.checked) setConfirmed(s => ({ ...s, [l.pid]: false })); }} />
+                {t('Manually confirmed')}
+              </label>
+            </div>
+            {short && (
+              <div style={{ marginTop: 10 }}>
+                <div className="muted" style={{ fontSize: 11.5, marginBottom: 4 }}>{t('Short-pick reason')} ({t('required')})</div>
+                <input className="input" value={shortReasons[l.pid] || ''} onChange={e => setShortReasons(s => ({ ...s, [l.pid]: e.target.value }))} placeholder="e.g. shelf count short by 2" style={{ height: 32 }} />
+              </div>
+            )}
+          </div>
+        );
+      })}
+      <button className="h5-btn success mt16" style={{ width: '100%', opacity: doneCount < lines.length ? 0.5 : 1 }} onClick={() => {
+        if (doneCount < lines.length) { toast('Confirm every line (scan or manual) before completing the pick', 'error'); return; }
+        const ok = act.finishPicking(ck, picked, shortReasons);
+        if (ok) onDone();
+      }}><Icon name="checkDouble" size={14} />{t('Complete Picking')}</button>
+    </div>
+  );
+}
+
 Object.assign(window, {
+  H5PickingPage,
   H5ProductFormPage, H5ScanPage, H5ImportPage, H5CategoriesPage, H5StockPage, H5MovementsPage,
-  H5QuoteFormPage, H5PrintPage, H5ExportSheet, H5AdminPage, H5MembersPage, H5BindWaPage,
+  H5QuoteFormPage, H5PrintPage, H5ExportSheet, H5AdminPage, H5TeamPage, H5DistributorPage, H5BindWaPage,
   GuestDocStage, H5GuestDocPage, H5PriceFormPage, H5AdjustStockPage, H5ReReceivePage,
-  H5AcceptPage, H5PayPage, H5ReplenishPage,
+  H5AcceptPage, H5PayPage, H5ReplenishPage, H5PurchaseHistoryPage,
 });
+
+// ============================================================
+// R06 —— H5 入库两步向导页（与 Web 共用 pricing.jsx 的 InboundWizard）
+// ============================================================
+function H5InboundWizardPage({ result, pids, onDone }) {
+  return (
+    <div className="h5-pad">
+      <InboundWizard result={result} pids={pids} onClose={onDone} onFinish={onDone} />
+    </div>
+  );
+}
+
+// ============================================================
+// R10 —— H5 系统设置页（税率 / 运费 / 报价模式 / 库存阈值）
+// ============================================================
+function H5SettingsPage({ onDone }) {
+  const { db, act, toast } = useApp();
+  const s = db.settings || {};
+  const [taxRate, setTaxRate] = useState(s.taxRate === null || s.taxRate === undefined ? '' : String(s.taxRate));
+  const [freightEnabled, setFreightEnabled] = useState(!!s.freightEnabled);
+  const [defaultFreight, setDefaultFreight] = useState(String(ifnull(s.defaultFreight, 0)));
+  const [quoteMode, setQuoteMode] = useState(s.quoteMode || 'manual');
+  const [threshold, setThreshold] = useState(String(ifnull(s.lowStockThreshold, 30)));
+  const [payee, setPayee] = useState(s.payeeInfo || { bankName: '', accountName: '', accountNo: '', swift: '', methods: [] });
+  // R13 — AI 折扣边界设置（AC-13-07：未配置时默认 97 折 / 每轮 1% / 最多 3 轮）
+  const [ai, setAi] = useState(s.aiPolicy || { floorDiscount: 0.97, stepSize: 0.01, maxRounds: 3, escalateTo: 'main', allowOverride: false });
+  const save = () => {
+    const rate = taxRate === '' ? null : Number(taxRate);
+    const aiNum = (v, d) => { const n = Number(v); return (v === '' || v === null || isNaN(n)) ? d : n; };
+    act.updateSettings({
+      taxRate: (rate === null || isNaN(rate)) ? null : rate,
+      freightEnabled,
+      defaultFreight: Number(defaultFreight) || 0,
+      quoteMode,
+      lowStockThreshold: Number(threshold) || 0,
+      payeeInfo: { ...payee, configured: !!(payee.bankName && payee.accountNo) },
+      aiPolicy: { enabled: true, floorDiscount: aiNum(ai.floorDiscount, 0.97), stepSize: aiNum(ai.stepSize, 0.01), maxRounds: Math.max(1, Math.round(aiNum(ai.maxRounds, 3))), escalateTo: ai.escalateTo || 'main', allowOverride: !!ai.allowOverride },
+    });
+    toast('Settings updated', 'success');
+  };
+  return (
+    <div className="h5-pad">
+      <div className="h5-card" style={{ padding: 12, marginBottom: 8 }}>
+        <div className="h5-form-row">
+          <span className="k">{t('Tax rate (%)')}</span>
+          <div style={{ flex: 1 }}>
+            <input className="input mono" style={{ height: 32, width: '100%' }} type="number" step="0.01" value={taxRate}
+              placeholder={t('Not set')} onChange={e => setTaxRate(e.target.value)} />
+          </div>
+        </div>
+        <div className="h5-form-row">
+          <span className="k">{t('Enable freight')}</span>
+          <div style={{ flex: 1 }}>
+            <input type="checkbox" checked={freightEnabled} onChange={e => setFreightEnabled(e.target.checked)} />
+          </div>
+        </div>
+        <div className="h5-form-row">
+          <span className="k">{t('Default freight')}</span>
+          <div style={{ flex: 1 }}>
+            <input className="input mono" style={{ height: 32, width: '100%' }} type="number" step="0.01" value={defaultFreight}
+              onChange={e => setDefaultFreight(e.target.value)} />
+          </div>
+        </div>
+        <div className="h5-form-row">
+          <span className="k">{t('Quote mode')}</span>
+          <div style={{ flex: 1 }}>
+            <Select value={quoteMode} onChange={v => setQuoteMode(v)} style={{ height: 32, width: '100%' }}
+              options={[{ value: 'manual', label: t('Quote mode manual') }, { value: 'auto', label: t('Quote mode auto') }]} />
+          </div>
+        </div>
+        <div className="h5-form-row">
+          <span className="k">{t('Low stock threshold')}</span>
+          <div style={{ flex: 1 }}>
+            <input className="input mono" style={{ height: 32, width: '100%' }} type="number" value={threshold}
+              onChange={e => setThreshold(e.target.value)} />
+          </div>
+        </div>
+      </div>
+      <div className="h5-card" style={{ padding: 12, marginBottom: 8 }}>
+        <div className="h5-section-title">{t('AI discount boundary')}</div>
+        <div className="muted small" style={{ marginBottom: 8 }}>{t('Defaults when not configured: 3% floor / 1% per round / up to 3 rounds')}</div>
+        <div className="h5-form-row">
+          <span className="k">{t('Lowest allowed discount (0.97 = 3% off)')}</span>
+          <div style={{ flex: 1 }}>
+            <input className="input mono" style={{ height: 32, width: '100%' }} type="number" step="0.01" min="0.5" max="1" value={ai.floorDiscount}
+              onChange={e => setAi({ ...ai, floorDiscount: e.target.value })} />
+          </div>
+        </div>
+        <div className="h5-form-row">
+          <span className="k">{t('Concession step per round')}</span>
+          <div style={{ flex: 1 }}>
+            <input className="input mono" style={{ height: 32, width: '100%' }} type="number" step="0.005" min="0.005" value={ai.stepSize}
+              onChange={e => setAi({ ...ai, stepSize: e.target.value })} />
+          </div>
+        </div>
+        <div className="h5-form-row">
+          <span className="k">{t('Max negotiation rounds')}</span>
+          <div style={{ flex: 1 }}>
+            <input className="input mono" style={{ height: 32, width: '100%' }} type="number" min="1" value={ai.maxRounds}
+              onChange={e => setAi({ ...ai, maxRounds: e.target.value })} />
+          </div>
+        </div>
+        <div className="h5-form-row">
+          <span className="k">{t('Escalate to')}</span>
+          <div style={{ flex: 1 }}>
+            <input className="input mono" style={{ height: 32, width: '100%' }} value={ai.escalateTo || ''}
+              placeholder={t('main / account id')} onChange={e => setAi({ ...ai, escalateTo: e.target.value })} />
+          </div>
+        </div>
+        <div className="h5-form-row">
+          <span className="k">{t('Allow override beyond boundary')}</span>
+          <div style={{ flex: 1 }} className="flex gap4" style={{ alignItems: 'center' }}>
+            <input type="checkbox" checked={!!ai.allowOverride} onChange={e => setAi({ ...ai, allowOverride: e.target.checked })} />
+            <span className="muted small">{t('When on, going below the floor requires a manual approval mark')}</span>
+          </div>
+        </div>
+      </div>
+      <div className="h5-card" style={{ padding: 12, marginBottom: 8 }}>
+        <div className="h5-section-title">{t('Payee info')}</div>
+        <div className="h5-form-row">
+          <span className="k">{t('Bank name')}</span>
+          <div style={{ flex: 1 }}>
+            <input className="input" style={{ height: 32, width: '100%' }} value={payee.bankName || ''}
+              onChange={e => setPayee({ ...payee, bankName: e.target.value })} />
+          </div>
+        </div>
+        <div className="h5-form-row">
+          <span className="k">{t('Account name')}</span>
+          <div style={{ flex: 1 }}>
+            <input className="input" style={{ height: 32, width: '100%' }} value={payee.accountName || ''}
+              onChange={e => setPayee({ ...payee, accountName: e.target.value })} />
+          </div>
+        </div>
+        <div className="h5-form-row">
+          <span className="k">{t('Account number')}</span>
+          <div style={{ flex: 1 }}>
+            <input className="input mono" style={{ height: 32, width: '100%' }} value={payee.accountNo || ''}
+              onChange={e => setPayee({ ...payee, accountNo: e.target.value })} />
+          </div>
+        </div>
+        <div className="h5-form-row">
+          <span className="k">{t('SWIFT')}</span>
+          <div style={{ flex: 1 }}>
+            <input className="input mono" style={{ height: 32, width: '100%' }} value={payee.swift || ''}
+              onChange={e => setPayee({ ...payee, swift: e.target.value })} />
+          </div>
+        </div>
+        <div className="h5-form-row">
+          <span className="k">{t('Payment methods')}</span>
+          <div style={{ flex: 1 }} className="flex gap10">
+            {['Bank Transfer', 'Cash', 'POS', 'Cheque'].map(m => (
+              <label key={m} className="flex gap4" style={{ fontSize: 12, alignItems: 'center' }}>
+                <input type="checkbox" checked={(payee.methods || []).includes(m)}
+                  onChange={e => setPayee({ ...payee, methods: e.target.checked ? [...(payee.methods || []), m] : (payee.methods || []).filter(x => x !== m) })} />
+                {t(m)}
+              </label>
+            ))}
+          </div>
+        </div>
+        <div className="h5-form-row">
+          <span className="k">OPay</span>
+          <div style={{ flex: 1 }}>
+            <input className="input" style={{ height: 32, width: '100%' }} disabled
+              placeholder={t('OPay — under research, not available yet')} />
+          </div>
+        </div>
+      </div>
+      <button type="button" className="h5-btn primary" style={{ width: '100%' }} onClick={save}>{t('Save settings')}</button>
+    </div>
+  );
+}
+
+Object.assign(window, { H5InboundWizardPage, H5SettingsPage });

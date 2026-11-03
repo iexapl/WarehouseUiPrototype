@@ -19,7 +19,7 @@ const CART_MODULES = [
   { id: 'inquiry', label: 'Inquiry', icon: 'inquiry' },
 ];
 
-// 入库暂存每行可独立设置的币种（采购价 = 成本价；行金额按行币种显示）
+// 入库暂存每行可独立设置的币种（采购价 Purchase Price；行金额按行币种显示）
 const CURRENCIES = ['USD', 'EUR', 'NGN', 'CNY', 'GBP'];
 
 // R110 — 移动端悬浮滚动条（暂存面板 .h5-cart-scroll）：原生滚动条隐藏，
@@ -108,11 +108,58 @@ function H5UploadField({ value, onChange }) {
   );
 }
 
-function emptyCarts() { return { inquiry: [], inbound: [], outbound: [] }; }
+// R07/R11 — carts 顶层结构（两条同批改，形状一次定型）：
+//   inquiry        : 行数组（不变）
+//   inbound        : { supplierId, supplierName, supplierPhone, lines }
+//                    （R07 方案 A：供应商选择提升到容器层，「先选供应商」的
+//                     约束在数据结构层成立，batchScanIn / H5ScanPage / 两端
+//                     编辑器读同一份状态，双端口径一致 AC-07-08）
+//   outbound       : 购物车数组（R11），每车 { id, receiver, lines, createdAt }，
+//                    receiver 为 null 表示未绑定，此时不可加货（AC-11-02）
+//   outboundActiveId / outboundSeq : 当前车 id / 车序号
+// 行结构与旧 outbound 行完全一致，不改。
+function emptyCarts() {
+  return {
+    inquiry: [],
+    inbound: { supplierId: '', supplierName: '', supplierPhone: '', lines: [] },
+    outbound: [{ id: 'c-1', receiver: null, lines: [], createdAt: '' }],
+    outboundActiveId: 'c-1',
+    outboundSeq: 1,
+  };
+}
+
+// ---- R07/R11 归一化读取层 ------------------------------------------------
+// 所有读 carts.inbound / carts.outbound 的代码一律经这里，禁止把两者直接
+// 当数组用。数组分支只是防御旧形状（正常不会出现——app.jsx 初始化即用新形状）。
+function inLines(carts) {
+  const c = (carts || {}).inbound;
+  return Array.isArray(c) ? c : ((c || {}).lines || []);
+}
+function inSupplier(carts) {
+  const c = (carts || {}).inbound;
+  return Array.isArray(c) ? { supplierId: '', supplierName: '', supplierPhone: '' }
+    : (c || { supplierId: '', supplierName: '', supplierPhone: '' });
+}
+function outCarts(carts) {
+  const o = (carts || {}).outbound;
+  // 旧形状 = 行数组（元素是 {pid,qty,…} 行对象，无 .lines）；新形状 = 车对象
+  // 数组（元素含 .lines）。空数组按旧形状包成一辆空车（与 removeCart 补车
+  // 语义一致，两端展示不破）。判别必须看元素结构，不能只看 Array.isArray。
+  const oldShape = Array.isArray(o) && (!o.length || !o[0] || !Array.isArray(o[0].lines));
+  if (oldShape) return [{ id: 'c-1', receiver: null, lines: o, createdAt: '' }];
+  return o || [];
+}
+function activeCart(carts) {
+  const list = outCarts(carts);
+  return list.find(c => c.id === (carts || {}).outboundActiveId) || list[0] || null;
+}
+function outLines(carts) { return (activeCart(carts) || {}).lines || []; }
+// outbound 页签角标 = Σ 各车行数（R11）
+function outLineCount(carts) { return outCarts(carts).reduce((s, c) => s + (((c || {}).lines) || []).length, 0); }
 
 function cartTotalCount(carts) {
   const c = carts || {};
-  return (c.inquiry || []).length + (c.inbound || []).length + (c.outbound || []).length;
+  return (c.inquiry || []).length + inLines(c).length + outLineCount(c);
 }
 
 // ---------- shared qty stepper (same visual language as the scan pages) ----------
@@ -248,12 +295,13 @@ function H5CartFab({ count, bottom, onClick }) {
 }
 
 function WebCartFab({ count, onClick }) {
-  if (!count) return null;
+  // R07 — 常驻：供应商优先流程要求先打开暂存弹窗选供应商/绑收货方，
+  // 空车时也必须有入口（角标为 0 时不显示数字）。
   return (
     <button type="button" className="web-cart-fab" onClick={onClick}
       title={t('Staging')} aria-label={t('Staging')}>
       <NavIcon name="staging" size={22} />
-      <span className="cart-fab-badge">{count > 99 ? '99+' : count}</span>
+      {!!count && <span className="cart-fab-badge">{count > 99 ? '99+' : count}</span>}
     </button>
   );
 }
@@ -262,11 +310,18 @@ function WebCartFab({ count, onClick }) {
 // Mobile cart sheet — one entry, three module carts on segments
 // ============================================================
 
-function H5CartSheet({ onClose, push }) {
+function H5CartSheet({ onClose, push, context = 'all' }) {
   const { carts } = useApp();
+  // R19 — 按入口上下文过滤可见模块（AC-19-01~05）：不相关页签不渲染（不是禁用）。
+  // 'all'（通用暂存入口）显示全部三页签；单一上下文只渲染对应 pane。
+  const visibleMods = (context && context !== 'all' && CART_MODULES.some(m => m.id === context))
+    ? CART_MODULES.filter(m => m.id === context)
+    : CART_MODULES;
   // R117 — 页签重排（入库→出库→询价）：高频仓配作业在前，询价选品低频在后。
   // 默认落在第一个非空模块（与页签顺序一致），全空落在首项「入库」。
-  const [seg, setSeg] = useState(() => (carts.inbound.length ? 'inbound' : carts.outbound.length ? 'outbound' : 'inquiry'));
+  const [seg, setSeg] = useState(() => (inLines(carts).length ? 'inbound' : outLineCount(carts) ? 'outbound' : 'inquiry'));
+  // R19 — 默认页签不在可见集合时（上下文进入）回落到第一个可见模块
+  const activeSeg = visibleMods.some(m => m.id === seg) ? seg : visibleMods[0].id;
   const sheetRef = useRef(null);
   const bodyRef = useRef(null);
   // 面板高度规则：三个页签内容都常驻渲染（未激活 pane 隐藏但仍参与测高，
@@ -278,6 +333,9 @@ function H5CartSheet({ onClose, push }) {
     const sheet = sheetRef.current;
     const body = bodyRef.current;
     if (!sheet || !body) return;
+    // R19 — 单页签（上下文进入）不固定高度：内容自然撑开，避免固定高度留白
+    if (visibleMods.length === 1) { setBodyH(null); return; }
+    // R19 — 条件渲染后 DOM 里只剩可见 pane，测高天然只测可见集合
     const panes = [...body.querySelectorAll('.h5-cart-pane')];
     if (!panes.length) return;
     let max = 0;
@@ -296,36 +354,41 @@ function H5CartSheet({ onClose, push }) {
     const screenH = sheet.parentElement ? sheet.parentElement.clientHeight : window.innerHeight;
     const cap = Math.max(180, Math.round(screenH * 3 / 4) - chrome);
     setBodyH(Math.min(max, cap));
-  }, [carts]);
+  }, [carts, visibleMods.length]);
   return (
     <div className="h5-cart-mask" onClick={onClose}>
       <div className="h5-cart-sheet" ref={sheetRef} onClick={e => e.stopPropagation()}>
         <div className="h5-cart-grip" />
         <div className="h5-cart-head">
-          <div className="h5-cart-title"><NavIcon name="staging" size={16} /><span>{t('Staging')}</span></div>
+          <div className="h5-cart-title"><NavIcon name="staging" size={16} /><span>{t('Staging')}{visibleMods.length === 1 ? ' · ' + t(visibleMods[0].label) : ''}</span></div>
           <button type="button" className="icon-btn" onClick={onClose} aria-label="Close"><Icon name="close" size={16} /></button>
         </div>
+        {/* R19/AC-19-07 — 单页签时不渲染切换控件 */}
+        {visibleMods.length > 1 && (
         <div className="h5-cart-segs">
-          {CART_MODULES.map(m => (
-            <button type="button" key={m.id} className={`h5-cart-seg${seg === m.id ? ' on' : ''}`} onClick={() => setSeg(m.id)}>
+          {visibleMods.map(m => (
+            <button type="button" key={m.id} className={`h5-cart-seg${activeSeg === m.id ? ' on' : ''}`} onClick={() => setSeg(m.id)}>
               <NavIcon name={m.icon} size={13} />
               <span>{t(m.label)}</span>
-              {(carts[m.id] || []).length > 0 && <span className="h5-cart-seg-n">{carts[m.id].length}</span>}
+              {/* R11 — outbound 角标 = Σ 各车行数 */}
+              {(() => { const n = m.id === 'outbound' ? outLineCount(carts) : (carts[m.id] || []).length; return n > 0 ? <span className="h5-cart-seg-n">{n}</span> : null; })()}
             </button>
           ))}
         </div>
+        )}
         <div className="h5-cart-body" ref={bodyRef} style={bodyH ? { height: bodyH } : null}>
-          {/* 三个页签全部常驻渲染：隐藏 pane 绝对定位（宽度一致、高度自然），
-              供 useEffect 测量真实内容高度；未激活不可交互 */}
-          <div className={`h5-cart-pane${seg === 'inbound' ? ' on' : ''}`} style={bodyH ? { maxHeight: bodyH } : null}>
-            <InboundCartEditor onDone={onClose} />
-          </div>
-          <div className={`h5-cart-pane${seg === 'outbound' ? ' on' : ''}`} style={bodyH ? { maxHeight: bodyH } : null}>
-            <OutboundCartEditor onDone={onClose} />
-          </div>
-          <div className={`h5-cart-pane${seg === 'inquiry' ? ' on' : ''}`} style={bodyH ? { maxHeight: bodyH } : null}>
-            <InquiryCartEditor onDone={onClose} push={push} />
-          </div>
+          {/* R19 — 只渲染上下文允许的 pane（AC-19-05：不渲染，不是禁用）。
+              多页签时未激活 pane 仍常驻（绝对定位、宽度一致），供测高取最大值 */}
+          {visibleMods.map(m => (
+            <div key={m.id} className={`h5-cart-pane${activeSeg === m.id ? ' on' : ''}`} style={bodyH ? { maxHeight: bodyH } : null}>
+              {m.id === 'inbound' ? <InboundCartEditor onDone={p => {
+                if (p && p.mode === 'wizard') { onClose(); if (push) push({ name: 'inboundWizard', result: p.result }); }
+                else onClose();
+              }} />
+              : m.id === 'outbound' ? <OutboundCartEditor onDone={onClose} />
+              : <InquiryCartEditor onDone={onClose} push={push} />}
+            </div>
+          ))}
         </div>
       </div>
     </div>
@@ -383,7 +446,7 @@ function InquiryCartEditor({ onDone, push }) {
                     <img src={prodImg(p)} alt="" style={{ width: 36, height: 36, borderRadius: 8, objectFit: 'cover' }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 13, fontWeight: 600 }}>{p.name}</div>
-                      <div className="muted mono" style={{ fontSize: 11, marginTop: 2 }}>{p.model} · {t('Channel Sales Price')} <b style={{ color: '#D35400' }}>{money(p.price, p.currency).text}</b></div>
+                      <div className="muted mono" style={{ fontSize: 11, marginTop: 2 }}>{p.model} · {t('Price on quote')}</div>
                     </div>
                     <span className="h5-back" title={t('Remove')} onClick={() => cartApi.removeAt('inquiry', i)} style={{ color: 'var(--danger)' }}><Icon name="trash" size={16} /></span>
                   </div>
@@ -428,25 +491,30 @@ function InquiryCartEditor({ onDone, push }) {
 // + 手动输入（名称/手机号表单，提交时以 createSupplier 建档后选用）；
 // 每行单价可独立设置币种，行金额与合计按币种分别小计（演示不折算）。
 function InboundCartEditor({ onDone }) {
-  const { db, account, act, carts, cartApi, toast } = useApp();
+  const { db, account, carts, cartApi, toast } = useApp();
   const [note, setNote] = useState('');
-  const [supId, setSupId] = useState('');
-  const [supName, setSupName] = useState('');
-  const [supPhone, setSupPhone] = useState('');
-  const lines = carts.inbound || [];
+  const [picking, setPicking] = useState(false);    // R07 — 已选定时点「切换」回到选择态
+  const [supSwitch, setSupSwitch] = useState(null); // R07 — 待二次确认的切换目标（AC-07-05）
+  const [supOpen, setSupOpen] = useState(false);    // 新建供应商弹窗（当场建档后选用）
+  const [invOpen, setInvOpen] = useState(false);     // R09 邀请供应商弹窗（发邀请码）
+  // R07 方案 A — 供应商选择存在 carts.inbound 容器层，双端读同一份状态
+  const sup = inSupplier(carts);
+  const supId = sup.supplierId || '';
+  const lines = inLines(carts);
+  const supplierLocked = !!supId;
   const stockOf = pid => (db.stock[account.tenantId] || {})[pid] || 0;
   const totalQty = lines.reduce((s, l) => s + (Number(l.qty) || 0), 0);
-  // 供货方候选：上游商户（供应商/上级代理）+ 已建档往来供货方（Supplier 型商户，
-  // 含手动输入路径当场新建的），去重后上游优先
+  // 供货方候选四类（AC-07-02）：上游商户 + 已建档供货方（去重、上游优先），
+  // 外加固定项「自产」（R08，不建租户）与「新建供应商…」（当场 createSupplier）
   const upstream = [...upstreamTenantIds(db, account.tenantId)]
     .map(id => db.tenants.find(x => x.id === id)).filter(x => x && x.status === 'Active');
   const filedSuppliers = db.tenants.filter(x => x.status === 'Active' && x.type === 'Supplier'
     && x.id !== account.tenantId && !upstream.some(u => u.id === x.id));
   const supOptions = upstream.concat(filedSuppliers);
-  const supTenant = supOptions.find(x => x.id === supId);
-  const supTenantPhone = supTenant
-    ? ((db.accounts.find(a => a.tenantId === supTenant.id && a.main) || {}).phone || supTenant.contactPhone || '')
-    : '';
+  const tenantPhoneOf = id => {
+    const tn = db.tenants.find(x => x.id === id) || {};
+    return ((db.accounts.find(a => a.tenantId === id && a.main) || {}).phone || tn.contactPhone || '');
+  };
   // 行币种：exist 行默认物料币种，new 行默认 USD，均可在行内改
   const lineCur = (l, p) => l.currency || (p ? p.currency : 'USD') || 'USD';
   // 合计按币种分别小计：Σ(物料单价 × 数量)，多币种不相加成一个数（演示不折算）
@@ -457,22 +525,69 @@ function InboundCartEditor({ onDone }) {
     const unit = Number(l.kind === 'exist' ? l.unitPrice : l.price) || 0;
     totalsByCur[cur] = (totalsByCur[cur] || 0) + unit * (Number(l.qty) || 0);
   });
+  // R07 — 选定/切换供应商：已有行且已有供应商时弹二次确认；确认后仅变更归属、行保留
+  const applySupplier = (patch) => {
+    if (lines.length > 0 && supplierLocked) setSupSwitch(patch);
+    else { cartApi.setInSupplier(patch); setPicking(false); }
+  };
+  const chooseSupplier = (v) => {
+    if (!v) return;
+    if (v === 'custom') { setSupOpen(true); setPicking(false); return; }
+    applySupplier(v === 'self'
+      ? { supplierId: 'self', supplierName: '', supplierPhone: '' }
+      : { supplierId: v, supplierName: (db.tenants.find(x => x.id === v) || {}).name || v, supplierPhone: tenantPhoneOf(v) });
+  };
   const confirm = () => {
-    let sid = supId;
-    if (supId === 'custom') {
-      const name = String(supName || '').trim();
-      if (!name) { toast('Supplier name is required', 'error'); return; }
-      // 手动输入 → 当场建档（Supplier 型商户），本次选用且后续可再选；
-      // 直接把新商户对象传给 submitInbound（同一次点击内 setDb 尚未生效）
-      const tn = act.createSupplier({ name, phone: String(supPhone || '').trim() });
-      sid = tn;
-    } else if (!supId) { toast('Select or enter a supplier for the stock-in', 'error'); return; }
-    if (cartApi.submitInbound(sid, note) && onDone) onDone();
+    if (!supplierLocked) { toast('Select or enter a supplier for the stock-in', 'error'); return; }
+    // R06 —— 入库成功后不直接关闭，改为把结果交给两步向导
+    const r = cartApi.submitInbound(note);
+    if (r && r.ok && onDone) onDone({ mode: 'wizard', result: r });
   };
   return (
     <div>
       <div className="h5-cart-scroll">
-      {lines.length === 0 && <H5Empty icon="warehouse" message={t('Inbound staging is empty')} hint={t('Scan barcodes on Scan / Stock In, or enter a Material Barcode and tap Add, or tap Stock In on the My Warehouse list')} />}
+      {/* R07/AC-07-01、AC-07-04 — 首屏供应商选择区；选定后收起为固定卡片（名称+联系方式） */}
+      <div className="h5-card" style={{ padding: 12, marginBottom: 8, borderColor: supplierLocked ? 'var(--primary)' : undefined }}>
+        {!supplierLocked || picking ? (
+          <React.Fragment>
+            <div className="h5-form-row" style={{ marginBottom: 0 }}>
+              <span className="k">{t('Supplier')} *</span>
+              <div style={{ flex: 1 }}>
+                <Select value="" onChange={chooseSupplier} placeholder={t('Select supplier first')}
+                  options={supOptions.map(x => ({ value: x.id, label: x.name + (x.type === 'Supplier' ? '' : ' (' + x.type + ')') }))
+                    .concat([{ value: 'self', label: t('Self-produced') }])
+                    .concat([{ value: 'custom', label: t('New supplier…') }])} style={{ height: 32 }} />
+              </div>
+            </div>
+            {/* R09 — 邀请供应商：对未入驻的供货方发邀请码 */}
+            <button type="button" className="h5-btn plain mt8" style={{ width: '100%' }} onClick={() => setInvOpen(true)}><Icon name="link" size={14} />{t('Invite Supplier')}</button>
+            {supplierLocked && picking && (
+              <button type="button" className="h5-btn plain mt8" style={{ width: '100%' }} onClick={() => setPicking(false)}>{t('Cancel')}</button>
+            )}
+            <div className="muted" style={{ fontSize: 11, marginTop: 8, lineHeight: 1.5 }}><Icon name="info" size={11} /> {t('Select a supplier first — then scan or add products')}</div>
+          </React.Fragment>
+        ) : (
+          <div className="flex gap10" style={{ alignItems: 'center' }}>
+            <span className="cell-icon" style={{ background: 'var(--primary-light)', color: 'var(--primary)' }}><Icon name={supId === 'self' ? 'warehouse' : 'truck'} size={18} /></span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div className="flex gap6" style={{ alignItems: 'center' }}>
+                <span style={{ fontSize: 13, fontWeight: 600 }}>{supId === 'self' ? t('Self-produced') : (sup.supplierName || supId)}</span>
+                {supId === 'self' ? <Tag tone="teal" dot>{t('Self-produced')}</Tag> : <Tag tone="info">{t('Supplier')}</Tag>}
+              </div>
+              {supId !== 'self' && <div className="muted mono" style={{ fontSize: 11, marginTop: 2 }}>{sup.supplierPhone || '—'}</div>}
+            </div>
+            <button type="button" className="h5-btn plain" style={{ height: 30 }} onClick={() => setPicking(true)}><Icon name="edit" size={13} />{t('Switch')}</button>
+          </div>
+        )}
+      </div>
+      {/* R07/AC-07-01 — 未选供应商时商品区禁用（扫码/加货在 cartApi.add 处同样被拦，AC-07-03） */}
+      {!supplierLocked && (
+        <div className="h5-card" style={{ padding: '20px 12px', textAlign: 'center', opacity: 0.7 }}>
+          <Icon name="lock" size={20} style={{ color: '#94A3B8' }} />
+          <div className="muted" style={{ fontSize: 12, marginTop: 6 }}>{t('Product area is disabled until a supplier is selected')}</div>
+        </div>
+      )}
+      {supplierLocked && lines.length === 0 && <H5Empty icon="warehouse" message={t('Inbound staging is empty')} hint={t('Scan barcodes on Scan / Stock In, or enter a Material Barcode and tap Add, or tap Stock In on the My Warehouse list')} />}
       {lines.map((l, i) => {
         const qty = Number(l.qty) || 0;
         if (l.kind === 'exist') {
@@ -515,7 +630,8 @@ function InboundCartEditor({ onDone }) {
               <span className="cell-icon" style={{ background: 'var(--primary-light)', color: 'var(--primary)' }}><Icon name="plus" size={18} /></span>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div className="flex gap6" style={{ alignItems: 'center' }}><span style={{ fontSize: 13, fontWeight: 600 }}>{t('New product — quick profile')}</span><Tag tone="info">{t('Not in warehouse yet')}</Tag></div>
-                <div className="muted mono" style={{ fontSize: 11, marginTop: 2 }}>{l.code || '—'}</div>
+                {/* R04/R05 — 新品行展示条码（若有），否则回落到扫码原值 */}
+                <div className="muted mono" style={{ fontSize: 11, marginTop: 2 }}>{l.barcode || l.code || '—'}</div>
               </div>
               <span className="h5-back" title={t('Remove')} onClick={() => cartApi.removeAt('inbound', i)} style={{ color: 'var(--danger)' }}><Icon name="trash" size={16} /></span>
             </div>
@@ -590,30 +706,6 @@ function InboundCartEditor({ onDone }) {
             <div className="muted" style={{ fontSize: 11, margin: '0 4px 8px', lineHeight: 1.5 }}><Icon name="info" size={11} /> {t('Multi-currency lines are subtotaled per currency — demo, no FX conversion')}</div>
           )}
           <div className="h5-card" style={{ padding: 12 }}>
-            <div className="h5-form-row">
-              <span className="k">{t('Supplier')} *</span>
-              <div style={{ flex: 1 }}>
-                <Select value={supId} onChange={v => { setSupId(v); if (v !== 'custom') { setSupName(''); setSupPhone(''); } }} placeholder={t('Select supplier')}
-                  options={supOptions.map(x => ({ value: x.id, label: x.name + (x.type === 'Supplier' ? '' : ' (' + x.type + ')') }))
-                    .concat([{ value: 'custom', label: t('Custom supplier…') }])} style={{ height: 32 }} />
-              </div>
-            </div>
-            {supId === 'custom' && (
-              <React.Fragment>
-                <div className="h5-form-row">
-                  <span className="k">{t('Supplier name')} *</span>
-                  <div style={{ flex: 1 }}><input className="input" style={{ height: 32, width: '100%' }} value={supName} onChange={e => setSupName(e.target.value)} placeholder={t('e.g. Sunrise Trading Co.')} /></div>
-                </div>
-                <div className="h5-form-row" style={{ marginBottom: 0 }}>
-                  <span className="k">{t('Supplier phone')}</span>
-                  <div style={{ flex: 1 }}><input className="input" style={{ height: 32, width: '100%' }} value={supPhone} onChange={e => setSupPhone(e.target.value)} placeholder="+234 …" /></div>
-                </div>
-                <div className="muted" style={{ fontSize: 11, marginTop: 8, lineHeight: 1.5 }}><Icon name="info" size={11} /> {t('The supplier is filed as a partner record and becomes immediately selectable for this and future stock-in.')}</div>
-              </React.Fragment>
-            )}
-            {supTenant && supTenantPhone && (
-              <div className="muted mono" style={{ fontSize: 11, marginTop: 8 }}>{supTenant.name} · {supTenantPhone}</div>
-            )}
             <div className="h5-form-row h5-form-row-top" style={{ marginBottom: 0 }}>
               <span className="k">{t('Stock-in note (optional)')}</span>
               <textarea className="textarea h5-note-area" rows={3} value={note} onChange={e => setNote(e.target.value)} placeholder={t('e.g. purchase arrival')}></textarea>
@@ -628,6 +720,21 @@ function InboundCartEditor({ onDone }) {
           <button type="button" className="h5-btn success" onClick={confirm}><NavIcon name="stockIn" size={14} />{t('Confirm Stock In')}</button>
         </div>
       )}
+      {/* R07/AC-07-05 — 切换供应商二次确认：保留已加商品，仅变更归属 */}
+      {supSwitch && (
+        <ConfirmDialog title={t('Switch Supplier')}
+          message={t('Switching keeps the added items and only changes the supplier attribution. Continue?')}
+          confirmText={t('Switch')}
+          onConfirm={() => { cartApi.setInSupplier(supSwitch); setSupSwitch(null); setPicking(false); }}
+          onClose={() => setSupSwitch(null)} />
+      )}
+      {/* R07/R08 — 新建供应商：当场建档（Supplier 型商户）后立即选用；「自产」不在此路径、不建租户 */}
+      {supOpen && (
+        <NewSupplierDialog onClose={() => setSupOpen(false)}
+          onCreated={tn => { setSupOpen(false); applySupplier({ supplierId: tn.id, supplierName: tn.name, supplierPhone: tn.phone || '' }); }} />
+      )}
+      {/* R09 — 邀请供应商弹窗 */}
+      {invOpen && <InviteDialog role="supplier" onClose={() => setInvOpen(false)} />}
     </div>
   );
 }
@@ -636,42 +743,158 @@ function InboundCartEditor({ onDone }) {
 function OutboundCartEditor({ onDone }) {
   const { db, account, carts, cartApi, toast } = useApp();
   const [note, setNote] = useState('');
-  // 收货方：可从下游商户选择，也可手动输入名称（可选手机号）；提交后随出库单留痕
-  const [recvId, setRecvId] = useState('');
-  const [recvName, setRecvName] = useState('');
-  const [recvPhone, setRecvPhone] = useState('');
-  const lines = carts.outbound || [];
+  const [delCart, setDelCart] = useState(null);   // R11 — 待删除确认的车（AC-11-08）
+  const [picking, setPicking] = useState(false);  // 收货方已绑定时点「更换」回到选择态
+  const [custom, setCustom] = useState(false);    // 自由输入收货方表单
+  const [custName, setCustName] = useState('');
+  const [custPhone, setCustPhone] = useState('');
+  // R11 — outbound 是车数组；编辑器只操作当前车，各行/价/合计随车隔离（AC-11-04/05）
+  const cartsList = outCarts(carts);
+  const cur = activeCart(carts) || { id: '', receiver: null, lines: [] };
+  const cartId = cur.id;
+  const lines = cur.lines || [];
+  const recv = cur.receiver || null;
   const stockOf = pid => (db.stock[account.tenantId] || {})[pid] || 0;
   const totalQty = lines.reduce((s, l) => s + (Number(l.qty) || 0), 0);
   // 实际销售价：默认取渠道销售价及其币种，可在行内改价/改币种；
-  // 行金额 = 实际销售价 × 数量，合计按币种分别小计（与入库一致）
+  // 行金额 = 实际销售价 × 数量，合计按币种分别小计（每车独立合计）
   const saleCur = (l, p) => l.saleCurrency || (p ? p.currency : 'USD') || 'USD';
   const saleNum = (l, p) => Number(ifnull(l.salePrice, p ? p.price : 0)) || 0;
   const totalsByCur = {};
   lines.forEach(l => {
     const p = db.products.find(x => x.id === l.pid) || {};
-    const cur = saleCur(l, p);
-    totalsByCur[cur] = (totalsByCur[cur] || 0) + saleNum(l, p) * (Number(l.qty) || 0);
+    const c = saleCur(l, p);
+    totalsByCur[c] = (totalsByCur[c] || 0) + saleNum(l, p) * (Number(l.qty) || 0);
   });
+  // R10 —— 行三列金额（原始/折后/优惠）+ 五行汇总（与 docAmountBreakdown 同口径）
+  const cartPct = (cur.discountPct === undefined || cur.discountPct === null) ? 0 : (Number(cur.discountPct) || 0);
+  const lineAmtMap = {};
+  let amtSubtotal = 0, amtDiscount = 0;
+  lines.forEach(l => {
+    const p = db.products.find(x => x.id === l.pid) || {};
+    const a = lineAmounts([{ qty: l.qty, price: saleNum(l, p) }], cartPct)[0];
+    const rowPct = (l.discountPct === undefined || l.discountPct === null) ? cartPct : (Number(l.discountPct) || 0);
+    const a2 = lineAmounts([{ qty: l.qty, price: saleNum(l, p) }], cartPct)[0];
+    a2.pct = rowPct;
+    a2.gross = Math.round(saleNum(l, p) * (Number(l.qty) || 0) * 100) / 100;
+    a2.net = Math.round(a2.gross * (1 - rowPct / 100) * 100) / 100;
+    a2.saving = Math.round((a2.gross - a2.net) * 100) / 100;
+    lineAmtMap[l.pid] = a2;
+    amtSubtotal += a2.gross;
+    amtDiscount += a2.saving;
+  });
+  const settings = db.settings || {};
+  const taxRate = (settings.taxRate === undefined || settings.taxRate === null) ? null : Number(settings.taxRate);
+  const amtTax = taxRate === null ? 0 : Math.round((amtSubtotal - amtDiscount) * taxRate) / 100;
+  const amtFreight = (cur.freight === undefined || cur.freight === null) ? (settings.freightEnabled ? Number(settings.defaultFreight) || 0 : 0) : Number(cur.freight);
+  const amtCurrency = (lines[0] ? (saleCur(lines[0], db.products.find(x => x.id === lines[0].pid) || {})) : 'USD');
+  const amtSummary = {
+    subtotal: Math.round(amtSubtotal * 100) / 100,
+    discountTotal: Math.round(amtDiscount * 100) / 100,
+    taxAmount: amtTax, taxRate, freight: amtFreight,
+    total: Math.round((amtSubtotal - amtDiscount + amtTax + amtFreight) * 100) / 100,
+    currency: amtCurrency,
+  };
   const downstream = db.relations.filter(r => r.upstream === account.tenantId)
     .map(r => db.tenants.find(x => x.id === r.downstream)).filter(x => x && x.status === 'Active');
-  const recvTenant = downstream.find(x => x.id === recvId);
-  const recvTenantPhone = recvTenant ? ((db.accounts.find(a => a.tenantId === recvTenant.id && a.main) || {}).phone || '') : '';
+  const recvTenantPhone = id => ((db.accounts.find(a => a.tenantId === id && a.main) || {}).phone || '');
+  // 车标签：收货方名（未绑定显示「未绑定」）；同名收货方按出现次序加 #n（AC-11-03，渲染时判定）
+  const labels = cartsList.map(c => (c.receiver && c.receiver.name) || '');
+  const tabTitle = (idx) => {
+    const nm = labels[idx];
+    if (!nm) return t('Unbound');
+    const dup = labels.filter(x => x === nm).length;
+    return dup > 1 ? nm + ' #' + (labels.slice(0, idx + 1).filter(x => x === nm).length) : nm;
+  };
+  const bindReceiver = (recvObj) => { cartApi.setReceiver(cartId, recvObj); setPicking(false); setCustom(false); };
+  const applyCustom = () => {
+    const name = String(custName || '').trim();
+    if (!name) { toast('Enter the receiver name', 'error'); return; }
+    bindReceiver({ name, phone: String(custPhone || '').trim(), tenantId: null });
+    setCustName(''); setCustPhone('');
+  };
   const confirm = () => {
-    const recv = recvId === 'custom'
-      ? { name: recvName.trim(), phone: recvPhone.trim() }
-      : recvTenant ? { name: recvTenant.name, phone: recvTenantPhone, tenantId: recvTenant.id } : null;
-    if (!recv || !recv.name) { toast('Select or enter a receiver for the outbound', 'error'); return; }
-    if (cartApi.submitOutbound(note, recv) && onDone) onDone();
+    if (!recv || !recv.name) { toast('Bind a receiver for this cart first', 'error'); return; }
+    if (cartApi.submitOutbound(note) && onDone) onDone();
   };
   return (
     <div>
       <div className="h5-cart-scroll">
-      {lines.length === 0 && <H5Empty icon="truck" message={t('Outbound staging is empty')} hint={t('Scan items on Scan / Stock Out, or tap Stock Out on the My Warehouse list')} />}
+      {/* R11/AC-11-09 — 原型不持久化，刷新后恢复初始演示态（界面标注） */}
+      <div className="muted" style={{ fontSize: 11, margin: '0 2px 8px', lineHeight: 1.5 }}><Icon name="info" size={11} /> {t('Prototype only — carts are not persisted; refresh restores the initial state')}</div>
+      {/* R11 — 车标签栏：收货方名 + 件数；切车 / 新建车 */}
+      <div className="flex gap6" style={{ overflowX: 'auto', paddingBottom: 2, marginBottom: 8 }}>
+        {cartsList.map((c, idx) => {
+          const n = (c.lines || []).length;
+          const on = c.id === cartId;
+          return (
+            <button key={c.id} type="button" className={'h5-chip' + (on ? ' on' : '')} style={{ flexShrink: 0 }}
+              onClick={() => cartApi.switchCart(c.id)}>
+              {tabTitle(idx)}{n > 0 ? ` · ${n}` : ''}
+            </button>
+          );
+        })}
+        <button type="button" className="h5-chip" style={{ flexShrink: 0, borderStyle: 'dashed' }} title={t('New Cart')}
+          onClick={() => { if (cartApi.newCart() === false) toast('Cart limit reached (10)', 'warning'); }}>
+          <Icon name="plus" size={11} />{t('New Cart')}
+        </button>
+      </div>
+      {/* 当前车 — 收货方（未绑定 → 选择卡；已绑定 → 固定卡 + 更换/删车） */}
+      <div className="h5-card" style={{ padding: 12, marginBottom: 8, borderColor: recv ? 'var(--primary)' : undefined }}>
+        {!recv || picking ? (
+          <React.Fragment>
+            <div className="h5-form-row" style={{ marginBottom: 0 }}>
+              <span className="k">{t('Receiver')} *</span>
+              <div style={{ flex: 1 }}>
+                <Select value="" onChange={v => {
+                  if (v === 'custom') { setCustom(true); return; }
+                  setCustom(false);
+                  const tn = downstream.find(x => x.id === v);
+                  if (tn) bindReceiver({ name: tn.name, phone: recvTenantPhone(tn.id), tenantId: tn.id });
+                }} placeholder={t('Select receiver')}
+                  options={downstream.map(x => ({ value: x.id, label: x.name + (x.type === 'Supplier' ? '' : ' (' + x.type + ')') }))
+                    .concat([{ value: 'custom', label: t('Custom receiver…') }])} style={{ height: 32 }} />
+              </div>
+            </div>
+            {custom && (
+              <React.Fragment>
+                <div className="h5-form-row mt8"><span className="k">{t('Receiver name')} *</span>
+                  <div style={{ flex: 1 }}><input className="input" style={{ height: 32, width: '100%' }} value={custName} onChange={e => setCustName(e.target.value)} placeholder={t('e.g. Sunrise Retail Store')} /></div>
+                </div>
+                <div className="h5-form-row"><span className="k">{t('Receiver phone')}</span>
+                  <div style={{ flex: 1 }}><input className="input" style={{ height: 32, width: '100%' }} value={custPhone} onChange={e => setCustPhone(e.target.value)} placeholder="+234 …" /></div>
+                </div>
+                <button type="button" className="h5-btn primary" style={{ width: '100%', marginTop: 8 }} onClick={applyCustom}><Icon name="check" size={14} />{t('Bind Receiver')}</button>
+              </React.Fragment>
+            )}
+            {picking && !custom && (
+              <button type="button" className="h5-btn plain mt8" style={{ width: '100%' }} onClick={() => setPicking(false)}>{t('Cancel')}</button>
+            )}
+            <div className="muted" style={{ fontSize: 11, marginTop: 8, lineHeight: 1.5 }}><Icon name="info" size={11} /> {t('Bind a receiver for this cart before adding items')}</div>
+          </React.Fragment>
+        ) : (
+          <div className="flex gap10" style={{ alignItems: 'center' }}>
+            <span className="cell-icon" style={{ background: 'var(--primary-light)', color: 'var(--primary)' }}><Icon name="truck" size={18} /></span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div className="flex gap6" style={{ alignItems: 'center' }}>
+                <span style={{ fontSize: 13, fontWeight: 600 }}>{recv.name}</span>
+                {recv.tenantId ? <Tag tone="info">{t('Receiver')}</Tag> : <Tag tone="warning">{t('Custom receiver…')}</Tag>}
+              </div>
+              <div className="muted mono" style={{ fontSize: 11, marginTop: 2 }}>{recv.phone || '—'}</div>
+            </div>
+            <button type="button" className="h5-btn plain" style={{ height: 30 }} onClick={() => setPicking(true)}><Icon name="edit" size={13} />{t('Switch')}</button>
+            {cartsList.length > 0 && (
+              <button type="button" className="h5-btn plain error" style={{ height: 30 }} title={t('Delete this cart?')} onClick={() => setDelCart(cartId)}><Icon name="trash" size={13} /></button>
+            )}
+          </div>
+        )}
+      </div>
+      {lines.length === 0 && <H5Empty icon="truck" message={t('This cart is empty')} hint={t('Bind a receiver, then scan items on Scan / Stock Out, or tap Stock Out on the My Warehouse list')} />}
       {lines.map((l, i) => {
         const p = db.products.find(x => x.id === l.pid) || {};
         const onHand = stockOf(l.pid);
         const qty = Number(l.qty) || 0;
+        const lineAmt = lineAmtMap[l.pid] || { gross: 0, net: 0, saving: 0, pct: 0 };
         return (
           <div key={l.pid} className="h5-card" style={{ marginBottom: 8, padding: 12 }}>
             <div className="flex gap10" style={{ alignItems: 'center' }}>
@@ -680,7 +903,7 @@ function OutboundCartEditor({ onDone }) {
                 <div style={{ fontSize: 13, fontWeight: 600 }}>{p.name}</div>
                 <div className="muted mono" style={{ fontSize: 11, marginTop: 2 }}>{p.model} · {t('On Hand')} {onHand} {p.unit}</div>
               </div>
-              <span className="h5-back" title={t('Remove')} onClick={() => cartApi.removeAt('outbound', i)} style={{ color: 'var(--danger)' }}><Icon name="trash" size={16} /></span>
+              <span className="h5-back" title={t('Remove')} onClick={() => cartApi.removeAt('outbound', i, cartId)} style={{ color: 'var(--danger)' }}><Icon name="trash" size={16} /></span>
             </div>
             {/* 价格体系：市场指导价 / 渠道销售价只读参考；实际销售价可改（默认渠道价及其币种）；价格区块在前、数量在后 */}
             <div className="flex mt8" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
@@ -688,29 +911,48 @@ function OutboundCartEditor({ onDone }) {
               <span className="muted mono" style={{ fontSize: 11 }}>{t('Channel Sales Price')}: <b>{money(p.price, p.currency).text}</b></span>
             </div>
             <div className="flex mt8" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
-              <span className="muted" style={{ fontSize: 11.5 }}>{t('Actual Sales Price')}</span>
+              <span className="muted" style={{ fontSize: 11.5 }}>{t('Channel Sales Price')}</span>
               <span className="flex" style={{ alignItems: 'center', gap: 8 }}>
-                <Select value={saleCur(l, p)} onChange={v => cartApi.setField('outbound', i, 'saleCurrency', v)}
+                <Select value={saleCur(l, p)} onChange={v => cartApi.setField('outbound', i, 'saleCurrency', v, cartId)}
                   options={CURRENCIES.map(c => ({ value: c, label: c }))} style={{ height: 30, width: 82 }} />
                 <input className="input mono" style={{ height: 30, width: 92, textAlign: 'right' }} type="number" min="0" step="0.01"
-                  value={ifnull(l.salePrice, ifnull(p.price, 0))} aria-label={t('Actual Sales Price')} onChange={e => cartApi.setField('outbound', i, 'salePrice', e.target.value)} />
+                  value={ifnull(l.salePrice, ifnull(p.price, 0))} aria-label={t('Channel Sales Price')} onChange={e => cartApi.setField('outbound', i, 'salePrice', e.target.value, cartId)} />
               </span>
             </div>
             <div className="flex mt8" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
               <span className="muted mono" style={{ fontSize: 11.5 }}>{p.unit} × {l.qty}</span>
-              <CartStepper value={l.qty} onChange={q => cartApi.setQty('outbound', i, q)} />
+              <CartStepper value={l.qty} onChange={q => cartApi.setQty('outbound', i, q, cartId)} />
+            </div>
+            {/* R10 —— 单行折扣（行折扣优先于整单折扣）+ 原始价/折后价/优惠金额三列 */}
+            <div className="flex mt8" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
+              <span className="muted" style={{ fontSize: 11.5 }}>{t('Line discount')}</span>
+              <span className="flex" style={{ alignItems: 'center', gap: 6 }}>
+                <input className="input mono" style={{ height: 28, width: 72, textAlign: 'right' }} type="number" min="0" step="0.01"
+                  value={ifnull(l.discountPct, '')} placeholder={ifnull(cur.discountPct, 0) ? String(cur.discountPct) : '0'}
+                  aria-label={t('Line discount')} onChange={e => cartApi.setField('outbound', i, 'discountPct', e.target.value === '' ? null : Number(e.target.value), cartId)} />
+                <span className="muted mono" style={{ fontSize: 11 }}>%</span>
+              </span>
+            </div>
+            <div className="flex mt4" style={{ gap: 10, justifyContent: 'space-between', flexWrap: 'wrap' }}>
+              <span className="muted mono" style={{ fontSize: 11 }}>{t('Original')}: <b>{money(lineAmt.gross, saleCur(l, p)).text}</b></span>
+              <span className="muted mono" style={{ fontSize: 11 }}>{t('Discounted')}: <b>{money(lineAmt.net, saleCur(l, p)).text}</b></span>
+              <span className="muted mono" style={{ fontSize: 11 }}>{t('Saving')}: <b>{money(lineAmt.saving, saleCur(l, p)).text}</b></span>
             </div>
             <div className="flex mt4" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
               <span className="muted mono" style={{ fontSize: 11 }}>{onHand} → {onHand - qty} {p.unit}</span>
               <span className="mono" style={{ fontSize: 11.5 }}>{t('Amount')}: <b style={{ color: '#D35400' }}>{money(qty * saleNum(l, p), saleCur(l, p)).text}</b></span>
             </div>
             {qty > onHand && <div style={{ color: 'var(--danger)', fontSize: 11.5, marginTop: 4, textAlign: 'right' }}>{t('Exceeds on-hand quantity')}</div>}
+            {/* R10/AC-10-14 — 折后单价低于采购价：警告不拦截（判据 purchasePriceOf） */}
+            {saleNum(l, p) * (1 - (lineAmt.pct || 0) / 100) < (purchasePriceOf(p) || 0) && (
+              <div className="flex gap6" style={{ alignItems: 'center', justifyContent: 'flex-end', color: 'var(--warning)', fontSize: 11.5, marginTop: 4 }}><Icon name="warn" size={12} />{t('Discounted price is below the purchase price — please double-check')}</div>
+            )}
           </div>
         );
       })}
       {lines.length > 0 && (
         <React.Fragment>
-          {/* 合计金额 = Σ(实际销售价 × 数量)；多币种按币种分别小计，逐币种上下堆叠（与入库一致，紧跟商品列表） */}
+          {/* 合计金额 = Σ(实际销售价 × 数量)；多币种按币种分别小计（每车独立） */}
           <div className="h5-card" style={{ padding: '10px 12px', marginBottom: Object.keys(totalsByCur).length > 1 ? 4 : 8 }}>
             <div className="flex" style={{ alignItems: 'flex-start', justifyContent: 'space-between' }}>
               <span className="muted" style={{ fontSize: 12, lineHeight: 1.6 }}>{`${lines.length} items · ${totalQty} units`}</span>
@@ -725,30 +967,38 @@ function OutboundCartEditor({ onDone }) {
           {Object.keys(totalsByCur).length > 1 && (
             <div className="muted" style={{ fontSize: 11, margin: '0 4px 8px', lineHeight: 1.5 }}><Icon name="info" size={11} /> {t('Multi-currency lines are subtotaled per currency — demo, no FX conversion')}</div>
           )}
-          <div className="h5-card" style={{ padding: 12 }}>
-            <div className="h5-form-row">
-              <span className="k">{t('Receiver')} *</span>
-              <div style={{ flex: 1 }}>
-                <Select value={recvId} onChange={v => { setRecvId(v); if (v !== 'custom') { setRecvName(''); setRecvPhone(''); } }} placeholder={t('Select receiver')}
-                  options={downstream.map(x => ({ value: x.id, label: x.name + (x.type === 'Supplier' ? '' : ' (' + x.type + ')') }))
-                    .concat([{ value: 'custom', label: t('Custom receiver…') }])} style={{ height: 32 }} />
+          {/* R10 —— 折扣申请：整体折扣 + 单行折扣 + 运费 + 五行汇总 */}
+          <div className="h5-card" style={{ padding: 12, marginBottom: 8 }}>
+            <div className="h5-form-row" style={{ marginBottom: 8 }}>
+              <span className="k">{t('Request discount')}</span>
+              <div className="flex" style={{ alignItems: 'center', gap: 8 }}>
+                <input className="input mono" style={{ height: 30, width: 84, textAlign: 'right' }} type="number" min="0" step="0.01"
+                  value={ifnull(cur.discountPct, '')} placeholder="0" aria-label={t('Overall discount')}
+                  onChange={e => cartApi.setCartField(cartId, 'discountPct', e.target.value === '' ? null : Number(e.target.value))} />
+                <span className="muted mono" style={{ fontSize: 11.5 }}>%</span>
               </div>
             </div>
-            {recvId === 'custom' && (
-              <React.Fragment>
-                <div className="h5-form-row">
-                  <span className="k">{t('Receiver name')} *</span>
-                  <div style={{ flex: 1 }}><input className="input" style={{ height: 32, width: '100%' }} value={recvName} onChange={e => setRecvName(e.target.value)} placeholder={t('e.g. Sunrise Retail Store')} /></div>
-                </div>
-                <div className="h5-form-row" style={{ marginBottom: 0 }}>
-                  <span className="k">{t('Receiver phone')}</span>
-                  <div style={{ flex: 1 }}><input className="input" style={{ height: 32, width: '100%' }} value={recvPhone} onChange={e => setRecvPhone(e.target.value)} placeholder="+234 …" /></div>
-                </div>
-              </React.Fragment>
-            )}
-            {recvTenant && recvTenantPhone && (
-              <div className="muted mono" style={{ fontSize: 11, marginTop: 8 }}>{recvTenant.name} · {recvTenantPhone}</div>
-            )}
+            <div className="h5-form-row" style={{ marginBottom: 0 }}>
+              <span className="k">{t('Freight amount')}</span>
+              <div className="flex" style={{ alignItems: 'center', gap: 8 }}>
+                <input className="input mono" style={{ height: 30, width: 84, textAlign: 'right' }} type="number" min="0" step="0.01"
+                  value={ifnull(cur.freight, '')} placeholder="0" aria-label={t('Freight amount')}
+                  onChange={e => cartApi.setCartField(cartId, 'freight', e.target.value === '' ? null : Number(e.target.value))} />
+                <span className="muted mono" style={{ fontSize: 11.5 }}>{t('Freight')}</span>
+              </div>
+            </div>
+          </div>
+          <div className="h5-card" style={{ padding: '10px 12px', marginBottom: 8 }}>
+            <AmountSummary
+              subtotal={amtSummary.subtotal}
+              discountTotal={amtSummary.discountTotal}
+              taxAmount={amtSummary.taxAmount}
+              taxRate={amtSummary.taxRate}
+              freight={amtSummary.freight}
+              total={amtSummary.total}
+              currency={amtSummary.currency} />
+          </div>
+          <div className="h5-card" style={{ padding: 12 }}>
             <div className="h5-form-row h5-form-row-top" style={{ marginBottom: 0 }}>
               <span className="k">{t('Outbound note (optional)')}</span>
               <textarea className="textarea h5-note-area" rows={3} value={note} onChange={e => setNote(e.target.value)} placeholder={t('e.g. transfer to another warehouse')}></textarea>
@@ -759,9 +1009,16 @@ function OutboundCartEditor({ onDone }) {
       </div>
       {lines.length > 0 && (
         <div className="h5-act-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-          <button type="button" className="h5-btn plain error" onClick={() => { cartApi.clear('outbound'); toast('Outbound staging cleared', 'info'); }}><Icon name="trash" size={14} />{t('Clear')}</button>
+          <button type="button" className="h5-btn plain error" onClick={() => { cartApi.clear('outbound'); toast('This cart cleared', 'info'); }}><Icon name="trash" size={14} />{t('Clear')}</button>
           <button type="button" className="h5-btn warning" onClick={confirm}><NavIcon name="stockOut" size={14} />{t('Confirm Stock Out')}</button>
         </div>
+      )}
+      {/* R11/AC-11-08 — 删除购物车二次确认：商品不回流到其他车 */}
+      {delCart && (
+        <ConfirmDialog title={t('Delete this cart?')} danger confirmText={t('Delete')}
+          message={t('Deleting the cart discards its items — they do not flow back to other carts. Continue?')}
+          onConfirm={() => { cartApi.removeCart(delCart); setDelCart(null); }}
+          onClose={() => setDelCart(null)} />
       )}
     </div>
   );
@@ -809,8 +1066,16 @@ function NewSupplierDialog({ onClose, onCreated }) {
 // (Web 控制台询价车弹窗已由 web-staging.jsx 的 WebStagingDialog 取代：
 //  三模块暂存 + 按供货方分组 + 提交后 WhatsApp 对话窗口)
 
+// R19 — 按上下文打开暂存面板：深层组件（商品详情的询价/入库/出库按钮）
+// 调用；mobile.jsx / web.jsx 监听 tl-open-staging 事件，各自打开对应端的
+// 暂存面板并带上 context（AC-19-06 上下文切换时页签集合同步更新）。
+function openStaging(context) {
+  window.dispatchEvent(new CustomEvent('tl-open-staging', { detail: { context: context || 'all' } }));
+}
+
 Object.assign(window, {
-  emptyCarts, cartTotalCount, CART_MODULES, CURRENCIES,
+  emptyCarts, cartTotalCount, CART_MODULES, CURRENCIES, openStaging,
+  inLines, inSupplier, outCarts, activeCart, outLines, outLineCount,
   CartStepper, H5CartFab, WebCartFab, H5CartSheet,
   InquiryCartEditor, InboundCartEditor, OutboundCartEditor,
   NewSupplierDialog,

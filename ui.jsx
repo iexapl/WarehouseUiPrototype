@@ -924,7 +924,52 @@ function H5FilterBar({ open, onToggle, activeCount, onReset, left, tools, fields
   );
 }
 
+// ============================================================
+// R16 —— 签名组件（手写画布 / 点选确认），收货确认与访客录单页共用
+// ============================================================
+function SignatureBox({ value, onChange }) {
+  // value: null | { mode: 'draw'|'tap', dataUrl, signedBy }
+  const [mode, setMode] = useState(value && value.mode === 'tap' ? 'tap' : 'draw');
+  const [name, setName] = useState((value && value.signedBy) || '');
+  const [tapped, setTapped] = useState(!!(value && value.mode === 'tap'));
+  const cvRef = useRef(null);
+  const drawing = useRef(false);
+  const dirty = useRef(false);
+  useEffect(() => {
+    const cv = cvRef.current; if (!cv) return;
+    const ctx = cv.getContext('2d');
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, cv.width, cv.height);
+  }, [mode]);
+  const pos = (e) => { const r = cvRef.current.getBoundingClientRect(); return { x: Math.round((e.clientX - r.left) * (cvRef.current.width / r.width)), y: Math.round((e.clientY - r.top) * (cvRef.current.height / r.height)) }; };
+  const emitDraw = () => { if (!dirty.current) return onChange(null); onChange({ mode: 'draw', dataUrl: cvRef.current.toDataURL('image/png'), signedBy: name }); };
+  const emitTap = (on) => { if (!on) return onChange(null); onChange({ mode: 'tap', dataUrl: '', signedBy: name }); };
+  return (
+    <div data-test="signature-box">
+      <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+        <button type="button" className={`btn sm${mode === 'draw' ? ' primary' : ''}`} onClick={() => { setMode('draw'); }}><Icon name="edit" size={12} />{t('Handwritten')}</button>
+        <button type="button" className={`btn sm${mode === 'tap' ? ' primary' : ''}`} onClick={() => { setMode('tap'); setTapped(false); emitTap(false); }}><Icon name="checkDouble" size={12} />{t('Tap Confirm')}</button>
+      </div>
+      {mode === 'draw' ? (
+        <canvas ref={cvRef} width={520} height={150} style={{ width: '100%', height: 120, border: '1px dashed var(--border-light)', borderRadius: 8, background: '#fff', touchAction: 'none', cursor: 'crosshair', display: 'block' }}
+          onPointerDown={e => { e.preventDefault(); drawing.current = true; dirty.current = true; const ctx = cvRef.current.getContext('2d'); const p = pos(e); ctx.strokeStyle = '#1F2D3D'; ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.beginPath(); ctx.moveTo(p.x, p.y); }}
+          onPointerMove={e => { if (!drawing.current) return; e.preventDefault(); const ctx = cvRef.current.getContext('2d'); const p = pos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); }}
+          onPointerUp={() => { if (!drawing.current) return; drawing.current = false; emitDraw(); }}
+          onPointerLeave={() => { if (!drawing.current) return; drawing.current = false; emitDraw(); }} />
+      ) : (
+        <button type="button" className={`btn${tapped ? ' success' : ''}`} style={{ width: '100%', height: 84, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }} onClick={() => { setTapped(true); emitTap(true); }}>
+          <Icon name={tapped ? 'checkDouble' : 'user'} size={18} />{tapped ? t('Confirmed') : t('Tap here to confirm receipt')}
+        </button>
+      )}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
+        <span className="muted" style={{ fontSize: 12, flexShrink: 0 }}>{t('Signed by')}</span>
+        <input className="input" style={{ height: 30 }} value={name} placeholder="Full name" onChange={e => { const v = e.target.value; setName(v); if (mode === 'draw' && dirty.current && cvRef.current) onChange({ mode: 'draw', dataUrl: cvRef.current.toDataURL('image/png'), signedBy: v }); else if (mode === 'tap' && tapped) onChange({ mode: 'tap', dataUrl: '', signedBy: v }); }} />
+      </div>
+    </div>
+  );
+}
+
 Object.assign(window, {
+  SignatureBox,
   Icon, NavIcon, NAV_ICONS, Logo, AppCtx, useApp, Tag, StatusTag, TenantTag, Money, Input, Textarea, Select, SearchBox, Switch,
   CropModal, ProductImagePicker,
   RadioRow, Checkbox, FormRow, Dialog, ConfirmDialog, Table, Pagination, EmptyState, Descriptions, Banner,

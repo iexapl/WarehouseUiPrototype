@@ -3,7 +3,7 @@
 // ============================================================
 
 // round 53 — icon mapping for document action verbs (icon+text buttons)
-const VERB_ICON = { Accept: 'check', Approve: 'check', Submit: 'check', Quote: 'edit', 'Confirm Quote': 'checkDouble', 'Place Order': 'cart', Ship: 'truck', Dispatch: 'truck', 'Confirm Receipt': 'checkDouble', 'Create Invoice': 'receipt', 'Confirm Invoice': 'checkDouble', 'Record Payment': 'receipt', Reject: 'close', Cancel: 'close', Close: 'close', Delete: 'trash', Print: 'print', Export: 'download', 'Re-receive': 'checkDouble', 'Replenish': 'truck', 'Terminate Receiving': 'close' };
+const VERB_ICON = { Accept: 'check', Approve: 'check', Submit: 'check', Quote: 'edit', 'Confirm Quote': 'checkDouble', 'Place Order': 'cart', Ship: 'truck', Dispatch: 'truck', 'Confirm Receipt': 'checkDouble', 'Create Invoice': 'receipt', 'Confirm Invoice': 'checkDouble', 'Record Payment': 'receipt', 'Start Picking': 'truck', Reject: 'close', Cancel: 'close', Close: 'close', Delete: 'trash', Print: 'print', Export: 'download', 'Re-receive': 'checkDouble', 'Replenish': 'truck', 'Terminate Receiving': 'close' };
 
 // fix #21 — smart date-time: show year only when crossing year boundary
 const fmtDateTime = (ts) => {
@@ -146,6 +146,14 @@ function MobileApp() {
   const [confirm, setConfirm] = useState(null);
   // 购物车：悬浮入口 + 底部面板（询价 / 入库 / 出库三车，数据在 App 层跨页保留）
   const [cartOpen, setCartOpen] = useState(false);
+  // R19 — 暂存面板入口上下文：'all'（通用）或单一模块（询价/入库/出库）
+  const [cartCtx, setCartCtx] = useState('all');
+  useEffect(() => {
+    // R19 — 深层组件（商品详情按钮等）按上下文请求打开暂存面板
+    const h = e => { setCartCtx(e.detail.context || 'all'); setCartOpen(true); };
+    window.addEventListener('tl-open-staging', h);
+    return () => window.removeEventListener('tl-open-staging', h);
+  }, []);
   const isPlatform = account.type === 'platform';
   const platform = isPlatform || null;
   const cartCount = cartTotalCount(carts);
@@ -183,8 +191,8 @@ function MobileApp() {
     ship: 'Ship Order', product: 'Product Detail', guide: 'Permission Guide', notes: 'Data Notes', wa: 'WhatsApp Link',
     productNew: 'New Product', scan: 'Scan', import: 'Batch Import', categories: 'Categories', stock: 'My Stock',
     movements: 'Stock Movements', quote: 'Send Quote', print: 'Print Preview', admin: 'Platform Admin',
-    members: 'Team Members', bindwa: 'Bind WhatsApp', adjustPrice: 'Adjust Price', adjustStock: 'Adjust Stock',
-    channelStock: 'Downstream Stock', waChat: 'WhatsApp Chat', waInbox: 'WhatsApp', rereceive: 'Re-receive',
+    members: 'Team Members', distributors: 'Distributors', bindwa: 'Bind WhatsApp', adjustPrice: 'Adjust Price', adjustStock: 'Adjust Stock',
+    channelStock: 'Downstream Stock', priceHistory: 'Purchase Price History', waChat: 'WhatsApp Chat', waInbox: 'WhatsApp', rereceive: 'Re-receive',
     accept: 'Accept Order', pay: 'Record Payment', replenish: 'Replenish',
   };
   // R96 — the doc detail title shows the DOCUMENT TYPE; R97 — 入库记录/出库单/
@@ -215,11 +223,15 @@ function MobileApp() {
             {page.name === 'order' && <H5DocFormPage mode="PO" onDone={back} />}
             {page.name === 'receive' && <H5ReceivePage ckId={page.docId} onDone={back} />}
             {page.name === 'ship' && <H5ShipPage poId={page.docId} onDone={back} />}
+            {page.name === 'picking' && <H5PickingPage ckId={page.docId} onDone={back} />}
+            {page.name === 'dispatch' && <H5DispatchPage ckId={page.docId} onDone={back} />}
         {page.name === 'rereceive' && <H5ReReceivePage poId={page.docId} onDone={back} />}
             {page.name === 'accept' && <H5AcceptPage poId={page.docId} onDone={back} />}
             {page.name === 'pay' && <H5PayPage poId={page.docId} onDone={back} />}
             {page.name === 'replenish' && <H5ReplenishPage poId={page.docId} onDone={back} />}
-            {page.name === 'product' && <H5ProductPage productId={page.productId} push={push} platform={platform} />}
+            {page.name === 'product' && <H5ProductPage productId={page.productId} push={push} platform={platform} inquiry={page.inquiry} />}
+            {page.name === 'inboundWizard' && <H5InboundWizardPage result={page.result} pids={page.pids} onDone={back} />}
+            {page.name === 'settings' && <H5SettingsPage onDone={back} />}
             {page.name === 'guide' && <H5GuidePage />}
             {page.name === 'notes' && <div className="h5-pad"><DataNotesTable /></div>}
             {page.name === 'productNew' && <H5ProductFormPage onDone={back} />}
@@ -233,11 +245,13 @@ function MobileApp() {
             {page.name === 'quote' && <H5QuoteFormPage docId={page.docId} onDone={back} />}
             {page.name === 'print' && <H5PrintPage docId={page.docId} />}
             {page.name === 'admin' && <H5AdminPage setConfirm={setConfirm} />}
-            {page.name === 'members' && <H5MembersPage />}
+            {page.name === 'members' && <H5TeamPage />}
+            {page.name === 'distributors' && <H5DistributorPage />}
             {page.name === 'bindwa' && <H5BindWaPage />}
             {page.name === 'adjustPrice' && <H5PriceFormPage productId={page.productId} onDone={back} />}
             {page.name === 'adjustStock' && <H5AdjustStockPage productId={page.productId} onDone={back} />}
             {page.name === 'channelStock' && <H5ChannelStockPage productId={page.productId} />}
+            {page.name === 'priceHistory' && <H5PurchaseHistoryPage productId={page.productId} />}
             </React.Fragment>)}
           </div>
         </div>
@@ -284,8 +298,9 @@ function MobileApp() {
       {confirm && <H5Confirm confirm={confirm} onClose={() => setConfirm(null)} />}
       {/* 购物车悬浮入口（角标 = 已加物料行数）：三车任一非空即显示；
           页面态抬高避开底部操作区，页签态抬到页签栏上方 */}
-      <H5CartFab count={cartCount} bottom={page ? 22 : 84} onClick={() => setCartOpen(true)} />
-      {cartOpen && <H5CartSheet onClose={() => setCartOpen(false)} push={push} />}
+      {/* R19 — FAB 在扫码页按当前模式带上下文打开（AC-19-02/03），其余入口 'all' */}
+      <H5CartFab count={cartCount} bottom={page ? 22 : 84} onClick={() => { setCartCtx(page && page.name === 'scan' ? (page.mode === 'out' ? 'outbound' : 'inbound') : 'all'); setCartOpen(true); }} />
+      {cartOpen && <H5CartSheet onClose={() => setCartOpen(false)} push={push} context={cartCtx} />}
     </div>
   );
 }
@@ -364,7 +379,7 @@ function H5Home({ openDoc, push, platform, noPerm, setTab }) {
   const ATT_ENTRIES = isSupplier
     ? [
         { label: 'Inquiries to Quote', icon: 'quote', tone: 'purple', goDocs: ['IQ', 'Submitted'], match: d => d.type === 'IQ' && d.seller === ATT_TID && d.status === 'Submitted' },
-        { label: 'Orders to Ship', icon: 'stockOut', tone: 'primary', goDocs: ['PO', 'Pending Outbound'], match: d => d.type === 'PO' && d.seller === ATT_TID && d.status === 'Pending Outbound' && d.paid },
+        { label: 'Orders to Ship', icon: 'stockOut', tone: 'primary', goDocs: ['PO', 'Pending Outbound'], match: d => d.type === 'PO' && d.seller === ATT_TID && d.status === 'Pending Outbound' },
         { label: 'Orders to Invoice', icon: 'invoices', tone: 'warning', goDocs: ['PO', 'ALL'], match: d => d.type === 'PO' && d.seller === ATT_TID && ['Received', 'Partially Received'].includes(d.status) },
       ]
     : [
@@ -420,6 +435,7 @@ function H5Home({ openDoc, push, platform, noPerm, setTab }) {
     ['My Stock', 'myStock', NAV_C.myStock, () => push({ name: 'stock' })],
     ['Movements', 'movements', NAV_C.movements, () => push({ name: 'movements' })],
     ['Team Members', 'team', NAV_C.team, () => push({ name: 'members' })],
+    ['Distributors', 'team', NAV_C.team, () => push({ name: 'distributors' })],
   ];
   const tradeReady = !(isTenant && !hasPartners);
   const grid = platform
@@ -432,7 +448,7 @@ function H5Home({ openDoc, push, platform, noPerm, setTab }) {
     : (isSupplier
       ? [
           ['To Quote', 'quote', NAV_C.iqList, () => openFirst(() => db.docs.find(d => d.type === 'IQ' && d.seller === account.tenantId && d.status === 'Submitted'), 'No inquiries awaiting your quote'), true],
-          ['Ship', 'stockOut', NAV_C.stockOut, () => openFirst(() => db.docs.find(d => d.type === 'PO' && d.seller === account.tenantId && d.status === 'Pending Outbound' && d.paid), 'No orders awaiting shipment'), true],
+          ['Ship', 'stockOut', NAV_C.stockOut, () => openFirst(() => db.docs.find(d => d.type === 'PO' && d.seller === account.tenantId && d.status === 'Pending Outbound'), 'No orders awaiting shipment'), true],
           ['Invoice', 'invoices', NAV_C.invoices, () => openFirst(() => db.docs.find(d => d.type === 'PO' && d.seller === account.tenantId && ['Received', 'Partially Received'].includes(d.status)), 'No received orders to invoice'), true],
           ...navShared,
         ]
@@ -672,7 +688,7 @@ function H5Products({ push, platform, skReady = true }) {
           // R100m — 库存数字统一带单位
           const sv = (db.stock[account.tenantId] || {})[p.id];
           return (
-          <div key={p.id} className="h5-product" onClick={() => push({ name: 'product', productId: p.id })}>
+          <div key={p.id} className="h5-product" onClick={() => push({ name: 'product', productId: p.id, inquiry: effTab === 'channel' && showChannelTab })}>
             {/* R100p — 列表项分 body/foot：p-main=body（图片/名称/编码/规格/库存/分类/价格），p-foot=操作按钮，段间虚线 */}
             <div className="p-main">
             <img src={prodImg(p)} alt={p.name} />
@@ -700,12 +716,16 @@ function H5Products({ push, platform, skReady = true }) {
               )}
               {/* R78 — list-item prices: own products show cost/market/sale,
                   upstream (channel) products show market/sale only (cost is the
-                  owner's procurement record, hidden across the tenant boundary) */}
-              <div className="p-prices">
-                {p.ownerId === account.tenantId && <div className="p-price-line"><span className="pl-k">{t('Cost Price')}</span><span className="pl-v">{money(ifnull(p.cost, p.price), p.currency).text}</span></div>}
+                  owner's procurement record, hidden across the tenant boundary).
+                  R12 — 询价场景（渠道 tab = 上游商品询价浏览）不渲染任何价格行 (AC-12-01)，
+                  以「价格以报价为准」chip 提示；供应商自己的商品（mine tab）完整展示 (AC-12-04) */}
+              {effTab === 'channel' && showChannelTab ? (
+                <div className="p-meta"><span className="p-chip"><Icon name="inquiry" size={10} />{t('Price on quote')}</span></div>
+              ) : <div className="p-prices">
+                {p.ownerId === account.tenantId && <div className="p-price-line"><span className="pl-k">{t('Purchase Price')}</span><span className="pl-v">{money(purchasePriceOf(p), purchaseCurrencyOf(p)).text}</span></div>}
                 <div className="p-price-line"><span className="pl-k">{t('Market Reference Price')}</span><span className="pl-v">{money(ifnull(p.marketPrice, p.price), marketCurOf(p)).text}</span></div>
                 <div className="p-price-line"><span className="pl-k">{t('Channel Sales Price')}</span><span className="pl-v pl-sale">{money(p.price, p.currency).text}</span></div>
-              </div>
+              </div>}
             </div>
             </div>
             {effTab === 'channel' && showChannelTab && inq && (
@@ -721,8 +741,8 @@ function H5Products({ push, platform, skReady = true }) {
                 <div className="row-actions" onClick={e => e.stopPropagation()}>
                   <button className="h5-item-act" title={t('Adjust Price')} aria-label={t('Adjust Price')} onClick={() => push({ name: 'adjustPrice', productId: p.id })}><Icon name="tag" size={12} />{t('Adjust Price')}</button>
                   {/* 调整库存拆分：入库/出库加入对应暂存（数量默认 1，已在车中则 +1） */}
-                  <button className="h5-item-act success" title={t('Stock In')} aria-label={t('Stock In')} onClick={() => { cartApi.add('inbound', { kind: 'exist', pid: p.id, qty: 1 }); toast(`${p.name} added to the inbound staging`, 'success'); }}><NavIcon name="stockIn" size={12} />{t('Stock In')}</button>
-                  <button className="h5-item-act warning" title={t('Stock Out')} aria-label={t('Stock Out')} onClick={() => { cartApi.add('outbound', { pid: p.id, qty: 1 }); toast(`${p.name} added to the outbound staging`, 'success'); }}><NavIcon name="stockOut" size={12} />{t('Stock Out')}</button>
+                  <button className="h5-item-act success" title={t('Stock In')} aria-label={t('Stock In')} onClick={() => { const ok = cartApi.add('inbound', { kind: 'exist', pid: p.id, qty: 1 }); if (ok) toast(`${p.name} added to the inbound staging`, 'success'); }}><NavIcon name="stockIn" size={12} />{t('Stock In')}</button>
+                  <button className="h5-item-act warning" title={t('Stock Out')} aria-label={t('Stock Out')} onClick={() => { const ok = cartApi.add('outbound', { pid: p.id, qty: 1 }); if (ok) toast(`${p.name} added to the outbound staging`, 'success'); }}><NavIcon name="stockOut" size={12} />{t('Stock Out')}</button>
                   <button className="h5-item-act" title={t('View Stock')} aria-label={t('View Stock')} onClick={() => push({ name: 'channelStock', productId: p.id })}><Icon name="eye" size={12} />{t('View Stock')}</button>
                 </div>
               </div>
@@ -905,7 +925,7 @@ function h5DocVerb(verb, doc, ctx) {
     return;
   }
   if (verb === 'Accept' || verb === 'Submit' || verb === 'Cancel' || verb === 'Close' || verb === 'Delete'
-    || verb === 'Confirm Quote' || verb === 'Place Order' || verb === 'Record Payment' || verb === 'Create Invoice' || verb === 'Confirm Invoice' || verb === 'Dispatch'
+    || verb === 'Confirm Quote' || verb === 'Place Order' || verb === 'Record Payment' || verb === 'Create Invoice' || verb === 'Confirm Invoice'
     || verb === 'Re-receive' || verb === 'Replenish' || verb === 'Terminate Receiving') {
     // R92 — the partial-receipt recovery actions can be triggered from a CK/RK
     // list item; they always operate on the parent purchase order
@@ -951,16 +971,13 @@ function h5DocVerb(verb, doc, ctx) {
       'Record Payment': `Record the offline payment for order ${doc.no}? The buyer pays offline — recording it notifies the buyer and unlocks shipment.`,
       'Create Invoice': `Issue the invoice for ${doc.no}? The invoice link will be pushed to ${tenantName(db, doc.buyer)} via WhatsApp.`,
       'Confirm Invoice': `Confirm invoice ${doc.no}? It will be archived after confirmation.`,
-      // R82 — dispatch the generated outbound order: waybill link pushed to the buyer
-      Dispatch: `Dispatch outbound order ${doc.no}? The waybill link is pushed to ${tenantName(db, doc.buyer)} and the order moves to awaiting receipt.`,
       // R83 — partial receipt recovery (R92: po.no — the doc may be a CK/RK item)
       'Re-receive': `Re-receive all outstanding quantities for order ${po.no}? An inbound record will be created and the order moves to fully received if all items are caught up.`,
       'Replenish': `Issue a replenishment shipment for the shortfall of order ${po.no}? A new outbound order with waybill will be generated.`,
       'Terminate Receiving': `Terminate receiving for order ${po.no}? The follow-up replenishment stops and this order's receiving is completed.`,
     };
-    setConfirm({ title: verb, message: msgs[verb], confirmText: verb, tone: ['Cancel', 'Close', 'Delete'].includes(verb) ? 'error' : verb === 'Re-receive' ? 'success' : verb === 'Dispatch' ? 'warning' : undefined, onConfirm: () => {
-      if (verb === 'Dispatch') act.dispatch(doc);
-      else if (verb === 'Re-receive') push({ name: 'rereceive', docId: po.id });
+    setConfirm({ title: verb, message: msgs[verb], confirmText: verb, tone: ['Cancel', 'Close', 'Delete'].includes(verb) ? 'error' : verb === 'Re-receive' ? 'success' : undefined, onConfirm: () => {
+      if (verb === 'Re-receive') push({ name: 'rereceive', docId: po.id });
       else if (verb === 'Replenish') act.replenish(po);
       else if (verb === 'Terminate Receiving') act.terminateReceiving(po);
       else act.docVerb(verb, doc);
@@ -969,6 +986,9 @@ function h5DocVerb(verb, doc, ctx) {
     } });
     return;
   }
+  // R16 — 拣货 / 发货（承运信息）专用页面（CK 行）
+  if (verb === 'Start Picking') return push({ name: 'picking', docId: doc.id });
+  if (verb === 'Dispatch') return push({ name: 'dispatch', docId: doc.id });
   if (verb === 'Ship') return push({ name: 'ship', docId: doc.id });
   // R91/R92 — the buyer can confirm receipt directly from the ORDER (or a CK
   // list item) at 已发货: resolve to the outbound (CK) and open the receiving
@@ -1044,6 +1064,8 @@ function H5Mine({ push }) {
   const isTenant = account.type === 'tenant';
   // round 54 — change own password dialog state
   const [pwOpen, setPwOpen] = useState(false);
+  // AC-09-07 — 被邀请方「我有邀请码」受理弹窗
+  const [accOpen, setAccOpen] = useState(false);
   const [pw, setPw] = useState({ cur: '', next: '', conf: '' });
   const savePw = () => {
     if (account.password && pw.cur !== account.password) { toast('Current password is incorrect', 'error'); return; }
@@ -1106,6 +1128,13 @@ function H5Mine({ push }) {
         <span className="cell-icon" style={{ background: 'var(--primary-light)', color: 'var(--primary)' }}><Icon name="lock" size={17} /></span>
         <div style={{ flex: 1, fontSize: 13.5 }}>Change Password<span className="muted" style={{ fontSize: 11, marginLeft: 6 }}>{account.password ? 'reset your login password' : 'set your login password'}</span></div><Icon name="chevronRight" size={14} color="var(--text-3)" />
       </div>
+      {/* R10d/AC-10-10 — 系统设置入口（税率 / 运费 / 报价模式 / AI 边界 / 库存阈值） */}
+      {isTenant && (
+        <div className="h5-cell" onClick={() => push({ name: 'settings' })}>
+          <span className="cell-icon" style={{ background: 'var(--warning-light)', color: 'var(--warning)' }}><Icon name="grid" size={17} /></span>
+          <div style={{ flex: 1, fontSize: 13.5 }}>{t('System Settings')}<span className="muted" style={{ fontSize: 11, marginLeft: 6 }}>tax · freight · quote mode</span></div><Icon name="chevronRight" size={14} color="var(--text-3)" />
+        </div>
+      )}
       {account.type === 'platform' && (
         <div className="h5-cell" onClick={() => push({ name: 'admin' })}>
           <span className="cell-icon" style={{ background: 'var(--purple-light)', color: 'var(--purple)' }}><Icon name="shield" size={17} /></span>
@@ -1115,7 +1144,21 @@ function H5Mine({ push }) {
       {isTenant && (
         <div className="h5-cell" onClick={() => push({ name: 'members' })}>
           <span className="cell-icon" style={{ background: 'var(--primary-light)', color: 'var(--primary)' }}><NavIcon name="team" size={17} /></span>
-          <div style={{ flex: 1, fontSize: 13.5 }}>Team Members &amp; Sub-Agents</div><Icon name="chevronRight" size={14} color="var(--text-3)" />
+          <div style={{ flex: 1, fontSize: 13.5 }}>Team Members<span className="muted" style={{ fontSize: 11, marginLeft: 6 }}>accounts of my merchant</span></div><Icon name="chevronRight" size={14} color="var(--text-3)" />
+        </div>
+      )}
+      {isTenant && (
+        <div className="h5-cell" onClick={() => push({ name: 'distributors' })}>
+          <span className="cell-icon" style={{ background: 'var(--success-light)', color: 'var(--success)' }}><Icon name="users" size={17} /></span>
+          <div style={{ flex: 1, fontSize: 13.5 }}>Distributors<span className="muted" style={{ fontSize: 11, marginLeft: 6 }}>downstream merchants</span></div><Icon name="chevronRight" size={14} color="var(--text-3)" />
+        </div>
+      )}
+      {/* AC-09-07 — 被邀请方受理邀请：与「邀请他人」成对出现，位置紧邻
+          Distributors，保证被邀请方能在自己这一端找到入口 */}
+      {isTenant && (
+        <div className="h5-cell" onClick={() => setAccOpen(true)}>
+          <span className="cell-icon" style={{ background: 'var(--primary-light)', color: 'var(--primary)' }}><Icon name="link" size={17} /></span>
+          <div style={{ flex: 1, fontSize: 13.5 }}>{t('I have an invite code')}<span className="muted" style={{ fontSize: 11, marginLeft: 6 }}>{t('accept a supplier / distributor invite')}</span></div><Icon name="chevronRight" size={14} color="var(--text-3)" />
         </div>
       )}
       {isTenant && (
@@ -1153,6 +1196,7 @@ function H5Mine({ push }) {
           <div className="muted" style={{ fontSize: 11, marginTop: 8 }}>demo password — hashed at rest in the real system</div>
         </Dialog>
       )}
+      {accOpen && <AcceptInviteDialog compact onClose={() => setAccOpen(false)} />}
       <div className="muted" style={{ textAlign: 'center', fontSize: 11, marginTop: 16 }}>TierLink Warehouse MVP · Demo data only · v1.0.0</div>
       </div>
     </div>
@@ -1434,6 +1478,9 @@ function WaChatCore({ docId, back, onClose, onOpenDoc }) {
   const [input, setInput] = useState('');
   const [chips, setChips] = useState(null);
   const [disc, setDisc] = useState(0);
+  const hintSent = useRef(new Set());               // R14 — 已发过库存提示的报价单号（去重，AC-14-05）
+  const [round, setRound] = useState(0);            // R13 — AI 让价轮次（从 0 起）
+  const [humanTakeover, setHumanTakeover] = useState(false); // R13 — 触达边界后转人工
   const [done, setDone] = useState(false);
   const pushMsg = (me, lines) => setMsgs(m => [...m, { me, ts: hhmm(), lines }]);
   const supplierSay = (lines, delay, after) => {
@@ -1451,14 +1498,32 @@ function WaChatCore({ docId, back, onClose, onOpenDoc }) {
     const t4 = setTimeout(() => { setTyping(false); setMsgs(m => [...m, { me: false, ts: hhmm(), lines: offerLines(0) }]); setChips(CHIPS_STD); }, 8000);
     return () => { [t1, t2, t3, t4].forEach(clearTimeout); };
   }, []);
-  // supplier counter-offer: first negotiation → 5% off, second → final 8% off
+  // supplier counter-offer: AI steps down the settings.aiPolicy ladder via nextAiDiscount();
+  // on hitting the floor or the round limit it stops and escalates to a human (R13, AC-13-03/09)
   const counter = (d) => {
-    const next = d === 0 ? 0.05 : 0.08;
+    if (humanTakeover) {
+      // 接管后不再走 nextAiDiscount —— 改由销售人工跟进（AC-13-09）
+      supplierSay(['Our team has taken over this conversation — the sales rep will follow up with you personally on the price.'], 2000);
+      return;
+    }
+    const r = nextAiDiscount(db.settings.aiPolicy, round);
+    const next = r.discount;
+    const boundary = r.hitFloor || !r.canContinue;
+    const pct = Math.round((1 - next) * 1000) / 10;
     setDisc(next);
+    setRound(round + 1);
+    if (boundary) setHumanTakeover(true);
     supplierSay([
-      d === 0 ? 'As a valued partner, we can offer a 5% discount on this order.' : 'We can stretch to 8% off — this is our best final price.',
+      `As a valued partner, we can offer a ${pct}% discount on this order.`,
       ...offerLines(next),
-    ], 2000, () => setChips(next >= 0.08 ? CHIPS_FINAL : CHIPS_STD));
+      ...(boundary ? [r.hitFloor
+        ? 'This is our best final price — any further concession needs approval from our sales team.'
+        : 'We have reached our negotiation round limit — further concession needs approval from our sales team.'] : []),
+    ], 2000, () => {
+      setChips(boundary ? CHIPS_FINAL : CHIPS_STD);
+      // R13 — 每条让价写 { round, discount, price, hitFloor } 入会话日志（AC-13-06）
+      setMsgs(m => [...m, { me: false, ts: hhmm(), log: `AI concession · round ${round + 1} · discount ${next} · total ${doc ? money(totalFor(next), doc.currency).full : '—'} · ${r.hitFloor ? 'floor reached' : boundary ? 'round limit reached' : 'can continue'}` }]);
+    });
   };
   // buyer confirms → supplier generates + confirms the quote and pushes the link
   const confirmQuote = () => {
@@ -1471,10 +1536,19 @@ function WaChatCore({ docId, back, onClose, onOpenDoc }) {
         supplierSay(['Our AI engine drafted the quotation — confirming it with one tap…'], 1400, () => {
           const sent = act.docVerb('Confirm Quote', created);
           const qt = sent || created;
-          setMsgs(m => [...m,
-            { me: false, ts: hhmm(), lines: ['Quotation confirmed. Here is the link:'] },
-            { me: false, ts: hhmm(), quote: { no: qt.no, docId: qt.id, total: money(docAmount(qt), qt.currency).full, valid: qt.validUntil } },
-          ]);
+          setMsgs(m => {
+            const next = [...m,
+              { me: false, ts: hhmm(), lines: ['Quotation confirmed. Here is the link:'] },
+              { me: false, ts: hhmm(), quote: { no: qt.no, docId: qt.id, total: money(docAmount(qt), qt.currency).full, valid: qt.validUntil } },
+            ];
+            // R14 — 库存提示追加在消息末尾；同一 docNo 只追加一次（AC-14-05），纯文本不改金额（AC-14-08）
+            if (!hintSent.current.has(qt.no)) {
+              hintSent.current.add(qt.no);
+              const hint = stockHintFor(db, qt.seller, qt.items.map(it => it.pid), (db.settings || {}).lowStockThreshold);
+              if (hint) next.push({ me: false, ts: hhmm(), lines: [hint] });
+            }
+            return next;
+          });
           setDone(true);
         });
       }
@@ -1524,11 +1598,18 @@ function WaChatCore({ docId, back, onClose, onOpenDoc }) {
         )}
       </div>
       <div className="wa-banner-mini"><Icon name="info" size={12} /> Demo simulation — inquiry pushed to the supplier's WhatsApp; replies are simulated.</div>
+      {humanTakeover && (
+        <div className="wa-banner-mini" style={{ background: '#FFF3E0', color: '#7A4E00' }}>
+          <Icon name="user" size={12} /> {t('Escalated to human — AI discount boundary reached')}
+        </div>
+      )}
       <div className="wa-chat-body">
         <div className="wa-day">Today</div>
         {msgs.map((m, i) => (
           <div key={i} className={`wa-row${m.me ? ' me' : ''}`}>
-            {m.quote ? (
+            {m.log ? (
+              <div className="wa-bubble" style={{ background: '#EDF1F5', color: '#5A6B7D', fontSize: 11 }}><Icon name="ai" size={11} /> {m.log}</div>
+            ) : m.quote ? (
               <div className="wa-bubble wa-quote-card" onClick={() => onOpenDoc && onOpenDoc(m.quote.docId)}>
                 <div className="wa-qc-title"><Icon name="file" size={14} /> {m.quote.no}</div>
                 <div className="wa-qc-sub">Quotation · {m.quote.total} · valid until {m.quote.valid}</div>
@@ -1783,6 +1864,8 @@ function H5ReceivePage({ ckId, onDone }) {
   const [mode, setMode] = useState('accept');
   const [qtys, setQtys] = useState(() => Object.fromEntries(ck.items.map(it => [it.pid, String(it.qty)])));
   const [reason, setReason] = useState('');
+  // R16 — 签收签名（手写 / 点选，选填；随实收写入 RK）
+  const [signature, setSignature] = useState(null);
   // R97 — result drives the qty inputs:
   //   accept  → received = ordered, read-only
   //   partial → received defaults to 0, editable within [0, ordered]
@@ -1834,6 +1917,8 @@ function H5ReceivePage({ ckId, onDone }) {
           </div>
         </div>
       )}
+      <div className="h5-section-title mt12">{t('Signature (optional)')}</div>
+      <div className="h5-card"><SignatureBox value={signature} onChange={setSignature} /></div>
       <button className="h5-btn success mt16" style={{ width: '100%' }} onClick={() => {
         if (mode !== 'accept' && !reason.trim()) { toast('Variance reason is required', 'error'); return; }
         if (mode === 'partial') {
@@ -1842,18 +1927,17 @@ function H5ReceivePage({ ckId, onDone }) {
             if (qtys[it.pid] === '' || isNaN(n) || n < 0 || n > it.qty) { toast('Received quantity must be between 0 and the ordered quantity', 'error'); return; }
           }
         }
-        act.receive(ck, mode, qtys, reason);
+        act.receive(ck, mode, qtys, reason, null, signature);
         onDone();
       }}><Icon name="checkDouble" size={14} />Confirm Receiving</button>
     </div>
   );
 }
 
-// ---------- ship page ----------
+// ---------- ship page（R16：只确认发货 → 生成 CK 进入拣货；物流信息后置到发货） ----------
 function H5ShipPage({ poId, onDone }) {
-  const { db, act, toast } = useApp();
+  const { db, act } = useApp();
   const po = db.docs.find(d => d.id === poId);
-  const [w, setW] = useState({ carrier: '', plate: '', driver: '', phone: '' });
   if (!po) return null;
   return (
     <div className="h5-pad">
@@ -1863,6 +1947,34 @@ function H5ShipPage({ poId, onDone }) {
           <StatusTag type="PO" status={po.status} />
         </div>
         <div className="muted" style={{ fontSize: 12, marginTop: 8 }}>To {tenantName(db, po.buyer)} · {po.items.length} items · {money(docAmount(po), po.currency).full}</div>
+      </div>
+      <div className="h5-card mt12" style={{ fontSize: 12.5, lineHeight: 1.7, color: 'var(--text-2)', display: 'flex', gap: 8 }}>
+        <Icon name="info" size={15} style={{ flexShrink: 0, marginTop: 2 }} />
+        <span>Confirming shipment decrements stock and generates the outbound doc <b>CK-</b> at <b>Picking</b>. Pick the goods first, then dispatch with the carrier info — the waybill and the buyer's WhatsApp link are generated at dispatch.</span>
+      </div>
+      <button className="h5-btn warning mt12" style={{ width: '100%' }} onClick={() => {
+        act.ship(po);
+        onDone();
+      }}><NavIcon name="stockOut" size={14} />Confirm Shipment</button>
+    </div>
+  );
+}
+
+// ---------- R16 · dispatch page（拣货完成后录入承运信息并发货） ----------
+function H5DispatchPage({ ckId, onDone }) {
+  const { db, act, toast } = useApp();
+  const ck = db.docs.find(d => d.id === ckId);
+  const [w, setW] = useState({ carrier: '', plate: '', driver: '', phone: '' });
+  if (!ck) return null;
+  return (
+    <div className="h5-pad">
+      <div className="h5-card">
+        <div className="flex" style={{ justifyContent: 'space-between' }}>
+          <span className="mono" style={{ fontWeight: 700, fontSize: 13 }}>{ck.no}</span>
+          <StatusTag type="CK" status={ck.status} />
+        </div>
+        <div className="muted" style={{ fontSize: 12, marginTop: 8 }}>To {tenantName(db, ck.buyer)} · {ck.items.length} items · {money(docAmount(ck), ck.currency).full}</div>
+        {ck.picking && ck.picking.shortPick && <div style={{ fontSize: 11.5, marginTop: 6, color: '#C0392B' }}><Icon name="alertCircle" size={12} /> Short pick on this shipment — picked quantities were shipped.</div>}
       </div>
       <div className="h5-section-title">Logistics Information</div>
       <div className="h5-card">
@@ -1876,16 +1988,16 @@ function H5ShipPage({ poId, onDone }) {
       <button className="btn block mt12" onClick={() => setW({ carrier: 'Swift Cargo', plate: 'LAG-889-XB', driver: 'Uche Nwankwo', phone: '+234 809 112 3344' })}><Icon name="ai" size={13} />Fill demo logistics</button>
       <button className="h5-btn warning mt12" style={{ width: '100%' }} onClick={() => {
         if (!w.carrier || !w.driver) { toast('Carrier and driver are required', 'error'); return; }
-        act.ship(po, w);
+        act.dispatch(ck, w);
         onDone();
-      }}><NavIcon name="stockOut" size={14} />Confirm Shipment</button>
-      <div className="muted" style={{ fontSize: 11, marginTop: 12, textAlign: 'center' }}>Shipment decrements stock, generates CK + waybill, and pushes a WhatsApp link to the buyer</div>
+      }}><NavIcon name="stockOut" size={14} />Dispatch</button>
+      <div className="muted" style={{ fontSize: 11, marginTop: 12, textAlign: 'center' }}>Dispatching generates the waybill and pushes a login-free confirmation link to the buyer</div>
     </div>
   );
 }
 
 // ---------- product page ----------
-function H5ProductPage({ productId, push, platform }) {
+function H5ProductPage({ productId, push, platform, inquiry }) {
   const { db, account, toast, cartApi } = useApp();
   const p = db.products.find(x => x.id === productId);
   const stock = ifnull((db.stock[account.tenantId] || {})[p.id], '—');
@@ -1912,12 +2024,22 @@ function H5ProductPage({ productId, push, platform }) {
           </div>
         </div>
       </div>
-      <div className="h5-section-title">Prices</div>
-      <div className="h5-desc">
-        {showCost && <div className="h5-desc-row"><div className="k">Cost Price</div><div className="v mono bold">{money(ifnull(p.cost, p.price), p.currency).text}</div></div>}
-        <div className="h5-desc-row"><div className="k">Market Reference Price</div><div className="v mono bold">{money(ifnull(p.marketPrice, p.price), marketCurOf(p)).text}</div></div>
-        <div className="h5-desc-row"><div className="k">Channel Sales Price</div><div className="v mono bold" style={{ color: '#D35400' }}>{money(p.price, p.currency).text}</div></div>
-      </div>
+      {/* R12 — 询价上下文（从渠道 tab 进入）不显示任何价格 (AC-12-01)；
+          供应商查看自己的商品时完整展示 (AC-12-04) */}
+      {!inquiry ? (
+        <React.Fragment>
+          <div className="h5-section-title">Prices</div>
+          <div className="h5-desc">
+            {showCost && <div className="h5-desc-row"><div className="k">Purchase Price</div><div className="v mono bold">{money(purchasePriceOf(p), purchaseCurrencyOf(p)).text}</div>{p.purchaseUpdatedAt ? <div className="cell-sub">{t('updated')} {p.purchaseUpdatedAt}</div> : null}</div>}
+            <div className="h5-desc-row"><div className="k">Market Reference Price</div><div className="v mono bold">{money(ifnull(p.marketPrice, p.price), marketCurOf(p)).text}</div></div>
+            <div className="h5-desc-row"><div className="k">Channel Sales Price</div><div className="v mono bold" style={{ color: '#D35400' }}>{money(p.price, p.currency).text}</div></div>
+          </div>
+        </React.Fragment>
+      ) : (
+        <div className="h5-card" style={{ padding: 12, marginTop: 12, display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: 'var(--text-2)' }}>
+          <Icon name="inquiry" size={14} /> {t('Price on quote')}
+        </div>
+      )}
       <div className="h5-desc mt12">
         <div className="h5-desc-row"><div className="k">Model</div><div className="v mono">{p.model}</div></div>
         <div className="h5-desc-row"><div className="k">Brand</div><div className="v">{p.brand}</div></div>
@@ -1930,12 +2052,13 @@ function H5ProductPage({ productId, push, platform }) {
       {hasActions && (
         <div className="h5-act-row">
           {/* 询价 = 加入询价暂存（数量默认 1，已在车中则 +1） */}
-          {inqOk && <button className="h5-btn plain primary" onClick={() => { cartApi.add('inquiry', { pid: p.id, qty: 1 }); toast(`${p.name} added to the inquiry staging`, 'success'); }}><NavIcon name="inquiry" size={14} />{t('Inquire')}</button>}
+          {inqOk && <button className="h5-btn plain primary" onClick={() => { cartApi.add('inquiry', { pid: p.id, qty: 1 }); toast(`${p.name} added to the inquiry staging`, 'success'); openStaging('inquiry'); }}><NavIcon name="inquiry" size={14} />{t('Inquire')}</button>}
           {mgrOk && <button className="h5-btn" onClick={() => push({ name: 'adjustPrice', productId: p.id })}><Icon name="tag" size={14} />{t('Adjust Price')}</button>}
           {/* 调整库存拆分：入库/出库加入对应暂存 */}
-          {mgrOk && <button className="h5-btn plain success" onClick={() => { cartApi.add('inbound', { kind: 'exist', pid: p.id, qty: 1 }); toast(`${p.name} added to the inbound staging`, 'success'); }}><NavIcon name="stockIn" size={14} />{t('Stock In')}</button>}
-          {mgrOk && <button className="h5-btn plain warning" onClick={() => { cartApi.add('outbound', { pid: p.id, qty: 1 }); toast(`${p.name} added to the outbound staging`, 'success'); }}><NavIcon name="stockOut" size={14} />{t('Stock Out')}</button>}
+          {mgrOk && <button className="h5-btn plain success" onClick={() => { const ok = cartApi.add('inbound', { kind: 'exist', pid: p.id, qty: 1 }); if (ok) { toast(`${p.name} added to the inbound staging`, 'success'); openStaging('inbound'); } }}><NavIcon name="stockIn" size={14} />{t('Stock In')}</button>}
+          {mgrOk && <button className="h5-btn plain warning" onClick={() => { const ok = cartApi.add('outbound', { pid: p.id, qty: 1 }); if (ok) { toast(`${p.name} added to the outbound staging`, 'success'); openStaging('outbound'); } }}><NavIcon name="stockOut" size={14} />{t('Stock Out')}</button>}
           {mgrOk && <button className="h5-btn" onClick={() => push({ name: 'channelStock', productId: p.id })}><Icon name="eye" size={14} />{t('View Stock')}</button>}
+          {showCost && <button className="h5-btn" onClick={() => push({ name: 'priceHistory', productId: p.id })}><Icon name="receipt" size={14} />{t('Purchase History')}</button>}
         </div>
       )}
       {(canInquire || canManage) && !inqOk && !mgrOk && (

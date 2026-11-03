@@ -5,7 +5,7 @@
 const { useState, useEffect, useMemo } = React;
 
 // round 56 — icon mapping for web document action verbs (icon+text buttons)
-const WEB_VERB_ICON = { Accept: 'check', Approve: 'check', Submit: 'check', Quote: 'quote', 'Confirm Quote': 'confirm', 'Place Order': 'orders', Ship: 'stockOut', Dispatch: 'stockOut', 'Confirm Receipt': 'receive', 'Create Invoice': 'invoices', 'Confirm Invoice': 'confirm', 'Record Payment': 'invoices', Reject: 'close', Cancel: 'close', Close: 'close', Delete: 'trash', Print: 'print', Export: 'download', 'Re-receive': 'receive', 'Replenish': 'stockOut', 'Terminate Receiving': 'close' };
+const WEB_VERB_ICON = { Accept: 'check', Approve: 'check', Submit: 'check', Quote: 'quote', 'Confirm Quote': 'confirm', 'Place Order': 'orders', Ship: 'stockOut', Dispatch: 'stockOut', 'Confirm Receipt': 'receive', 'Create Invoice': 'invoices', 'Confirm Invoice': 'confirm', 'Record Payment': 'invoices', 'Start Picking': 'stockOut', Reject: 'close', Cancel: 'close', Close: 'close', Delete: 'trash', Print: 'print', Export: 'download', 'Re-receive': 'receive', 'Replenish': 'stockOut', 'Terminate Receiving': 'close' };
 
 // ---------- menus ----------
 const WEB_MENU = {
@@ -32,7 +32,11 @@ const WEB_MENU = {
       { id: 'invoice', label: 'Invoices' },
     ]},
     { id: 'accounts', label: 'Accounts', icon: 'users', children: [
-      { id: 'account-mgmt', label: 'Accounts' },
+      { id: 'team-mgmt', label: 'Team' },
+      { id: 'distributor-mgmt', label: 'Distributors' },
+    ]},
+    { id: 'settings', label: 'Settings', icon: 'file', children: [
+      { id: 'settings', label: 'System Settings' },
     ]},
   ],
   platform: [
@@ -73,7 +77,12 @@ function webMenuFor(account, tenant, db) {
 // same account role wording (Sub-Distributor / Agent / Supplier / Platform
 // Admin), instead of the raw tenant.type or the internal role key.
 const ROLE_LABELS = { platform: 'Platform Admin', supplier: 'Supplier', agent: 'Agent', sub: 'Sub-Distributor' };
+// R03 — a level label set by the upstream merchant wins over the built-in role
+// wording; the built-in map stays as the fallback when no label was set.
+// levelLabel is DISPLAY-ONLY: maxLevel stays the single source for permission
+// inference (tenantRole), so renaming a level never changes any permission.
 function tenantRoleLabel(db, account, tenant) {
+  if (tenant && tenant.levelLabel) return tenant.levelLabel;
   return ROLE_LABELS[tenantRole(db, account, tenant)] || tenantRole(db, account, tenant);
 }
 
@@ -152,6 +161,9 @@ function WebConsole() {
   const menu = webMenuFor(account, tenant, db);
   const [group, setGroup] = useState(menu[0].id);
   const [page, setPage] = useState(menu[0].children[0].id);
+  // R06 —— 入库两步向导（独立于购物车弹窗渲染）
+  const [wizard, setWizard] = useState(null);
+  const openPendingReprice = (ids) => { setWizard({ pids: ids || [] }); };
   const [collapsed, setCollapsed] = useState(false);
   const [openDocId, setOpenDocId] = useState(null);
   const [permOpen, setPermOpen] = useState(false);
@@ -160,7 +172,15 @@ function WebConsole() {
   // 暂存单（Web 端）：三模块暂存（询价/入库/出库）共用一个 FAB 入口；
   // 提交询价后弹出桌面版 WhatsApp 对话窗口（与移动端同一套数据与流程）
   const [cartOpen, setCartOpen] = useState(false);
+  // R19 — 暂存面板入口上下文（'all' | 'inquiry' | 'inbound' | 'outbound'）
+  const [stagingContext, setStagingContext] = useState('all');
   const [waDocIds, setWaDocIds] = useState(null);
+  useEffect(() => {
+    // R19 — 深层组件按上下文请求打开暂存面板（与 mobile.jsx 同一事件）
+    const h = e => { setStagingContext(e.detail.context || 'all'); setCartOpen(true); };
+    window.addEventListener('tl-open-staging', h);
+    return () => window.removeEventListener('tl-open-staging', h);
+  }, []);
   const cartCount = cartTotalCount(carts);
 
   useEffect(() => {
@@ -184,6 +204,7 @@ function WebConsole() {
     'product-list': 'Product List', 'categories': 'Categories', 'inquiry': 'Inquiries', 'quote': 'Quotes',
     'po': 'Purchase Orders', 'inventory': 'Inventory', 'movements': 'Stock Movements', 'outbound': 'Outbound',
     'receiving': 'Receiving', 'doccenter': 'Document Center', 'invoice': 'Invoices', 'account-mgmt': 'Accounts',
+    'team-mgmt': 'Team', 'distributor-mgmt': 'Distributors',
     'merchant-mgmt': 'Merchants & Relations',
   };
 
@@ -240,6 +261,7 @@ function WebConsole() {
         </div>
         <div className="main">
           <div className="page">
+            {page === 'product-list' && <PendingRepriceBanner onOpen={openPendingReprice} />}
             {page === 'product-list' && <ProductListPage openDoc={openDoc} />}
             {page === 'categories' && <CategoriesPage />}
             {page === 'inquiry' && <InquiryPage openDoc={openDoc} />}
@@ -252,7 +274,10 @@ function WebConsole() {
             {page === 'doccenter' && <DocCenterPage openDoc={openDoc} goPage={goPage} />}
             {page === 'invoice' && <InvoicePage openDoc={openDoc} />}
             {page === 'account-mgmt' && <AccountMgmtPage />}
+            {page === 'team-mgmt' && <TeamPage />}
+            {page === 'distributor-mgmt' && <DistributorPage />}
             {page === 'merchant-mgmt' && <TenantMgmtPage />}
+            {page === 'settings' && <SettingsPage />}
           </div>
         </div>
       </div>
@@ -261,8 +286,9 @@ function WebConsole() {
       {notesOpen && <DataNotesDialog onClose={() => setNotesOpen(false)} />}
       {profileOpen && <ProfileDialog onClose={() => setProfileOpen(false)} />}
       {/* 暂存单悬浮入口（仅商户账号，角标 = 三模块行数合计） */}
-      {account.type === 'tenant' && <WebCartFab count={cartCount} onClick={() => setCartOpen(true)} />}
-      {cartOpen && <WebStagingDialog onClose={() => setCartOpen(false)} onInquired={ids => { setCartOpen(false); setWaDocIds(ids); }} />}
+      {account.type === 'tenant' && <WebCartFab count={cartCount} onClick={() => { setStagingContext('all'); setCartOpen(true); }} />}
+      {cartOpen && <WebStagingDialog onClose={() => setCartOpen(false)} onInquired={ids => { setCartOpen(false); setWaDocIds(ids); }} onWizard={r => setWizard({ result: r })} context={stagingContext} />}
+      {wizard && <InboundWizardDialog result={wizard.result} pids={wizard.pids} onClose={() => setWizard(null)} />}
       {waDocIds && waDocIds.length > 0 && <WebWhatsAppDialog docIds={waDocIds} onOpenDoc={openDoc} onClose={() => setWaDocIds(null)} />}
     </div>
   );
@@ -339,9 +365,10 @@ function ActionButtons({ doc, openDoc, size = 'sm', extraAction }) {
     if (verb === 'Close') return setConfirm({ verb, message: `Close inquiry ${doc.no}?`, danger: true });
     if (verb === 'Delete') return setConfirm({ verb, message: `Delete draft ${doc.no}? This cannot be undone.`, danger: true });
     if (verb === 'Ship') return setDialog('ship');
+    // R16 — 拣货 / 发货（承运信息）专用表单
+    if (verb === 'Start Picking') return setDialog('picking');
+    if (verb === 'Dispatch') return setDialog('dispatch');
     if (verb === 'Confirm Receipt') return setDialog('receive');
-    // R82 — dispatch the generated outbound order (CK): waybill link pushed
-    if (verb === 'Dispatch') return setConfirm({ verb, message: `Dispatch outbound order ${doc.no}? The waybill link is pushed to ${tenantName(db, doc.buyer)} and the order moves to awaiting receipt.` });
     if (verb === 'Print') return setDialog('print');
     if (verb === 'Download') {
       downloadInvoiceFile(db, doc);
@@ -381,7 +408,6 @@ function ActionButtons({ doc, openDoc, size = 'sm', extraAction }) {
         <ConfirmDialog title={`${confirm.title || confirm.verb + ' ' + doc.no}`} message={confirm.message} confirmText={confirm.verb} danger={confirm.danger}
           onConfirm={() => {
             if (confirm.verb === 'OK') return setConfirm(null);
-            if (confirm.verb === 'Dispatch') return act.dispatch(doc);
             return act.docVerb(confirm.verb, doc);
           }} onClose={() => setConfirm(null)} />
       )}
@@ -404,6 +430,9 @@ function ActionButtons({ doc, openDoc, size = 'sm', extraAction }) {
       {dialog === 'po' && <POFormDialog editDoc={doc} onClose={() => setDialog(null)} />}
       {dialog === 'quote' && <QuoteFormDialog inquiry={doc.type === 'IQ' ? doc : null} editQuote={doc.type === 'QT' ? doc : null} onClose={() => setDialog(null)} />}
       {dialog === 'ship' && <ShipDialog po={doc} onClose={() => setDialog(null)} />}
+      {/* R16 — 拣货 / 发货表单（CK 行） */}
+      {dialog === 'picking' && <PickingDialog ckId={doc.id} onClose={() => setDialog(null)} />}
+      {dialog === 'dispatch' && <DispatchDialog ck={doc} onClose={() => setDialog(null)} />}
       {/* R93 — a PO row at 已发货 opens the receive dialog on its generated CK (incl. Pending Shipment) */}
       {dialog === 'receive' && <ReceiveDialog ck={doc.type === 'PO' ? (db.docs.filter(d => d.type === 'CK' && d.poNo === doc.no && ['Shipped', 'Pending Shipment'].includes(d.status)).pop() || doc) : doc} onClose={() => setDialog(null)} />}
       {/* R94 — dedicated FORM dialogs for the order-flow actions (list rows);
@@ -440,12 +469,26 @@ function ProductListPage() {
   const rows = db.products.filter(p => {
     if (isTenant && (tab === 'mine' ? p.ownerId !== account.tenantId : !upstreamIds.has(p.ownerId))) return false;
     if (isTenant && tab === 'channel' && supplier !== 'ALL' && p.ownerId !== supplier) return false;
-    if (q && !(p.name + p.model + p.brand).toLowerCase().includes(q.toLowerCase())) return false;
+    // R05/AC-05-09 — 条码命中要精确（整码或主体码全等即命中）；
+    // 其余仍走名称/型号/品牌的包含匹配，避免改变原有搜索手感。
+    if (q) {
+      const ql = q.trim().toLowerCase();
+      const bc = String(p.barcode || '').trim().toLowerCase();
+      const bd = String(p.barcodeBody || '').trim().toLowerCase();
+      const hitBarcode = !!ql && ((bc && bc === ql) || (bd && bd === ql));
+      if (!hitBarcode && !(p.name + ' ' + p.model + ' ' + p.brand).toLowerCase().includes(ql)) return false;
+    }
     if (cat && !p.categories.includes(cat)) return false;
     return true;
   });
   const filtered = !!(q || cat);
-  const paged = usePaged(rows);
+  // R21/AC-21-09 — list sort by LATEST purchase price (derived value, falls
+  // back to initial cost for products never stocked in this session)
+  const [pSort, setPSort] = useState('default');
+  const sortedRows = pSort === 'priceAsc' ? [...rows].sort((a, b) => purchasePriceOf(a) - purchasePriceOf(b))
+    : pSort === 'priceDesc' ? [...rows].sort((a, b) => purchasePriceOf(b) - purchasePriceOf(a))
+    : rows;
+  const paged = usePaged(sortedRows);
   return (
     <div>
       <div className="page-header">
@@ -482,7 +525,13 @@ function ProductListPage() {
           <span className="label">Category</span>
           <Select value={cat} onChange={setCat} placeholder="All categories" style={{ width: 180 }}
             options={db.categories.map(c => ({ value: c.id, label: t(c.name) }))} />
-          <SearchBox value={q} onChange={setQ} placeholder="Search name / model / brand" width={260} />
+          <SearchBox value={q} onChange={setQ} placeholder="Search name / model / brand / barcode" width={280} />
+          <span className="label">Sort By</span>
+          <Select value={pSort} onChange={setPSort} style={{ width: 200 }} options={[
+            { value: 'default', label: t('Default') },
+            { value: 'priceAsc', label: t('Purchase Price (low → high)') },
+            { value: 'priceDesc', label: t('Purchase Price (high → low)') },
+          ]} />
           <span className="label" style={{ marginLeft: 'auto' }}>{rows.length} products</span>
         </div>
         <Table loading={loading} empty={filtered || (isTenant && tab === 'channel') ? (upstream.length ? 'No products match the current filters' : 'No upstream suppliers') : undefined} emptyHint={filtered ? 'Try clearing the search or filters' : 'This tab lists products from your upstream suppliers — suppliers have none.'} columns={[
@@ -495,7 +544,13 @@ function ProductListPage() {
               </div>
             </div>
           )},
-          { key: 'model', label: 'Model', width: 110, render: p => <span className="mono small">{p.model}</span> },
+          { key: 'model', label: 'Model', width: 130, render: p => (
+            // R05 — 型号与条码分行显示（条码副行，AC-05-08 要求商品详情可见条码）
+            <div>
+              <span className="mono small">{p.model || '—'}</span>
+              {p.barcode ? <div className="cell-sub mono">{p.barcode}</div> : <div className="cell-sub">No barcode</div>}
+            </div>
+          ) },
           { key: 'brand', label: 'Brand', width: 90 },
           { key: 'cats', label: 'Categories', render: p => (
             <div>
@@ -521,12 +576,16 @@ function ProductListPage() {
             // R78 — stacked price set with currency codes: own products show
             // cost/market/sale, upstream (channel) products market/sale only
             <div style={{ display: 'inline-flex', flexDirection: 'column', gap: 1, alignItems: 'flex-end' }}>
-              {p.ownerId === account.tenantId && <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{t('Cost Price')} <span className="mono">{money(ifnull(p.cost, p.price), p.currency).text}</span></span>}
+              {p.ownerId === account.tenantId && <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{t('Purchase Price')} <span className="mono">{money(purchasePriceOf(p), purchaseCurrencyOf(p)).text}</span>{p.purchaseUpdatedAt ? <span className="muted" style={{ marginLeft: 4 }}>{t('updated')} {p.purchaseUpdatedAt}</span> : null}</span>}
               <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{t('Market Reference Price')} <span className="mono">{money(ifnull(p.marketPrice, p.price), marketCurOf(p)).text}</span></span>
               <span style={{ fontSize: 11, color: 'var(--text-2)' }}>{t('Channel Sales Price')} <span className="mono bold" style={{ color: '#D35400' }}>{money(p.price, p.currency).text}</span></span>
             </div>
           ) },
           { key: 'stock', label: 'My Stock', width: 100, align: 'center', render: p => <span className="mono bold">{ifnull((db.stock[account.tenantId] || {})[p.id], 0)} {p.unit}</span> },
+          // R08/AC-08-04 — 商品档案区分自产 / 外购
+          { key: 'source', label: 'Source', width: 110, render: p => p.source === 'self'
+            ? <Tag tone="teal" dot>{t('Self-produced')}</Tag>
+            : <Tag tone="info">{t('Externally sourced')}</Tag> },
           { key: 'status', label: 'Status', width: 110, render: p => <Tag tone={p.onSale === false ? 'dark' : 'teal'} dot>{p.onSale === false ? 'Discontinued' : 'On Sale'}</Tag> },
           { key: 'act', label: 'Actions', width: isTenant && tab === 'channel' ? 200 : 360, render: p => isTenant && tab === 'channel' ? (
             <div className="row-actions">
@@ -537,11 +596,12 @@ function ProductListPage() {
           ) : canManageProduct(db, account, p) ? (
             <div className="row-actions">
               {/* 加入入库/出库暂存（与移动端同一套暂存数据） */}
-              <button className="btn sm text success-text" title={t('Add to Inbound Staging')} onClick={() => { cartApi.add('inbound', { kind: 'exist', pid: p.id, qty: 1 }); toast(`${p.name} added to the inbound staging`, 'success'); }}><NavIcon name="stockIn" size={13} />{t('Stock In')}</button>
-              <button className="btn sm text warning-text" title={t('Add to Outbound Staging')} onClick={() => { cartApi.add('outbound', { pid: p.id, qty: 1 }); toast(`${p.name} added to the outbound staging`, 'success'); }}><NavIcon name="stockOut" size={13} />{t('Stock Out')}</button>
+              <button className="btn sm text success-text" title={t('Add to Inbound Staging')} onClick={() => { const ok = cartApi.add('inbound', { kind: 'exist', pid: p.id, qty: 1 }); if (ok) toast(`${p.name} added to the inbound staging`, 'success'); }}><NavIcon name="stockIn" size={13} />{t('Stock In')}</button>
+              <button className="btn sm text warning-text" title={t('Add to Outbound Staging')} onClick={() => { const ok = cartApi.add('outbound', { pid: p.id, qty: 1 }); if (ok) toast(`${p.name} added to the outbound staging`, 'success'); }}><NavIcon name="stockOut" size={13} />{t('Stock Out')}</button>
               <button className="btn sm text info" onClick={() => setDialog('edit:' + p.id)}><Icon name="edit" size={13} />Edit</button>
               <button className="btn sm text info" onClick={() => setDialog('stock:' + p.id)}><NavIcon name="myStock" size={13} />Adjust Stock</button>
               <button className="btn sm text info" onClick={() => setDialog('chain:' + p.id)}><Icon name="link" size={13} />View Stock</button>
+              <button className="btn sm text" title={t('Purchase History')} onClick={() => setDialog('phistory:' + p.id)}><Icon name="receipt" size={13} />{t('Purchase History')}</button>
               <button className="btn sm text error-text" onClick={() => setConfirmDel(p)}><Icon name="trash" size={13} />Delete</button>
             </div>
           ) : (
@@ -555,6 +615,7 @@ function ProductListPage() {
       {dialog && dialog.startsWith('edit:') && <ProductFormDialog editProduct={db.products.find(p => p.id === dialog.slice(5))} onClose={() => setDialog(null)} />}
       {dialog && dialog.startsWith('stock:') && <AdjustStockDialog productId={dialog.slice(6)} onClose={() => setDialog(null)} />}
       {dialog && dialog.startsWith('chain:') && <DownstreamStockDialog productId={dialog.slice(6)} onClose={() => setDialog(null)} />}
+      {dialog && dialog.startsWith('phistory:') && <PurchaseHistoryDialog productId={dialog.slice(9)} onClose={() => setDialog(null)} />}
       {dialog && dialog.startsWith('inquire:') && <InquiryFormDialog initialPid={dialog.slice(8)} onClose={() => setDialog(null)} />}
       {confirmDel && (
         <ConfirmDialog title="Delete Product" danger confirmText="Delete"
@@ -851,10 +912,12 @@ function InventoryPage() {
   const [adjustId, setAdjustId] = useState(null);
   const loading = useSkeleton([account.id]);
   const stockMap = db.stock[account.tenantId] || {};
+  // R14 — 告警阈值与 settings.lowStockThreshold 同源（AC-14-04，与 WhatsApp 提示同一口径）
+  const lowTh = (db.settings || {}).lowStockThreshold != null ? Number((db.settings || {}).lowStockThreshold) : 30;
   const rows = db.products.filter(p => stockMap[p.id] != null && (!q || (p.name + p.model).toLowerCase().includes(q.toLowerCase())));
   const filtered = !!q;
   const paged = usePaged(rows);
-  const lowStock = rows.filter(p => stockMap[p.id] < 30).length;
+  const lowStock = rows.filter(p => stockMap[p.id] < lowTh).length;
   return (
     <div>
       <div className="page-header">
@@ -879,8 +942,8 @@ function InventoryPage() {
         <Table loading={loading} empty={filtered ? 'No SKUs match the search' : undefined} columns={[
           { key: 'name', label: 'Product', render: p => <div><div className="bold" style={{ fontSize: 13 }}>{p.name}</div><div className="cell-sub mono">{p.model} · {p.spec}</div></div> },
           { key: 'unit', label: 'Unit', width: 60, align: 'center' },
-          { key: 'qty', label: 'On Hand', width: 110, align: 'center', render: p => <span className="mono bold" style={{ color: stockMap[p.id] < 30 ? 'var(--warning)' : 'inherit' }}>{stockMap[p.id]} {p.unit}</span> },
-          { key: 'ref', label: 'Reference Price', width: 140, align: 'right', render: p => <Money amount={p.price} currency={p.currency} /> },
+          { key: 'qty', label: 'On Hand', width: 110, align: 'center', render: p => <span className="mono bold" style={{ color: stockMap[p.id] < lowTh ? 'var(--warning)' : 'inherit' }}>{stockMap[p.id]} {p.unit}</span> },
+          { key: 'ref', label: 'Purchase Price', width: 150, align: 'right', render: p => <div style={{ textAlign: 'right' }}><Money amount={purchasePriceOf(p)} currency={purchaseCurrencyOf(p)} />{p.purchaseUpdatedAt ? <div className="cell-sub">{t('updated')} {p.purchaseUpdatedAt}</div> : null}</div> },
           { key: 'last', label: 'Last Movement', width: 150, render: p => {
             const m = db.movements.filter(x => x.tenantId === account.tenantId && x.productId === p.id).slice(-1)[0];
             return m ? <span className="small muted">{m.ts}<div className="cell-sub">{m.refNo}</div></span> : <span className="muted">—</span>;
@@ -905,7 +968,10 @@ function MovementsPage() {
   const [type, setType] = useState('');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
-  const loading = useSkeleton([account.id, pid, type, from, to, wh]);
+  // R08/AC-08-05 — 流水按来源筛选（自产 / 外购）。仅入库流水有来源语义，
+  // 选定来源筛选时自动只看 IN，避免出库/调整流水混进来。
+  const [src, setSrc] = useState('');
+  const loading = useSkeleton([account.id, pid, type, from, to, wh, src]);
   const unitOf = pid => ((db.products.find(p => p.id === pid) || {}).unit) || '';
   const rows = db.movements.filter(m => {
     if (m.tenantId !== account.tenantId) return false;
@@ -913,9 +979,15 @@ function MovementsPage() {
     if (type && m.type !== type) return false;
     if (from && m.ts.slice(0, 10) < from) return false;
     if (to && m.ts.slice(0, 10) > to) return false;
+    if (src) {
+      if (m.type !== 'IN') return false;
+      const isSelf = !!m.selfProduced;
+      if (src === 'self' && !isSelf) return false;
+      if (src === 'external' && isSelf) return false;
+    }
     return true;
   }).slice().reverse();
-  const filtered = !!(pid || type || from || to);
+  const filtered = !!(pid || type || from || to || src);
   const TYPE_TONE = { IN: 'success', OUT: 'warning', ADJ: 'primary' };
   const TYPE_LABEL = { IN: 'Inbound', OUT: 'Outbound', ADJ: 'Adjustment' };
   return (
@@ -937,6 +1009,9 @@ function MovementsPage() {
           <span className="label">Type</span>
           <Select value={type} onChange={setType} placeholder="All" style={{ width: 130 }}
             options={[{ value: 'IN', label: 'Inbound' }, { value: 'OUT', label: 'Outbound' }, { value: 'ADJ', label: 'Adjustment' }]} />
+          <span className="label">Source</span>
+          <Select value={src} onChange={setSrc} placeholder="All" style={{ width: 150 }}
+            options={[{ value: 'self', label: 'Self-produced' }, { value: 'external', label: 'Externally sourced' }]} />
           <span className="label">From</span>
           <input className="input" type="date" value={from} onChange={e => setFrom(e.target.value)} style={{ width: 140 }} />
           <span className="label">To</span>
@@ -957,7 +1032,10 @@ function MovementsPage() {
             ? <span className="small">{m.receiverName}{m.receiverPhone ? <span className="mono muted"> · {m.receiverPhone}</span> : null}</span>
             : <span className="muted small">—</span> },
           { key: 'ref', label: 'Ref Doc', width: 150, render: m => <span className="mono small">{m.refNo}</span> },
-          { key: 'supplier', label: 'Supplier', width: 140, render: m => m.supplierId ? <span className="small">{tenantName(db, m.supplierId)}</span> : <span className="muted small">—</span> },
+          // R08/AC-08-03 — 自产流水没有供应商，但事由里有「自产」标记
+          { key: 'supplier', label: 'Supplier', width: 140, render: m => m.supplierId
+            ? <span className="small">{tenantName(db, m.supplierId)}</span>
+            : (m.selfProduced ? <Tag tone="teal" dot>{t('Self-produced')}</Tag> : <span className="muted small">—</span>) },
           { key: 'by', label: 'By', width: 110, render: m => <span className="small">{m.by}</span> },
           { key: 'reason', label: 'Reason', render: m => <span className="small muted">{m.reason}</span> },
         ]} rows={rows} rowKey="id" />
@@ -1223,6 +1301,7 @@ function InvoicePage({ openDoc }) {
           { key: 'seller', label: 'Seller', render: r => tenantName(db, r.seller) },
           { key: 'buyer', label: 'Buyer', render: r => tenantName(db, r.buyer) },
           { key: 'po', label: 'Order Ref', width: 150, render: r => <span className="mono small">{r.poNo}</span> },
+          { key: 'ck', label: 'Outbound Ref', width: 150, render: r => <span className="mono small">{r.ckNo || '—'}</span> },
           { key: 'amount', label: 'Amount', width: 150, align: 'right', render: r => <Money amount={docAmount(r)} currency={r.currency} /> },
           { key: 'issueDate', label: 'Issue Date', width: 110, render: r => <span className="small">{r.issueDate}</span> },
           { key: 'status', label: 'Status', width: 110, render: r => <StatusTag type="FP" status={r.status} /> },
@@ -1374,6 +1453,129 @@ function AccountMgmtPage() {
   );
 }
 
+// ---------- R02 — Team / Distributors split ----------
+// Two collections, two pages, one shared derivation (data.jsx deriveTeam /
+// deriveDistributors) so the Web console and the H5 app can never drift:
+//   Team        = accounts of my own merchant (master account excluded)
+//   Distributors= downstream merchants in the relation graph (they are tenants,
+//                 not rows in db.accounts)
+// Do NOT filter by account.type — db.accounts holds no distributor rows and
+// sub-accounts carry no dedicated type.
+function TeamPage() {
+  const { db, account, act, toast } = useApp();
+  const [q, setQ] = useState('');
+  const [dialog, setDialog] = useState(null);
+  const [edit, setEdit] = useState(null);
+  const loading = useSkeleton([account.id, 'team']);
+  const members = deriveTeam(db, account);
+  const rows = members.filter(a => !q || ((a.name || '') + (a.phone || '')).toLowerCase().includes(q.toLowerCase()));
+  const waBound = members.filter(a => a.whatsapp).length;
+  return (
+    <div>
+      <div className="page-header">
+        <div>
+          <div className="page-title">Team</div>
+          <div className="page-desc">Team members are the accounts of <b>your own merchant</b> — sub-accounts that sign in with the same data scope. Distributors (downstream merchants) are managed separately on the Distributors page. <span className="mini-chip mvp">MVP</span></div>
+        </div>
+        <div className="page-actions">
+          <button className="btn primary" onClick={() => setDialog({})}><Icon name="plus" size={14} />New Sub-Account</button>
+        </div>
+      </div>
+      <Banner tone="info" icon="users">
+        <b>Scope:</b> only accounts belonging to {(db.tenants.find(t => t.id === account.tenantId) || {}).name} are listed here ({members.length}). Distributor merchants are listed under <b>Distributors</b> — creating a sub-account never changes the distributor list, and creating a distributor never changes this list.
+      </Banner>
+      <div className="card">
+        <div className="filter-bar">
+          <SearchBox value={q} onChange={setQ} placeholder="Search name / phone" width={240} />
+          <span className="label">Members: {members.length}</span>
+          <span className="label">WhatsApp bound: {waBound}/{members.length}</span>
+          <span className="label" style={{ marginLeft: 'auto' }}>{rows.length} shown</span>
+        </div>
+        <Table loading={loading} rows={rows} rowKey={r => r.id} columns={[
+          { key: 'name', label: 'Name', render: a => (
+            <div className="flex gap10">
+              <span className="avatar tenant">{a.name.split(' ').map(w => w[0]).slice(0, 2).join('')}</span>
+              <div>
+                <div className="bold" style={{ fontSize: 13 }}>{a.name}</div>
+                <div className="cell-sub mono">{a.phone}</div>
+              </div>
+            </div>
+          )},
+          { key: 'wa', label: 'WhatsApp', width: 160, render: a => a.whatsapp ? <span className="mono small"><Icon name="whatsapp" size={12} /> {a.whatsapp}</span> : <span className="muted">—</span> },
+          { key: 'status', label: 'Status', width: 110, render: a => <Tag tone={a.status === 'Active' ? 'green' : 'gray'}>{a.status || 'Active'}</Tag> },
+          { key: 'ops', label: '', width: 90, render: a => <button className="btn sm" onClick={() => setEdit(a)}>Edit</button> },
+        ]} />
+      </div>
+      {dialog && <AccountFormDialog mode={{ team: true }} onClose={() => setDialog(null)} />}
+      {edit && <AccountFormDialog mode={{ editAcc: edit }} onClose={() => setEdit(null)} />}
+    </div>
+  );
+}
+
+function DistributorPage() {
+  const { db, account, act, toast } = useApp();
+  const [q, setQ] = useState('');
+  const [dialog, setDialog] = useState(null);
+  const [levelDlg, setLevelDlg] = useState(null);
+  const [inviteDlg, setInviteDlg] = useState(false);    // R09 邀请分销商弹窗
+  const [accDlg, setAccDlg] = useState(false);          // AC-09-07 受理邀请弹窗
+  const loading = useSkeleton([account.id, 'dist']);
+  const own = db.tenants.find(t => t.id === account.tenantId);
+  const list = deriveDistributors(db, account);
+  const rows = list.filter(t => !q || (t.name + t.code).toLowerCase().includes(q.toLowerCase()));
+  const grantMax = own && own.type === 'Agent' ? Math.max(1, Number(own.maxLevel) - 1) : 99;
+  const canCreate = !!own && (own.type === 'Supplier' || Number(own.maxLevel) > 1);
+  return (
+    <div>
+      <div className="page-header">
+        <div>
+          <div className="page-title">Distributors</div>
+          <div className="page-desc">Distributors are <b>downstream merchants</b> in your relation graph — separate companies, not accounts of yours. Creating one registers a new merchant, its master account and the supply relation in one step. <span className="mini-chip mvp">MVP</span></div>
+        </div>
+        <div className="page-actions">
+          {/* R09 — 邀请分销商：发邀请码建立关系（与当场新建商户分开） */}
+          <button className="btn" onClick={() => setInviteDlg(true)}><Icon name="link" size={14} />Invite Distributor</button>
+          {/* AC-09-07 — 被邀请方受理入口（与邀请入口并列，两端同构） */}
+          <button className="btn" onClick={() => setAccDlg(true)}><Icon name="check" size={14} />{t('I have an invite code')}</button>
+          {canCreate
+            ? <button className="btn primary" onClick={() => setDialog({ subAgent: true })}><Icon name="plus" size={14} />New Distributor</button>
+            : <span className="muted" style={{ fontSize: 12 }}>{own ? `You can develop up to ${own.maxLevel} levels of sub-agents` : ''}</span>}
+        </div>
+      </div>
+      <Banner tone="info" icon="link">
+        <b>Scope:</b> only merchants linked downstream of {(own || {}).name || 'your merchant'} ({list.length}). Sub-accounts of your own merchant are listed under <b>Team</b> and never appear here.
+      </Banner>
+      <div className="card">
+        <div className="filter-bar">
+          <SearchBox value={q} onChange={setQ} placeholder="Search merchant" width={240} />
+          <span className="label">Distributors: {list.length}</span>
+          <span className="label" style={{ marginLeft: 'auto' }}>{rows.length} shown</span>
+        </div>
+        <Table loading={loading} rows={rows} rowKey={r => r.id} columns={[
+          { key: 'name', label: 'Merchant', render: t => (
+            <div>
+              <div className="bold" style={{ fontSize: 13 }}>{t.name}</div>
+              <div className="cell-sub mono">{t.code}</div>
+            </div>
+          )},
+          { key: 'level', label: 'Level', width: 170, render: t => (
+            <div className="flex gap6" style={{ alignItems: 'center' }}>
+              <span>{t.levelLabel || tenantRoleLabel(db, account, t)}</span>
+              <button className="btn sm" title="Set a custom level label" onClick={() => setLevelDlg(t)}>Set Label</button>
+            </div>
+          )},
+          { key: 'max', label: 'Max sub-level', width: 110, render: t => <span className="mono">{t.maxLevel}</span> },
+          { key: 'status', label: 'Status', width: 110, render: t => <Tag tone={t.status === 'Active' ? 'green' : 'gray'}>{t.status}</Tag> },
+        ]} />
+      </div>
+      {dialog && <AccountFormDialog mode={dialog} onClose={() => setDialog(null)} />}
+      {levelDlg && <LevelLabelDialog tenant={levelDlg} onClose={() => setLevelDlg(null)} />}
+      {inviteDlg && <InviteDialog role="distributor" onClose={() => setInviteDlg(false)} />}
+      {accDlg && <AcceptInviteDialog onClose={() => setAccDlg(false)} />}
+    </div>
+  );
+}
+
 function TenantMgmtPage() {
   const { db, act, toast } = useApp();
   const [tab, setTab] = useState('merchants');
@@ -1433,6 +1635,20 @@ function TenantMgmtPage() {
                 return <span className="small muted">{up.length} upstream · {down.length} downstream</span>;
               }},
               { key: 'status', label: 'Status', width: 110, render: t => t.status === 'Active' ? <Tag tone="success" dot>Active</Tag> : <Tag tone="danger" dot>Suspended</Tag> },
+              // R01 — 入驻状态列 + 行内通过/驳回（AC-01-05/07）；render 参数 tn 避免遮蔽 i18n 的 t()
+              { key: 'reg', label: 'Onboarding', width: 170, render: tn => (
+                <div className="flex gap6" style={{ alignItems: 'center' }}>
+                  {tn.registrationStatus === 'pending' ? <Tag tone="warning" dot>{t('Pending Review')}</Tag>
+                    : tn.registrationStatus === 'rejected' ? <Tag tone="danger">{t('Rejected')}</Tag>
+                    : <Tag tone="success">{t('Approved')}</Tag>}
+                  {tn.registrationStatus === 'pending' && (
+                    <React.Fragment>
+                      <button className="btn sm text success-text" onClick={() => act.setRegistrationStatus(tn.id, 'approved')}>{t('Approve')}</button>
+                      <button className="btn sm text error-text" onClick={() => act.setRegistrationStatus(tn.id, 'rejected')}>{t('Reject')}</button>
+                    </React.Fragment>
+                  )}
+                </div>
+              )},
               { key: 'createdAt', label: 'Created', width: 100, render: t => <span className="small muted">{t.createdAt}</span> },
               { key: 'act', label: 'Actions', width: 220, render: t => (
                 <div className="row-actions">
@@ -1478,3 +1694,154 @@ function TenantMgmtPage() {
 }
 
 Object.assign(window, { WebConsole, ActionButtons, WEB_MENU, tenantRole, tenantRoleLabel });
+
+// ============================================================
+// R06 —— 商品列表顶部的「待调价」提醒条：待办入口，可找回并继续调价
+// ============================================================
+function PendingRepriceBanner({ onOpen }) {
+  const { db } = useApp();
+  const pend = (db.products || []).filter(p => p.pendingReprice);
+  if (!pend.length) return null;
+  return (
+    <div className="wiz-banner">
+      <Icon name="info" size={14} />
+      <span>{t('Pending price adjustment')} — {pend.length} {t('items')}</span>
+      <button type="button" className="btn" style={{ height: 28, marginLeft: 'auto' }} onClick={() => onOpen(pend.map(p => p.id))}>{t('Continue pricing')}</button>
+    </div>
+  );
+}
+
+// ============================================================
+// R10 / R12 / R13 / R14 / R15 —— 系统设置页（Web 版，与 H5 同源）
+// ============================================================
+function SettingsPage() {
+  const { db, act, toast } = useApp();
+  const s = db.settings || {};
+  const [taxRate, setTaxRate] = useState(s.taxRate === null || s.taxRate === undefined ? '' : String(s.taxRate));
+  const [freightEnabled, setFreightEnabled] = useState(!!s.freightEnabled);
+  const [defaultFreight, setDefaultFreight] = useState(String(ifnull(s.defaultFreight, 0)));
+  const [quoteMode, setQuoteMode] = useState(s.quoteMode || 'manual');
+  const [threshold, setThreshold] = useState(String(ifnull(s.lowStockThreshold, 30)));
+  const [payee, setPayee] = useState(s.payeeInfo || { bankName: '', accountName: '', accountNo: '', swift: '', methods: [] });
+  // R13 — AI 折扣边界设置（AC-13-07：未配置时默认 97 折 / 每轮 1% / 最多 3 轮）
+  const [ai, setAi] = useState(s.aiPolicy || { floorDiscount: 0.97, stepSize: 0.01, maxRounds: 3, escalateTo: 'main', allowOverride: false });
+  const save = () => {
+    const rate = taxRate === '' ? null : Number(taxRate);
+    const aiNum = (v, d) => { const n = Number(v); return (v === '' || v === null || isNaN(n)) ? d : n; };
+    act.updateSettings({
+      taxRate: (rate === null || isNaN(rate)) ? null : rate,
+      freightEnabled, defaultFreight: Number(defaultFreight) || 0,
+      quoteMode, lowStockThreshold: Number(threshold) || 0,
+      payeeInfo: { ...payee, configured: !!(payee.bankName && payee.accountNo) },
+      aiPolicy: { enabled: true, floorDiscount: aiNum(ai.floorDiscount, 0.97), stepSize: aiNum(ai.stepSize, 0.01), maxRounds: Math.max(1, Math.round(aiNum(ai.maxRounds, 3))), escalateTo: ai.escalateTo || 'main', allowOverride: !!ai.allowOverride },
+    });
+    toast('Settings updated', 'success');
+  };
+  return (
+    <div className="page" style={{ maxWidth: 760 }}>
+      <div className="card" style={{ padding: 14, marginBottom: 12 }}>
+        <div className="card-title">{t('Tax & freight')}</div>
+        <div className="flex gap10" style={{ alignItems: 'center', marginBottom: 10 }}>
+          <span className="k" style={{ width: 150 }}>{t('Tax rate (%)')}</span>
+          <input className="input mono" style={{ width: 120, height: 32 }} type="number" step="0.01" value={taxRate}
+            placeholder={t('Not set')} onChange={e => setTaxRate(e.target.value)} />
+          <span className="muted small">{t('Leave empty to turn tax off')}</span>
+        </div>
+        <div className="flex gap10" style={{ alignItems: 'center', marginBottom: 10 }}>
+          <span className="k" style={{ width: 150 }}>{t('Enable freight')}</span>
+          <input type="checkbox" checked={freightEnabled} onChange={e => setFreightEnabled(e.target.checked)} />
+        </div>
+        <div className="flex gap10" style={{ alignItems: 'center' }}>
+          <span className="k" style={{ width: 150 }}>{t('Default freight')}</span>
+          <input className="input mono" style={{ width: 120, height: 32 }} type="number" step="0.01" value={defaultFreight}
+            onChange={e => setDefaultFreight(e.target.value)} />
+        </div>
+      </div>
+      <div className="card" style={{ padding: 14, marginBottom: 12 }}>
+        <div className="card-title">{t('Quote & inventory')}</div>
+        <div className="flex gap10" style={{ alignItems: 'center', marginBottom: 10 }}>
+          <span className="k" style={{ width: 150 }}>{t('Quote mode')}</span>
+          <Select value={quoteMode} onChange={v => setQuoteMode(v)} style={{ width: 200, height: 32 }}
+            options={[{ value: 'manual', label: t('Quote mode manual') }, { value: 'auto', label: t('Quote mode auto') }]} />
+        </div>
+        <div className="flex gap10" style={{ alignItems: 'center' }}>
+          <span className="k" style={{ width: 150 }}>{t('Low stock threshold')}</span>
+          <input className="input mono" style={{ width: 120, height: 32 }} type="number" value={threshold}
+            onChange={e => setThreshold(e.target.value)} />
+        </div>
+      </div>
+      <div className="card" style={{ padding: 14, marginBottom: 12 }}>
+        <div className="card-title">{t('AI discount boundary')}</div>
+        <div className="muted small" style={{ marginBottom: 10 }}>{t('Defaults when not configured: 3% floor / 1% per round / up to 3 rounds')}</div>
+        <div className="flex gap10" style={{ alignItems: 'center', marginBottom: 10 }}>
+          <span className="k" style={{ width: 150 }}>{t('Lowest allowed discount (0.97 = 3% off)')}</span>
+          <input className="input mono" style={{ width: 120, height: 32 }} type="number" step="0.01" min="0.5" max="1" value={ai.floorDiscount}
+            onChange={e => setAi({ ...ai, floorDiscount: e.target.value })} />
+        </div>
+        <div className="flex gap10" style={{ alignItems: 'center', marginBottom: 10 }}>
+          <span className="k" style={{ width: 150 }}>{t('Concession step per round')}</span>
+          <input className="input mono" style={{ width: 120, height: 32 }} type="number" step="0.005" min="0.005" value={ai.stepSize}
+            onChange={e => setAi({ ...ai, stepSize: e.target.value })} />
+        </div>
+        <div className="flex gap10" style={{ alignItems: 'center', marginBottom: 10 }}>
+          <span className="k" style={{ width: 150 }}>{t('Max negotiation rounds')}</span>
+          <input className="input mono" style={{ width: 120, height: 32 }} type="number" min="1" value={ai.maxRounds}
+            onChange={e => setAi({ ...ai, maxRounds: e.target.value })} />
+        </div>
+        <div className="flex gap10" style={{ alignItems: 'center', marginBottom: 10 }}>
+          <span className="k" style={{ width: 150 }}>{t('Escalate to')}</span>
+          <input className="input mono" style={{ width: 200, height: 32 }} value={ai.escalateTo || ''}
+            placeholder={t('main / account id')} onChange={e => setAi({ ...ai, escalateTo: e.target.value })} />
+        </div>
+        <div className="flex gap10" style={{ alignItems: 'center' }}>
+          <span className="k" style={{ width: 150 }}>{t('Allow override beyond boundary')}</span>
+          <input type="checkbox" checked={!!ai.allowOverride} onChange={e => setAi({ ...ai, allowOverride: e.target.checked })} />
+          <span className="muted small">{t('When on, going below the floor requires a manual approval mark')}</span>
+        </div>
+      </div>
+      <div className="card" style={{ padding: 14, marginBottom: 12 }}>
+        <div className="card-title">{t('Payee info')}</div>
+        <div className="flex gap10" style={{ alignItems: 'center', marginBottom: 10 }}>
+          <span className="k" style={{ width: 150 }}>{t('Bank name')}</span>
+          <input className="input" style={{ flex: 1, height: 32 }} value={payee.bankName || ''}
+            onChange={e => setPayee({ ...payee, bankName: e.target.value })} />
+        </div>
+        <div className="flex gap10" style={{ alignItems: 'center', marginBottom: 10 }}>
+          <span className="k" style={{ width: 150 }}>{t('Account name')}</span>
+          <input className="input" style={{ flex: 1, height: 32 }} value={payee.accountName || ''}
+            onChange={e => setPayee({ ...payee, accountName: e.target.value })} />
+        </div>
+        <div className="flex gap10" style={{ alignItems: 'center', marginBottom: 10 }}>
+          <span className="k" style={{ width: 150 }}>{t('Account number')}</span>
+          <input className="input mono" style={{ flex: 1, height: 32 }} value={payee.accountNo || ''}
+            onChange={e => setPayee({ ...payee, accountNo: e.target.value })} />
+        </div>
+        <div className="flex gap10" style={{ alignItems: 'center', marginBottom: 10 }}>
+          <span className="k" style={{ width: 150 }}>{t('SWIFT')}</span>
+          <input className="input mono" style={{ flex: 1, height: 32 }} value={payee.swift || ''}
+            onChange={e => setPayee({ ...payee, swift: e.target.value })} />
+        </div>
+        <div className="flex gap10" style={{ alignItems: 'flex-start', marginBottom: 10 }}>
+          <span className="k" style={{ width: 150 }}>{t('Payment methods')}</span>
+          <div className="flex gap10" style={{ flex: 1, flexWrap: 'wrap' }}>
+            {['Bank Transfer', 'Cash', 'POS', 'Cheque'].map(m => (
+              <label key={m} className="flex gap4" style={{ fontSize: 12.5, alignItems: 'center' }}>
+                <input type="checkbox" checked={(payee.methods || []).includes(m)}
+                  onChange={e => setPayee({ ...payee, methods: e.target.checked ? [...(payee.methods || []), m] : (payee.methods || []).filter(x => x !== m) })} />
+                {t(m)}
+              </label>
+            ))}
+          </div>
+        </div>
+        <div className="flex gap10" style={{ alignItems: 'center' }}>
+          <span className="k" style={{ width: 150 }}>OPay</span>
+          <input className="input" style={{ flex: 1, height: 32 }} disabled
+            placeholder={t('OPay — under research, not available yet')} />
+        </div>
+      </div>
+      <button type="button" className="btn primary" onClick={save}><Icon name="check" size={13} />{t('Save settings')}</button>
+    </div>
+  );
+}
+
+Object.assign(window, { PendingRepriceBanner, SettingsPage });

@@ -84,6 +84,11 @@ button { font-family: inherit; }
 }
 .input.error, .select.error { border-color: var(--danger); }
 .input[readonly], .input.readonly { background: #F5F7FA; color: var(--text-3); cursor: not-allowed; }
+/* R05 — 条码前缀区（只读）+ 主体码区（可编辑）视觉分区，二者合成一个输入整体 */
+.prefix-chip { display: inline-flex; align-items: center; height: 34px; padding: 0 10px; border: 1px solid var(--border-light); border-right: none; border-radius: var(--radius) 0 0 var(--radius); background: #F5F7FA; color: var(--text-3); font-family: var(--mono); font-size: 12px; letter-spacing: .6px; white-space: nowrap; }
+.prefix-chip + .input { border-radius: 0 var(--radius) var(--radius) 0; }
+.h5-prefix-chip { display: inline-flex; align-items: center; height: 32px; padding: 0 9px; border: 1px solid var(--border); border-right: none; border-radius: var(--radius) 0 0 var(--radius); background: #F5F7FA; color: var(--text-3); font-family: var(--mono); font-size: 12px; letter-spacing: .6px; white-space: nowrap; }
+.h5-prefix-chip + .input { border-radius: 0 var(--radius) var(--radius) 0; }
 .select { appearance: none; cursor: pointer;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238A919C' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
   background-repeat: no-repeat; background-position: right 10px center; padding-right: 28px;
@@ -477,6 +482,13 @@ button { font-family: inherit; }
 @keyframes shimmer { 0% { background-position: 100% 0; } 100% { background-position: 0 0; } }
 .skeleton-rows { display: flex; flex-direction: column; gap: 14px; padding: 6px 0; }
 .skeleton-rows .sk { height: 16px; }
+/* R04 — 扫码识别过渡态：转圈 + 骨架行，明确的 loading 表现 */
+.h5-spinner { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--border-light); border-top-color: var(--primary); animation: h5spin .8s linear infinite; flex: none; }
+@keyframes h5spin { to { transform: rotate(360deg); } }
+.h5-skel-line { height: 12px; border-radius: 4px; margin-top: 8px; }
+.h5-scan-preview-note { display: flex; gap: 6px; align-items: flex-start; font-size: 11.5px; line-height: 1.5; padding: 7px 9px; border-radius: var(--radius); margin-top: 8px; }
+.h5-scan-preview-note.warn { background: var(--warning-light); color: var(--warning); }
+.h5-scan-preview-note.info { background: var(--primary-light); color: var(--primary-dark); }
 
 /* ---------- empty state ---------- */
 .empty-state { text-align: center; padding: 44px 20px; color: var(--text-3); }
@@ -2094,3 +2106,29 @@ body:has(.mobile-stage) .toast {
 .h5-app .h5-cart-seg.on { background: var(--primary); color: #fff; font-weight: 600; }
 .h5-app .h5-cart-seg-n { background: #E5566D; color: #fff; }
 .h5-app .h5-cart-seg.on .h5-cart-seg-n { background: rgba(255, 255, 255, 0.24); color: #fff; }
+
+/* ===== R06 / R10 —— 入库两步向导与金额五行汇总 ===== */
+.amt-summary { display:flex; flex-direction:column; gap:4px; }
+.amt-row { display:flex; justify-content:space-between; align-items:center; font-size:12px; color:var(--text-3); }
+.amt-row .mono { font-weight:600; color:var(--text-1); }
+.amt-total { border-top:1px solid var(--border-light); padding-top:6px; margin-top:2px; font-weight:700; }
+.amt-total .mono { font-size:14px; color:#D35400; }
+.wiz { display:flex; flex-direction:column; gap:12px; }
+.wiz-steps { display:flex; align-items:center; gap:8px; }
+.wiz-step { display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--text-3); }
+.wiz-step.on { color:var(--primary); font-weight:600; }
+.wiz-dot { width:20px; height:20px; border-radius:50%; border:1px solid var(--border-light); display:inline-flex; align-items:center; justify-content:center; font-size:11px; }
+.wiz-step.on .wiz-dot { background:var(--primary); color:#fff; border-color:var(--primary); }
+.wiz-step.done .wiz-dot { border-color:var(--primary); color:var(--primary); }
+.wiz-line { flex:1; height:1px; background:var(--border-light); }
+.wiz-panel { border:1px solid var(--border-light); border-radius:var(--radius); padding:10px 12px; }
+.wiz-kv { display:flex; justify-content:space-between; gap:10px; padding:5px 0; font-size:12.5px; }
+.wiz-bulk { display:flex; flex-wrap:wrap; gap:8px; align-items:flex-end; padding:10px 12px; border:1px solid var(--border-light); border-radius:var(--radius); background:#F5F7FA; }
+.wiz-field { display:flex; flex-direction:column; gap:4px; font-size:11px; color:var(--text-3); }
+.wiz-thead, .wiz-tr { display:flex; align-items:center; gap:8px; padding:7px 4px; font-size:12px; }
+.wiz-thead { color:var(--text-3); font-size:11px; border-bottom:1px solid var(--border-light); }
+.wiz-tr { border-bottom:1px solid var(--border-light); }
+.wiz-warn { display:inline-block; margin-left:6px; font-size:10.5px; color:var(--warning); }
+.wiz-preview { margin-top:10px; padding:10px 12px; border:1px dashed var(--primary); border-radius:var(--radius); background:var(--primary-light); }
+.wiz-foot { display:flex; align-items:center; gap:8px; }
+.wiz-banner { display:flex; align-items:center; gap:8px; padding:9px 12px; margin-bottom:10px; border:1px solid var(--warning); border-radius:var(--radius); background:var(--warning-light); color:var(--warning); font-size:12px; }

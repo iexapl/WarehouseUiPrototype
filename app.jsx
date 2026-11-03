@@ -55,6 +55,12 @@ function App() {
     if (a.status === 'Suspended') { toast(`${a.name} is suspended and cannot sign in`, 'error'); return; }
     const tenant = a.tenantId ? db.tenants.find(t => t.id === a.tenantId) : null;
     if (tenant && tenant.status === 'Suspended') { toast(`Merchant ${tenant.name} is suspended — login blocked`, 'error'); return; }
+    // R01 — 待审核/已驳回租户拦截：自主注册的租户须平台审核通过后才能登录
+    if (tenant && tenant.registrationStatus && tenant.registrationStatus !== 'approved') {
+      if (tenant.registrationStatus === 'rejected') toast(`${tenant.name} — registration rejected by the platform, sign-in unavailable`, 'error');
+      else toast(`${tenant.name} is under platform review — sign-in available once approved`, 'error');
+      return;
+    }
     setAccountId(id);
     setAuthed(true);
     setCarts(emptyCarts());
@@ -98,11 +104,8 @@ function App() {
           // No Draft stage: order statuses are ONLY the nine order-flow ones.
           newPO = { id: 'd-po-' + Date.now(), no: nextNo('PO', db.docs), type: 'PO', buyer: doc.buyer, seller: doc.seller, createdBy: 'AI Engine', createdAt: tnow, status: 'Pending Acceptance', currency: doc.currency, deliveryDate: '', quoteNo: doc.no, chainPath: [doc.seller, doc.buyer], items: doc.items.map(it => ({ ...it })), timeline: [{ ts: tnow, text: 'Purchase order generated from accepted quote — awaiting supplier acceptance', by: 'AI Engine' }] };
         }
-        // R81 — supplier accepting the order auto-issues the invoice
-        if ((verb === 'Accept' || verb === 'Approve') && doc.type === 'PO' && !db.docs.some(d => d.type === 'FP' && d.poNo === doc.no)) {
-          const fno = nextNo('FP', db.docs);
-          newFP = { id: 'd-fp-' + Date.now(), no: fno, type: 'FP', seller: doc.seller, buyer: doc.buyer, createdBy: opName, createdAt: tnow, status: 'Issued', currency: doc.currency, poNo: doc.no, issueDate: tnow.slice(0, 10), items: doc.items.map(it => ({ ...it })), timeline: [{ ts: tnow, text: `Invoice issued for ${doc.no} — link pushed to buyer via WhatsApp`, by: opName }] };
-        }
+        // R17 — 订单接受阶段不再自动开票（AC-17-06）：开票触发点移至 receive()
+        // 买方签收之后（见下方 receive 尾部）；Create Invoice 保留为人工补开路径。
         if (verb === 'Create Invoice') {
           // works from a completed PO or an inbound record (RK) — resolve the PO
           let poNo = doc.type === 'PO' ? doc.no : null;
@@ -145,7 +148,13 @@ function App() {
               case 'Record Payment': {
                 const pf = form || {};
                 const amountTxt = (pf.amount !== '' && pf.amount != null) ? ` ${doc.currency === 'NGN' ? '₦' : '$'}${pf.amount}` : '';
-                return { ...d, paid: true, paidAt: tnow, status: 'Pending Outbound', payment: { amount: pf.amount !== '' && pf.amount != null ? String(pf.amount) : '', date: pf.date || tnow.slice(0, 10), method: pf.method || 'Bank Transfer', ref: pf.ref || '', note: pf.note || '' }, timeline: [...d.timeline, { ts: tnow, text: `Offline payment recorded by ${tenantName(db, d.seller)} — ${pf.method || 'Bank Transfer'}${pf.ref ? `, ref ${pf.ref}` : ''}${amountTxt}`, by: opName }] };
+                return { ...d, paid: true, paidAt: tnow, status: 'Pending Payment Confirmation', payment: { amount: pf.amount !== '' && pf.amount != null ? String(pf.amount) : '', date: pf.date || tnow.slice(0, 10), method: pf.method || 'Bank Transfer', ref: pf.ref || '', note: pf.note || '', voucher: pf.voucher || null, mismatchNote: pf.mismatchNote || '', status: 'pending' }, timeline: [...d.timeline, { ts: tnow, text: `Offline payment recorded by ${tenantName(db, d.seller)} — ${pf.method || 'Bank Transfer'}${pf.ref ? `, ref ${pf.ref}` : ''}${amountTxt} — awaiting confirmation`, by: opName }] };
+              }
+              // R15 — supplier confirms the recorded payment (待确认 → 待出库);
+              // the timeline keeps operator + time, voucher confirmation retained
+              case 'Confirm Payment': {
+                const voucherTxt = (d.payment && d.payment.voucher && d.payment.voucher.fileName) ? `, voucher ${d.payment.voucher.fileName}` : '';
+                return { ...d, status: 'Pending Outbound', payment: { ...d.payment, status: 'confirmed', voucher: d.payment && d.payment.voucher ? { ...d.payment.voucher, confirmedBy: opName, confirmedAt: tnow } : null }, timeline: [...d.timeline, { ts: tnow, text: `Payment confirmed by ${opName}${voucherTxt} — shipment unlocked`, by: opName }] };
               }
               case 'Approve': return { ...d, status: 'Pending Payment', timeline: [...d.timeline, { ts: tnow, text: 'Approved by ' + tenantName(db, d.seller), by: opName }] };
               case 'Cancel': return { ...d, status: 'Cancelled', timeline: [...d.timeline, { ts: tnow, text: 'Order cancelled', by: opName }] };
@@ -170,14 +179,20 @@ function App() {
         // R81 — order acceptance (supplier side) auto-issues the invoice → notify buyer
         if ((verb === 'Accept' || verb === 'Approve') && doc.type === 'PO' && newFP) pushTo(doc.buyer, `Order ${doc.no} accepted by ${tenantName(db, doc.seller)}. Invoice ${newFP.no} issued — tap to view and confirm.`, newFP.no, 'FP');
         if (verb === 'Reject') pushTo(doc.type === 'PO' ? doc.buyer : doc.seller, `${doc.type === 'PO' ? 'Order' : 'Quote'} ${doc.no} rejected by ${tenantName(db, doc.type === 'PO' ? doc.seller : doc.buyer)} — reason: ${reason || ''}`, doc.no, doc.type);
-        if (verb === 'Confirm Quote') pushTo(doc.buyer, `New quote from ${tenantName(db, doc.seller)} on inquiry ${doc.inquiryNo || ''}. Valid until ${doc.validUntil || 'TBC'}.`, doc.no, 'QT');
+        // R14 — WhatsApp 议价成交的报价推送同样追加库存提示（AC-14-01 覆盖推送路径）
+        if (verb === 'Confirm Quote') {
+          const quoteHint = stockHintFor(db, doc.seller, doc.items.map(it => it.pid), (db.settings || {}).lowStockThreshold);
+          pushTo(doc.buyer, `New quote from ${tenantName(db, doc.seller)} on inquiry ${doc.inquiryNo || ''}. Valid until ${doc.validUntil || 'TBC'}.` + (quoteHint ? '\n\n' + quoteHint : ''), doc.no, 'QT');
+        }
         if (verb === 'Place Order') pushTo(doc.seller, `New order ${doc.no} from ${tenantName(db, doc.buyer)} — please review and approve.`, doc.no, 'PO');
         // R81 — supplier records the buyer's OFFLINE payment → notify buyer, unlock shipment
         // R94 — include the method/ref captured on the payment form
         if (verb === 'Record Payment') {
           const pf = form || {};
-          pushTo(doc.buyer, `Offline payment for order ${doc.no} recorded by ${tenantName(db, doc.seller)}${pf.method ? ` (${pf.method}${pf.ref ? ', ref ' + pf.ref : ''})` : ''}. Shipment will be arranged.`, doc.no, 'PO');
+          pushTo(doc.buyer, `Offline payment for order ${doc.no} recorded by ${tenantName(db, doc.seller)}${pf.method ? ` (${pf.method}${pf.ref ? ', ref ' + pf.ref : ''})` : ''}. Awaiting supplier confirmation before shipment.`, doc.no, 'PO');
         }
+        // R15 — payment confirmed → notify the buyer, shipment unlocked
+        if (verb === 'Confirm Payment') pushTo(doc.buyer, `Payment for order ${doc.no} confirmed by ${tenantName(db, doc.seller)} — shipment will be arranged.`, doc.no, 'PO');
         if (verb === 'Create Invoice' && newFP) pushTo(doc.buyer, `Invoice ${newFP.no} issued by ${tenantName(db, doc.seller)} for order ${newFP.poNo}. Tap to view and confirm.`, newFP.no, 'FP');
         if (verb === 'Confirm Invoice') pushTo(doc.seller, `Invoice ${doc.no} confirmed and archived by ${tenantName(db, doc.buyer)}.`, doc.no, 'FP');
         toast(`${verb} completed`, 'success');
@@ -213,6 +228,27 @@ function App() {
           // matched products, a quote draft is suggested for one-tap confirmation
           const sellerMain = db.accounts.find(a => a.tenantId === f.seller && a.main);
           if (sellerMain) updatePushes(prev => [...prev, { id: 'w-' + Date.now(), toAccount: sellerMain.id, docNo: no, docType: 'IQ', ts: now(), text: `New inquiry ${no} from ${tenantName(db, account.tenantId)} — AI parsed the requirement and matched products; confirm the AI quote draft with one tap.`, read: false }]);
+          // R12 — quote mode: auto → the QT is generated and sent right away so
+          // it lands in the buyer's quote list; any out-of-stock line turns it
+          // back to manual (Q18 无库存不自动报价，转人工)
+          if (((db.settings || {}).quoteMode || 'manual') === 'auto') {
+            const outOfStock = items.some(it => { const st = (db.stock[f.seller] || {})[it.pid]; return st != null && Number(st) <= 0; });
+            if (!outOfStock) {
+              const vd2 = new Date(Date.now() + 7 * 86400000);
+              const validUntil2 = `${vd2.getFullYear()}-${String(vd2.getMonth() + 1).padStart(2, '0')}-${String(vd2.getDate()).padStart(2, '0')}`;
+              const qno = nextNo('QT', db.docs);
+              const qt = { id: 'd-' + Date.now() + '-q' + Math.random().toString(36).slice(2, 6), no: qno, type: 'QT', seller: f.seller, buyer: account.tenantId, createdBy: 'AI Engine', createdAt: now(), status: 'Sent', currency, validUntil: validUntil2, inquiryNo: no, items: items.map(it => ({ pid: it.pid, name: it.name, spec: it.spec, unit: it.unit, qty: Number(it.qty) || 0, price: it.price })), timeline: [
+                { ts: now(), text: 'Auto quote generated from the submitted inquiry (quote mode: auto)', by: 'AI Engine' },
+                { ts: now(), text: `Quote link pushed to ${tenantName(db, account.tenantId)} via WhatsApp`, by: 'AI Engine' },
+              ] };
+              updateDocs(prev => [...prev, qt]);
+              const buyerMain = db.accounts.find(a => a.tenantId === account.tenantId && a.main);
+              if (buyerMain) updatePushes(prev => [...prev, { id: 'w-' + Date.now() + '-q', toAccount: buyerMain.id, docNo: qno, docType: 'QT', ts: now(), text: `Auto quote ${qno} for inquiry ${no} from ${tenantName(db, f.seller)} — valid until ${validUntil2}.`, read: false }]);
+            } else {
+              const sellerMain2 = db.accounts.find(a => a.tenantId === f.seller && a.main);
+              if (sellerMain2) updatePushes(prev => [...prev, { id: 'w-' + Date.now() + '-m', toAccount: sellerMain2.id, docNo: no, docType: 'IQ', ts: now(), text: `Inquiry ${no} involves an out-of-stock item — auto quote skipped, please quote manually.`, read: false }]);
+            }
+          }
         }
         toast(`Inquiry ${no} ${submit ? 'submitted' : 'saved as draft'}`, 'success');
         return newDoc;
@@ -231,7 +267,9 @@ function App() {
           // Push notification to buyer main account
           const buyerMain = db.accounts.find(a => a.tenantId === inquiry.buyer && a.main);
           if (buyerMain) {
-            updatePushes(prev => [...prev, { id: 'w-' + Date.now(), toAccount: buyerMain.id, docNo: no, docType: 'QT', ts: tnow, text: `New quote from ${tenantName(db, account.tenantId)} on inquiry ${inquiry.no}. Valid until ${validUntil}.`, read: false }]);
+            // R14 — 推送文本同步追加库存提示（纯文本拼接，不改金额，AC-14-01/08）
+            const hint = stockHintFor(db, account.tenantId, lines.map(l => l.pid), (db.settings || {}).lowStockThreshold);
+            updatePushes(prev => [...prev, { id: 'w-' + Date.now(), toAccount: buyerMain.id, docNo: no, docType: 'QT', ts: tnow, text: `New quote from ${tenantName(db, account.tenantId)} on inquiry ${inquiry.no}. Valid until ${validUntil}.` + (hint ? '\n\n' + hint : ''), read: false }]);
           }
           toast(`Quote ${no} sent — buyer notified via WhatsApp`, 'success');
         }
@@ -269,7 +307,7 @@ function App() {
         toast(`Order ${no} submitted for supplier review`, 'success');
       },
 
-      ship(po, logistics) {
+      ship(po) {
         const tnow = now();
         const items = po.items.map(it => ({ ...it }));
         // decrement seller stock and record movements
@@ -284,42 +322,101 @@ function App() {
         });
         updateStock(prev => ({ ...prev, [po.seller]: nextStock }));
         updateMovements(prev => [...prev, ...newMoves]);
-        // create CK doc
+        // create CK doc — R16: born at 拣货中 (Picking); the seller picks,
+        // then dispatches with carrier info (waybill at dispatch, AC-16-06)
         const ckNo = nextNo('CK', db.docs);
-        const ck = { id: 'd-ck-' + Date.now(), no: ckNo, type: 'CK', seller: po.seller, buyer: po.buyer, createdBy: account.name, createdAt: tnow, status: 'Pending Shipment', currency: po.currency, poNo: po.no, items, waybill: { no: 'WY-' + tnow.slice(0, 10).replace(/-/g, '') + '-' + String(Math.floor(Math.random() * 900) + 100), ...logistics }, timeline: [{ ts: tnow, text: `Outbound order generated from ${po.no}`, by: 'System' }, { ts: tnow, text: `Shipment confirmed by ${account.name} — awaiting dispatch`, by: account.name }] };
-        // R82 — 确认发货 generates the CK + waybill; the order moves to 待出货
-        // until the seller dispatches the outbound order (→ 待收货)
+        const ck = { id: 'd-ck-' + Date.now(), no: ckNo, type: 'CK', seller: po.seller, buyer: po.buyer, createdBy: account.name, createdAt: tnow, status: 'Picking', currency: po.currency, poNo: po.no, items, waybill: null,
+          picking: { startedAt: null, finishedAt: null, lines: items.map(it => ({ pid: it.pid, expectedQty: it.qty, pickedQty: 0, scanConfirmed: false, shortReason: '' })), shortPick: false, by: null },
+          timeline: [{ ts: tnow, text: `Outbound order generated from ${po.no}`, by: 'System' }, { ts: tnow, text: `Shipment confirmed by ${account.name} — awaiting picking`, by: account.name }] };
+        // R16 — 确认发货 generates the CK at picking; the order moves to 待拣货
+        // until picking completes (→ 待发货), then dispatch (→ 待收货)
         updateDocs(prev => {
-          const docs = prev.map(d => d.id === po.id ? { ...d, status: 'Pending Shipment', timeline: [...d.timeline, { ts: tnow, text: `Outbound order ${ckNo} generated — awaiting dispatch`, by: account.name }] } : d);
+          const docs = prev.map(d => d.id === po.id ? { ...d, status: 'Pending Picking', timeline: [...d.timeline, { ts: tnow, text: `Outbound order ${ckNo} generated — picking required before dispatch`, by: account.name }] } : d);
           docs.push(ck);
           return docs;
         });
-        // notify buyer that the outbound order + waybill were generated
+        // notify buyer that the outbound order was generated (picking in progress)
         const buyerMain = db.accounts.find(a => a.tenantId === po.buyer && a.main);
         if (buyerMain) {
-          updatePushes(prev => [...prev, { id: 'w-' + Date.now(), toAccount: buyerMain.id, docNo: ckNo, docType: 'CK', ts: tnow, text: `Outbound order ${ckNo} generated for your order ${po.no}. Waybill ${ck.waybill.no}.`, read: false }]);
+          updatePushes(prev => [...prev, { id: 'w-' + Date.now(), toAccount: buyerMain.id, docNo: ckNo, docType: 'CK', ts: tnow, text: `Outbound order ${ckNo} generated for your order ${po.no}. Picking in progress — we will notify you again once dispatched.`, read: false }]);
         }
-        toast(`Shipment confirmed — outbound doc ${ckNo} and waybill ${ck.waybill.no} generated`, 'success');
+        toast(`Shipment confirmed — outbound doc ${ckNo} generated at picking status`, 'success');
+      },
+
+      // R16 — 开始拣货：写 picking.startedAt / by，PO → 拣货中
+      startPicking(ck) {
+        const tnow = now();
+        const po = db.docs.find(d => d.type === 'PO' && d.no === ck.poNo);
+        updateDocs(prev => prev.map(d => {
+          if (d.id === ck.id) return { ...d, picking: { ...(d.picking || {}), startedAt: tnow, by: account.name }, timeline: [...d.timeline, { ts: tnow, text: `Picking started by ${account.name}`, by: account.name }] };
+          if (po && d.id === po.id) return { ...d, status: 'Picking', timeline: [...d.timeline, { ts: tnow, text: `Picking started (${ck.no})`, by: account.name }] };
+          return d;
+        }));
+        toast(`Picking started for ${ck.no}`, 'success');
+      },
+
+      // R16 — 完成拣货：短拣原因必填（AC-16-04）、多拣拦截；CK → 待发货、PO → 待发货。
+      // 拣货数作为后续实收默认值（AC-16-12）：CK items[].qty 改写为 pickedQty。
+      finishPicking(ck, pickedLines, shortReasons) {
+        const tnow = now();
+        const base = (ck.picking && ck.picking.lines) ? ck.picking.lines : ck.items.map(it => ({ pid: it.pid, expectedQty: it.qty, pickedQty: 0, scanConfirmed: false, shortReason: '' }));
+        const merged = base.map(l => {
+          const picked = Number(pickedLines && pickedLines[l.pid] != null ? pickedLines[l.pid] : ifnull(l.pickedQty, 0));
+          return { ...l, pickedQty: picked, shortReason: ((shortReasons && shortReasons[l.pid]) || l.shortReason || '').trim() };
+        });
+        for (const l of merged) {
+          if (isNaN(l.pickedQty) || l.pickedQty < 0 || l.pickedQty > l.expectedQty) { toast('Picked quantity cannot exceed the expected quantity — over-picking is not allowed', 'error'); return false; }
+          if (l.pickedQty < l.expectedQty && !l.shortReason) { toast('Short-pick reason is required for every short line', 'error'); return false; }
+        }
+        const shortPick = merged.some(l => l.pickedQty < l.expectedQty);
+        const po = db.docs.find(d => d.type === 'PO' && d.no === ck.poNo);
+        // short pick → put the un-picked units back into stock (balance-level
+        // correction; the original OUT movement keeps its audit trail)
+        if (shortPick) {
+          const tenantStock = db.stock[ck.seller] || {};
+          const nextStock = { ...tenantStock };
+          merged.forEach(l => { if (l.pickedQty < l.expectedQty) nextStock[l.pid] = (nextStock[l.pid] || 0) + (l.expectedQty - l.pickedQty); });
+          updateStock(prev => ({ ...prev, [ck.seller]: nextStock }));
+        }
+        updateDocs(prev => prev.map(d => {
+          if (d.id === ck.id) return {
+            ...d,
+            status: 'Pending Shipment',
+            items: d.items.map(it => { const l = merged.find(x => x.pid === it.pid); return l ? { ...it, qty: l.pickedQty } : it; }),
+            picking: { ...(d.picking || {}), lines: merged, shortPick, finishedAt: tnow, by: account.name },
+            timeline: [...d.timeline, { ts: tnow, text: `Picking completed by ${account.name} — ${merged.length} lines, short pick: ${shortPick ? 'yes' : 'no'}`, by: account.name }],
+          };
+          if (po && d.id === po.id) return { ...d, status: 'Pending Shipment', timeline: [...d.timeline, { ts: tnow, text: `Picking completed (${ck.no})${shortPick ? ' — short pick' : ''} — ready for dispatch`, by: account.name }] };
+          return d;
+        }));
+        toast(`Picking completed — ${ck.no} is awaiting dispatch`, 'success');
+        return true;
       },
 
       // R82 — seller dispatches the generated outbound order: CK → Shipped,
       // the linked order moves to 待收货, waybill link pushed to the buyer
-      dispatch(ck) {
+      dispatch(ck, logistics) {
         const tnow = now();
         const po = db.docs.find(d => d.type === 'PO' && d.no === ck.poNo);
+        // R16 — carrier info is captured HERE (after picking, AC-16-06);
+        // the waybill number is generated with the dispatch
+        const waybill = { no: 'WY-' + tnow.slice(0, 10).replace(/-/g, '') + '-' + String(Math.floor(Math.random() * 900) + 100), ...(logistics || {}) };
         updateDocs(prev => prev.map(d => {
-          if (d.id === ck.id) return { ...d, status: 'Shipped', timeline: [...d.timeline, { ts: tnow, text: `Dispatched by ${account.name} — waybill link pushed to buyer`, by: account.name }] };
+          if (d.id === ck.id) return { ...d, status: 'Shipped', waybill, timeline: [...d.timeline, { ts: tnow, text: `Dispatched by ${account.name} — waybill ${waybill.no}, carrier ${waybill.carrier || 'TBC'}`, by: account.name }] };
           if (po && d.id === po.id) return { ...d, status: 'Pending Receipt', timeline: [...d.timeline, { ts: tnow, text: `Dispatched (${ck.no}) — in transit, awaiting buyer receipt`, by: account.name }] };
           return d;
         }));
         const buyerMain = db.accounts.find(a => a.tenantId === ck.buyer && a.main);
         if (buyerMain) {
-          updatePushes(prev => [...prev, { id: 'w-' + Date.now(), toAccount: buyerMain.id, docNo: ck.no, docType: 'CK', ts: tnow, text: `Your order ${ck.poNo} has been dispatched. Waybill ${ck.waybill.no}. Tap to confirm receipt.`, read: false }]);
+          // R16/AC-16-07 — 发货后推送带一次性 token 的免登录录单链接
+          const base = (typeof window !== 'undefined' && window.location) ? window.location.href.split('?')[0] : '';
+          const guestLink = `${base}?doc=${ck.no}&token=demo`;
+          updatePushes(prev => [...prev, { id: 'w-' + Date.now(), toAccount: buyerMain.id, docNo: ck.no, docType: 'CK', ts: tnow, text: `Your order ${ck.poNo} has been dispatched. Waybill ${waybill.no}. Tap to confirm receipt.` + '\n\nLogin-free confirm: ' + guestLink, read: false }]);
         }
-        toast(`Dispatched — waybill ${ck.waybill.no} link pushed to the buyer`, 'success');
+        toast(`Dispatched — waybill ${waybill.no} link pushed to the buyer`, 'success');
       },
 
-      receive(ck, mode, qtys, reason, byAccount) {
+      receive(ck, mode, qtys, reason, byAccount, signature) {
         const tnow = now();
         // byAccount: the account the action is attributed to (defaults to the
         // signed-in account; the login-free WhatsApp flow passes the buyer's
@@ -346,7 +443,10 @@ function App() {
         updateMovements(prev => [...prev, ...newMoves]);
         // create RK doc
         const rkNo = nextNo('RK', db.docs);
-        const rk = { id: 'd-rk-' + Date.now(), no: rkNo, type: 'RK', seller: ck.seller, buyer: ck.buyer, createdBy: opName, createdAt: tnow, status, currency: ck.currency, ckNo: ck.no, items, variance, timeline: [{ ts: tnow, text: `Inbound record generated from ${ck.no}`, by: 'System' }, { ts: tnow, text: `Receiving confirmed${status === 'Partial Variance' ? ' (partial)' : ''} by ${opName}`, by: opName }] };
+        const rk = { id: 'd-rk-' + Date.now(), no: rkNo, type: 'RK', seller: ck.seller, buyer: ck.buyer, createdBy: opName, createdAt: tnow, status, currency: ck.currency, ckNo: ck.no, items, variance,
+          // R16 — 签收签名随实收写入 RK（AC-16-10：ckNo 关联正确）
+          signature: signature || null,
+          timeline: [{ ts: tnow, text: `Inbound record generated from ${ck.no}`, by: 'System' }, { ts: tnow, text: `Receiving confirmed${status === 'Partial Variance' ? ' (partial)' : ''} by ${opName}`, by: opName }, ...(signature ? [{ ts: tnow, text: `Customer signed (${signature.mode === 'tap' ? 'tap confirmation' : 'handwritten signature'}) by ${signature.signedBy || opName}`, by: opName }] : [])] };
         // update CK status, complete PO — the system then URGES the supplier to
         // issue the invoice (flow: receiving → auto invoice reminder → the
         // supplier issues it via Create Invoice and pushes the link)
@@ -356,7 +456,7 @@ function App() {
         updateDocs(prev => {
           // R82 — CK terminal status: full → Received / partial → Partial Variance / reject → Rejected
           const ckStatus = mode === 'reject' ? 'Rejected' : (totalRecv < totalShipped ? 'Partial Variance' : 'Received');
-          let docs = prev.map(d => d.id === ck.id ? { ...d, status: ckStatus, timeline: [...d.timeline, { ts: tnow, text: `Receiving confirmed by ${tenantName(db, ck.buyer)}`, by: opName }] } : d);
+          let docs = prev.map(d => d.id === ck.id ? { ...d, status: ckStatus, timeline: [...d.timeline, { ts: tnow, text: `Receiving confirmed by ${tenantName(db, ck.buyer)}`, by: opName }, ...(signature ? [{ ts: tnow, text: `Customer signed by ${signature.signedBy || opName} — ${signature.mode === 'tap' ? 'tap confirmation' : 'handwritten signature'}`, by: opName }] : [])] } : d);
           docs.push(rk);
           if (po) {
             docs = docs.map(d => d.id === po.id ? { ...d, status: poStatus, timeline: [...d.timeline, { ts: tnow, text: `Receiving confirmed (${rkNo}) — order ${poStatus === 'Received' ? 'fully received' : poStatus === 'Partially Received' ? 'partially received' : 'rejected'}`, by: opName }] } : d);
@@ -368,6 +468,27 @@ function App() {
           const sellerMain = db.accounts.find(a => a.tenantId === po.seller && a.main);
           if (sellerMain) {
             updatePushes(prev => [...prev, { id: 'w-' + Date.now(), toAccount: sellerMain.id, docNo: po.no, docType: 'PO', ts: tnow, text: `Receiving completed for ${po.no} (${poStatus === 'Received' ? 'all items' : poStatus === 'Partially Received' ? 'partial' : 'rejected'}).`, read: false }]);
+          }
+        }
+        // R17 — 买方签收后自动开票：金额按实收数量 × 成交价（AC-17-03/04）；
+        // ckNo 维度判重（AC-17-07）——同一 CK 重复签收不开第二张，
+        // 部分签收 + 补货再签收（不同 CK）各开一张差额票。
+        if (po && mode !== 'reject' && !db.docs.some(d => d.type === 'FP' && d.ckNo === ck.no)) {
+          const fpItems = items.filter(it => (ifnull(it.actualQty, it.qty)) > 0).map(it => ({ ...it, qty: ifnull(it.actualQty, it.qty) }));
+          if (fpItems.length) {
+            const fno = nextNo('FP', db.docs);
+            const settings = db.settings || {};
+            const taxRate = (settings.taxRate === undefined || settings.taxRate === null) ? null : Number(settings.taxRate);
+            const linesTotal = fpItems.reduce((s, it) => s + (Number(it.price) || 0) * (Number(it.qty) || 0), 0);
+            const taxAmount = taxRate === null ? 0 : Math.round(linesTotal * taxRate) / 100;
+            // Q23：全额票含运费，差额票运费为 0（可解释的简单分摊）
+            const freight = mode === 'accept' ? (Number(po.freight) || 0) : 0;
+            const fp = { id: 'd-fp-' + Date.now(), no: fno, type: 'FP', seller: ck.seller, buyer: ck.buyer, createdBy: 'System', createdAt: tnow, status: 'Issued', currency: ck.currency, poNo: po.no, ckNo: ck.no, issueDate: tnow.slice(0, 10), basis: 'receivedQty', taxRate, taxAmount, freight, items: fpItems, timeline: [{ ts: tnow, text: `Invoice auto-issued on receiving (${rk.no}) — amounts based on actually received quantities`, by: 'System' }] };
+            updateDocs(prev => [...prev, fp]);
+            // AC-17-05 — 发票生成后自动推送 WhatsApp 给买方
+            const buyerMainFp = db.accounts.find(a => a.tenantId === ck.buyer && a.main);
+            if (buyerMainFp) updatePushes(prev => [...prev, { id: 'w-' + Date.now() + '-fp', toAccount: buyerMainFp.id, docNo: fno, docType: 'FP', ts: tnow, text: `Invoice ${fno} issued by ${tenantName(db, ck.seller)} for order ${po.no} — based on received quantities. Tap to view and confirm.`, read: false }]);
+            toast(`Invoice ${fno} auto-issued for order ${po.no}`, 'success');
           }
         }
         toast(`Receiving confirmed — inbound record ${rkNo} generated`, 'success');
@@ -494,7 +615,11 @@ function App() {
       },
 
       // R100h — 扫码批量出库：一次确认多条 OUT 库存流水（仅限本商户物料，逐行校验库存充足；共享一个 OUT- 编号便于追溯）
-      batchScanOut(lines, note, receiver) {
+      batchScanOut(cart, note) {
+        // R11 — 一次只处理一辆出库车：行与收货方都取自 cart（收货方绑定由
+        // cartApi.add 在加货时校验），全部流水共享一个 OUT- 编号（一张 CK）
+        const lines = (cart && cart.lines) || [];
+        const receiver = cart ? cart.receiver : null;
         const tnow = now();
         const tid = account.tenantId;
         const stockMap = db.stock[tid] || {};
@@ -512,6 +637,33 @@ function App() {
         if (!recv) { toast('Select or enter a receiver for the outbound', 'error'); return false; }
         const total = lines.reduce((s, l) => s + l.qty, 0);
         const refNo = 'OUT-' + tnow.slice(0, 10).replace(/-/g, '') + '-' + String(Math.floor(Math.random() * 900) + 100);
+        // R10 —— 整单折扣（车级）与金额五行口径
+        const cartPct = (cart && cart.discountPct !== undefined && cart.discountPct !== null && cart.discountPct !== '')
+          ? Number(cart.discountPct) : 0;
+        const settings = db.settings || {};
+        const taxRate = (settings.taxRate === undefined || settings.taxRate === null) ? null : Number(settings.taxRate);
+        let subtotal = 0, discountTotal = 0;
+        const docItems = lines.map(ln => {
+          const prod = db.products.find(p => p.id === ln.pid) || {};
+          const unit = Number(ln.salePrice) || 0;
+          const qty = Number(ln.qty) || 0;
+          const gross = unit * qty;
+          const rowPct = (ln.discountPct === undefined || ln.discountPct === null) ? cartPct : (Number(ln.discountPct) || 0);
+          const net = +(unit * (1 - rowPct / 100)).toFixed(2);
+          subtotal += gross;
+          discountTotal += gross - net * qty;
+          return {
+            pid: ln.pid, name: prod.name || '', qty, price: net, grossPrice: unit,
+            discountPct: rowPct, currency: ln.saleCurrency || prod.currency || 'USD',
+          };
+        });
+        subtotal = Math.round(subtotal * 100) / 100;
+        discountTotal = Math.round(discountTotal * 100) / 100;
+        const taxAmount = taxRate === null ? 0 : Math.round((subtotal - discountTotal) * taxRate) / 100;
+        let freight = (cart && cart.freight !== undefined && cart.freight !== null && cart.freight !== '') ? Number(cart.freight) : null;
+        if (freight === null) freight = settings.freightEnabled ? Number(settings.defaultFreight) || 0 : 0;
+        const totalAmount = Math.round((subtotal - discountTotal + taxAmount + freight) * 100) / 100;
+        const docCurrency = (docItems[0] && docItems[0].currency) || 'USD';
         const nextStock = { ...stockMap };
         const newMoves = lines.map(ln => {
           const before = nextStock[ln.pid] || 0;
@@ -521,15 +673,31 @@ function App() {
           if ((note || '').trim()) reasonParts.push(note.trim());
           reasonParts.push(`Receiver: ${recv.name}${recv.phone ? ` (${recv.phone})` : ''}`);
           // 实际销售价随流水留痕：字段 + 事由里带「实际销售价 × 数量 = 金额」
+          // R10 —— 折扣：行折扣优先于整体折扣；写流水与单据都用折后价
           const salePrice = Number(ln.salePrice) || 0;
           const saleCurrency = ln.saleCurrency || 'USD';
-          const saleAmount = salePrice * ln.qty;
-          reasonParts.push(`Sale: ${saleCurrency} ${salePrice.toFixed(2)} × ${ln.qty} = ${saleCurrency} ${saleAmount.toFixed(2)}`);
+          const rowPct = (ln.discountPct === undefined || ln.discountPct === null) ? cartPct : (Number(ln.discountPct) || 0);
+          const grossAmount = salePrice * ln.qty;
+          const netUnit = +(salePrice * (1 - rowPct / 100)).toFixed(2);
+          const saleAmount = netUnit * ln.qty;
+          if (rowPct) reasonParts.push(`Discount ${rowPct}% on ${salePrice.toFixed(2)}`);
+          reasonParts.push(`Sale: ${saleCurrency} ${netUnit.toFixed(2)} × ${ln.qty} = ${saleCurrency} ${saleAmount.toFixed(2)}`);
           reasonParts.push('Batch scan outbound (scan)');
           return { id: 'm-' + Date.now() + Math.random().toString(36).slice(2, 5), tenantId: tid, productId: ln.pid, type: 'OUT', qty: -ln.qty, before, after, refNo, by: account.name, ts: tnow, receiverName: recv.name, receiverPhone: recv.phone || null, receiverTenantId: recv.tenantId, salePrice, saleCurrency, saleAmount, reason: reasonParts.join(' · ') };
         });
         updateStock(prev => ({ ...prev, [tid]: nextStock }));
         updateMovements(prev => [...prev, ...newMoves]);
+        // R10/AC-10-13 —— 出库暂存生成一张 CK 单据，折扣/税额/运费以快照写入，重开后数值不变
+        const ckNo = nextNo('CK', db.docs);
+        const ck = {
+          id: 'd-ck-' + Date.now(), no: ckNo, type: 'CK', seller: tid, buyer: recv.tenantId || null,
+          createdBy: account.name, createdAt: tnow, status: 'Pending Shipment', currency: docCurrency,
+          poNo: null, waybill: null, fromStaging: true, note: note || '',
+          items: docItems, discountPct: cartPct, subtotal, discountTotal,
+          taxRate, taxAmount, freight, totalAmount, amountsFrozen: true,
+          timeline: [{ ts: tnow, text: `Outbound order generated from staging cart (${refNo})`, by: 'System' }],
+        };
+        updateDocs(prev => [...prev, ck]);
         toast(`Batch outbound complete — ${lines.length} items, ${total} units to ${recv.name} (${refNo})`, 'success');
         return true;
       },
@@ -544,19 +712,26 @@ function App() {
         const tid = account.tenantId;
         const stockMap = db.stock[tid] || {};
         // supplier 可为商户 id（已有供货方）或新建商户对象（手动输入路径：
-        // createSupplier 的 setDb 在同一事件内尚未生效，直接传对象避免查不到）
-        const sup = supplier && typeof supplier === 'object'
+        // createSupplier 的 setDb 在同一事件内尚未生效，直接传对象避免查不到）。
+        // R08 — 'self' = 自产：不建租户、不查 tenants；流水 supplierId=null +
+        // selfProduced=true、事由含「自产」；商品 source='self'（粘住不回退）
+        const isSelf = supplier === 'self' || (supplier && supplier.self === true);
+        const sup = isSelf ? null : (supplier && typeof supplier === 'object'
           ? supplier
-          : (supplier ? db.tenants.find(x => x.id === supplier) : null);
+          : (supplier ? db.tenants.find(x => x.id === supplier) : null));
+        // 自产 / 外购的采购历史供应商字段（AC-08-07：自产同样记入采购历史）
+        const supHistFields = isSelf
+          ? { supplierId: null, supplierName: null, supplierLabel: 'Self-produced', selfProduced: true }
+          : { supplierId: sup ? sup.id : null, supplierName: sup ? sup.name : null };
         // validation pass — nothing is written unless every line checks out
         for (const ln of lines) {
-          if (!(Number(ln.qty) > 0)) { toast('Enter an inbound quantity > 0 for every line', 'error'); return false; }
+          if (!(Number(ln.qty) > 0)) { toast('Enter an inbound quantity > 0 for every line', 'error'); return { ok: false }; }
           if (ln.kind === 'exist') {
             const prod = db.products.find(p => p.id === ln.pid);
-            if (!prod || prod.ownerId !== tid) { toast('Stock-in applies to your own products only', 'error'); return false; }
-          } else if (!String(ln.name || '').trim()) { toast('Enter a name for every new item', 'error'); return false; }
+            if (!prod || prod.ownerId !== tid) { toast('Stock-in applies to your own products only', 'error'); return { ok: false }; }
+          } else if (!String(ln.name || '').trim()) { toast('Enter a name for every new item', 'error'); return { ok: false }; }
         }
-        if (!sup) { toast('Select a supplier for the stock-in', 'error'); return false; }
+        if (!sup && !isSelf) { toast('Select a supplier for the stock-in', 'error'); return { ok: false }; }
         const total = lines.reduce((s, l) => s + (Number(l.qty) || 0), 0);
         // 入库金额 = 物料单价 × 数量；单价在入库暂存单内可改（默认参考价/渠道价）。
         // 移动端每行可独立设置币种：行金额与合计按币种分别小计（演示不折算）
@@ -573,6 +748,10 @@ function App() {
         const refNo = 'IN-' + tnow.slice(0, 10).replace(/-/g, '') + '-' + String(Math.floor(Math.random() * 900) + 100);
         const nextStock = { ...stockMap };
         const newProducts = [];
+        const recByPid = {};
+        // R06 — 本次入库涉及的商品 pid（第二步调价的行来源，由 batchScanIn 给出，
+        // 不在向导里重新推导——入库前后 db 不同，重推会漏新建商品）
+        const touchedPids = [];
         const newMoves = lines.map(ln => {
           let pid = ln.pid;
           if (ln.kind === 'new') {
@@ -580,35 +759,88 @@ function App() {
             // R107 — 类目改点选多选（ln.categories 存分类 id 数组），建档时映射既有分类
             pid = 'p-' + Date.now() + Math.random().toString(36).slice(2, 5);
             const cats = (Array.isArray(ln.categories) ? ln.categories : []).filter(id => db.categories.some(c => c.id === id));
-            newProducts.push({ id: pid, ownerId: tid, name: String(ln.name).trim(), spec: String(ln.spec || '').trim(), model: String(ln.model || '').trim() || String(ln.code || '').trim(), brand: String(ln.brand || '').trim(), unit: ln.unit || 'pcs', price: Number(ln.price) || 0, currency: ln.currency || 'USD', image: ln.image || '', images: [], categories: cats, onSale: true });
+            // R21 — 新建商品在构造时就把这条入库写进 purchaseHistory（不要事后 find 再补），
+            // 并落派生快照 purchasePrice / purchaseCurrency / purchaseUpdatedAt / purchaseRefNo
+            const recNew = { price: Number(ln.price) || 0, currency: ln.currency || 'USD', qty: Number(ln.qty) || 0, ts: tnow, refNo, ...supHistFields };
+            // R05 — 型号与条码彻底解耦（AC-05-01）：model 只来自表单型号字段，
+            // 扫码值进 barcode，不再兼作型号。快速建档的商品条码同样带前缀
+            // （AC-05-08），前缀由本商户决定；扫到的完整码原样保留。
+            const ownPrefix = ownBarcodePrefix(db, account);
+            const rawCode = String(ln.code || '').trim();
+            const scannedBarcode = String(ln.barcode || '').trim()
+              || (splitBarcode(rawCode).prefix ? rawCode : composeBarcode(ownPrefix, rawCode));
+            const bcBody = splitBarcode(scannedBarcode).body;
+            newProducts.push({ id: pid, ownerId: tid, name: String(ln.name).trim(), spec: String(ln.spec || '').trim(), model: String(ln.model || '').trim(), brand: String(ln.brand || '').trim(), unit: ln.unit || 'pcs', price: Number(ln.price) || 0, currency: ln.currency || 'USD', image: ln.image || '', images: [], categories: cats, onSale: true, source: isSelf ? 'self' : 'external', barcode: scannedBarcode, barcodeBody: bcBody, purchaseHistory: [recNew], purchasePrice: recNew.price, purchaseCurrency: recNew.currency, purchaseUpdatedAt: recNew.ts, purchaseRefNo: recNew.refNo });
           }
+          if (pid && touchedPids.indexOf(pid) < 0) touchedPids.push(pid);
           const up = Number(ln.kind === 'exist' ? ln.unitPrice : ln.price) || 0;
           const amt = Math.round(up * (Number(ln.qty) || 0) * 100) / 100;
           const lnCur = (ln.kind === 'exist'
             ? (ln.currency || ((db.products.find(p => p.id === ln.pid) || {}).currency))
             : ln.currency) || 'USD';
+          // R21 — 既有商品：本次入库同样是一条采购价历史（新建商品已在构造时写入，不重复）
+          if (ln.kind === 'exist' && pid) {
+            recByPid[pid] = { price: up, currency: lnCur, qty: Number(ln.qty) || 0, ts: tnow, refNo, ...supHistFields };
+          }
           const before = nextStock[pid] || 0;
           const after = before + (Number(ln.qty) || 0);
           nextStock[pid] = after;
           const reasonParts = [];
           if ((note || '').trim()) reasonParts.push(note.trim());
-          if (sup) reasonParts.push(`Supplier: ${sup.name}`);
+          if (isSelf) reasonParts.push('自产 / Self-produced');
+          else if (sup) reasonParts.push(`Supplier: ${sup.name}`);
           reasonParts.push('Batch scan stock-in (scan)');
-          return { id: 'm-' + Date.now() + Math.random().toString(36).slice(2, 5), tenantId: tid, productId: pid, type: 'IN', qty: Number(ln.qty) || 0, before, after, refNo, by: account.name, ts: tnow, supplierId: sup ? sup.id : null, price: up, amount: amt, currency: lnCur, reason: reasonParts.join(' · ') };
+          return { id: 'm-' + Date.now() + Math.random().toString(36).slice(2, 5), tenantId: tid, productId: pid, type: 'IN', qty: Number(ln.qty) || 0, before, after, refNo, by: account.name, ts: tnow, supplierId: sup ? sup.id : null, ...(isSelf ? { selfProduced: true } : {}), price: up, amount: amt, currency: lnCur, reason: reasonParts.join(' · ') };
         });
+        // R21 — 采购价快照必须并进这一个 setDb（不能再单独发一次，否则被 React 批处理吞掉）
         setDb(prev => ({
           ...prev,
-          products: [...prev.products, ...newProducts],
+          products: [
+            // R08 — 自产入库把商品 source 置 'self'（粘住：能力属性，不因外购回退）
+            ...prev.products.map(p => recByPid[p.id] ? { ...p, ...purchasePatch(p, recByPid[p.id]), ...(isSelf ? { source: 'self' } : {}) } : p),
+            ...newProducts,
+          ],
           stock: { ...prev.stock, [tid]: nextStock },
           movements: [...prev.movements, ...newMoves],
         }));
         toast(`Batch stock-in complete — ${lines.length} items, ${total} units, ${amountsText} in (${refNo})`, 'success');
-        return true;
+        // R06 — 返回入库结果给两步向导：第一步（只读确认）与第二步（批量调价）
+        const priceRows = touchedPids.map(pid => {
+          const np = newProducts.find(x => x.id === pid);
+          const p = np || db.products.find(x => x.id === pid) || {};
+          return {
+            pid, name: p.name || '',
+            purchasePrice: purchasePriceOf(p), purchaseCurrency: purchaseCurrencyOf(p),
+            marketPrice: ifnull(p.marketPrice, p.price), marketCurrency: marketCurOf(p),
+            salePrice: p.price, saleCurrency: p.currency || 'USD',
+          };
+        });
+        const rows = lines.map(ln => {
+          const pid = ln.kind === 'exist' ? ln.pid : (newProducts.find(x => x.name === String(ln.name).trim()) || {}).id;
+          const p = (pid && db.products.find(x => x.id === pid)) || newProducts.find(x => x.id === pid) || {};
+          return {
+            pid: pid || '', kind: ln.kind, name: p.name || ln.name || '', unit: p.unit || ln.unit || 'pcs',
+            qty: Number(ln.qty) || 0,
+            purchasePrice: Number(ln.kind === 'exist' ? ln.unitPrice : ln.price) || 0,
+            currency: ln.currency || p.currency || 'USD',
+          };
+        });
+        return {
+          ok: true, productIds: touchedPids, priceRows, rows,
+          refNo, supplierName: isSelf ? 'Self-produced' : (sup ? sup.name : ''),
+          totalQty: total, amountsText,
+        };
       },
 
       createProduct(f) {
         const imgs = Array.isArray(f.images) ? f.images : [];
-        const p = { id: 'p-' + Date.now(), ownerId: account.tenantId, name: f.name, spec: f.spec, model: f.model, brand: f.brand, unit: f.unit, price: Number(f.price), currency: f.currency, image: imgs[0] || '', images: imgs, categories: f.categories, onSale: f.onSale !== false };
+        // R05 — 条码全平台唯一（跨租户）。冲突时中断写入并提示，不落到 db 里。
+        const barcode = String(f.barcode || '').trim();
+        if (barcode) {
+          const conflict = findBarcodeConflict(db, barcode, null);
+          if (conflict) { toast(`Barcode ${barcode} is already used by "${conflict.name}"`, 'error'); return; }
+        }
+        const p = { id: 'p-' + Date.now(), ownerId: account.tenantId, name: f.name, spec: f.spec, model: f.model, brand: f.brand, unit: f.unit, price: Number(f.price), currency: f.currency, image: imgs[0] || '', images: imgs, categories: f.categories, onSale: f.onSale !== false, barcode, barcodeBody: String(f.barcodeBody || '').trim(), source: f.source || 'external' };
         setDb(prev => ({ ...prev, products: [...prev.products, p] }));
         updateStock(prev => ({ ...prev, [account.tenantId]: { ...prev[account.tenantId], [p.id]: Number(f.stock) || 0 } }));
         toast(`Product "${f.name}" added`, 'success');
@@ -619,7 +851,8 @@ function App() {
         const tnow = now();
         const imgs = Array.isArray(f.images) ? f.images : [];
         const n = Math.max(0, Number(qty) || 0);
-        const p = { id: 'p-' + Date.now(), ownerId: account.tenantId, name: f.name, spec: f.spec, model: f.model, brand: f.brand, unit: f.unit, price: Number(f.price), currency: f.currency, image: imgs[0] || '', images: imgs, categories: f.categories, onSale: f.onSale !== false };
+        const recIn = { price: Number(f.purchasePrice != null ? f.purchasePrice : f.price) || 0, currency: f.purchaseCurrency || f.currency || 'USD', qty: n, supplierId: null, supplierName: null, ts: tnow, refNo: 'IN-' + Date.now() };
+        const p = { id: 'p-' + Date.now(), ownerId: account.tenantId, name: f.name, spec: f.spec, model: f.model, brand: f.brand, unit: f.unit, price: Number(f.price), currency: f.currency, image: imgs[0] || '', images: imgs, categories: f.categories, onSale: f.onSale !== false, purchaseHistory: [recIn], purchasePrice: recIn.price, purchaseCurrency: recIn.currency, purchaseUpdatedAt: recIn.ts, purchaseRefNo: recIn.refNo };
         setDb(prev => ({
           ...prev,
           products: [...prev.products, p],
@@ -631,10 +864,26 @@ function App() {
 
       updateProduct(id, f) {
         const imgs = f.images !== undefined ? f.images : undefined; // undefined = untouched
+        // R05 — 编辑同样做唯一性校验，排除自身
+        const barcode = f.barcode !== undefined ? String(f.barcode || '').trim() : undefined;
+        if (barcode) {
+          const conflict = findBarcodeConflict(db, barcode, id);
+          if (conflict) { toast(`Barcode ${barcode} is already used by "${conflict.name}"`, 'error'); return; }
+        }
         setDb(prev => ({ ...prev, products: prev.products.map(p => {
           if (p.id !== id) return p;
           const nextImages = imgs !== undefined ? imgs : (p.images || (p.image ? [p.image] : []));
-          return { ...p, name: f.name, spec: f.spec, model: f.model, brand: f.brand, unit: f.unit, price: Number(f.price), currency: f.currency, images: nextImages, image: nextImages[0] || '', categories: f.categories, onSale: f.onSale !== false };
+          // R21 — 采购价历史与派生快照只读取自旧记录，编辑表单无法改写它们
+          // （不展开 f 的任意键，只挑可编辑字段显式赋值）
+          return {
+            ...p,
+            name: f.name, spec: f.spec, model: f.model, brand: f.brand, unit: f.unit,
+            price: Number(f.price), currency: f.currency,
+            images: nextImages, image: nextImages[0] || '', categories: f.categories,
+            onSale: f.onSale !== false,
+            // R05 — undefined = 本次未改条码，保持原值
+            ...(barcode === undefined ? {} : { barcode, barcodeBody: String(f.barcodeBody || '').trim() }),
+          };
         }) }));
         toast('Product updated', 'success');
       },
@@ -661,19 +910,68 @@ function App() {
         toast(`Price updated — ${p.name}`, 'success');
       },
 
-      createTenant(f) {
-        setDb(prev => {
-          // code left blank (H5 form) auto-generates the next T-00x code
-          const code = (f.code && String(f.code).trim()) || 'T-' + String(prev.tenants.length + 1).padStart(3, '0');
-          const t = { id: 't-' + Date.now(), code, name: f.name, type: f.type, country: f.country, maxLevel: f.maxLevel ? Number(f.maxLevel) : null, status: f.status, createdAt: now().slice(0, 10) };
-          // one-stop provisioning: tenant + master account (+ WhatsApp binding) in a single step
-          const master = f.master && f.master.name
-            ? { id: 'a-' + Date.now(), name: f.master.name, tenantId: t.id, type: 'tenant', phone: f.master.phone, password: f.master.password || null, whatsapp: f.master.whatsapp || null, status: 'Active', main: true }
-            : null;
-          return { ...prev, tenants: [...prev.tenants, t], accounts: master ? [...prev.accounts, master] : prev.accounts };
+      // R06 — 批量调价（第二步的落库口）。只对「值确实变了」的行写库并记事件，
+      // 全部未变则不调用 setDb、不产生任何事件日志（AC-06-09）。
+      adjustPrices(patches) {
+        const list = (patches || []).filter(pf => pf && pf.pid);
+        const changes = [];
+        list.forEach(pf => {
+          const prod = db.products.find(x => x.id === pf.pid);
+          if (!prod || prod.ownerId !== account.tenantId) return;
+          const beforeSale = Number(prod.price) || 0;
+          const beforeMarket = Number(ifnull(prod.marketPrice, prod.price)) || 0;
+          const nextSale = (pf.salePrice === undefined || pf.salePrice === null || pf.salePrice === '') ? beforeSale : Number(pf.salePrice);
+          const nextMarket = (pf.marketPrice === undefined || pf.marketPrice === null || pf.marketPrice === '') ? beforeMarket : Number(pf.marketPrice);
+          if (nextSale === beforeSale && nextMarket === beforeMarket) return;
+          changes.push({
+            prod, beforeSale, beforeMarket, nextSale, nextMarket,
+            nextCur: pf.saleCurrency || prod.currency || 'USD',
+            nextMCur: pf.marketCurrency || marketCurOf(prod),
+          });
         });
+        if (!changes.length) { toast('No price changed — nothing to save', 'info'); return false; }
+        setDb(prev => ({
+          ...prev,
+          products: prev.products.map(x => {
+            const c = changes.find(k => k.prod.id === x.id);
+            return c ? { ...x, price: c.nextSale, marketPrice: c.nextMarket, currency: c.nextCur, marketCurrency: c.nextMCur, pendingReprice: false, pendingRepriceAt: null } : x;
+          }),
+          events: [...prev.events, ...changes.map(c => ({
+            id: 'e-' + Date.now() + Math.random().toString(36).slice(2, 5), ts: now(), by: account.name, action: 'Adjust Price',
+            detail: `${c.prod.name} · channel sale price ${c.beforeSale} → ${c.nextSale}, market reference price ${c.beforeMarket} → ${c.nextMarket}`,
+          }))],
+        }));
+        toast(`Prices updated — ${changes.length} product(s)`, 'success');
+        return true;
+      },
+      // R06/AC-06-06 — 「稍后处理」给未改价的商品打「待调价」标识。
+      // 这里不写事件日志（否则 AC-06-09「不调价不产生额外日志」会被破坏）。
+      setPendingReprice(pids, pending) {
+        const ids = (pids || []).filter(Boolean);
+        if (!ids.length) return;
+        setDb(prev => ({ ...prev, products: prev.products.map(p => ids.indexOf(p.id) >= 0
+          ? { ...p, pendingReprice: !!pending, pendingRepriceAt: pending ? now() : null } : p) }));
+      },
+      // R10 — 系统设置（税率 / 运费 / 报价模式 / AI 边界 / 库存阈值 / 收款信息）
+      updateSettings(patch) {
+        setDb(prev => ({ ...prev, settings: { ...(prev.settings || {}), ...(patch || {}), updatedAt: now() } }));
+        toast('Settings updated', 'success');
+      },
+      createTenant(f) {
+        // R01 — 租户对象在 setDb 外构建并同步返回：注册向导提交后需要立刻
+        // 展示结果（setDb 内构建的话同一次点击读不到新租户 —— createSupplier
+        // 已有同样的先例与注释）。registrationStatus：自主注册（向导）传
+        // 'pending' 待平台审核；平台端新建默认 'approved'（平台即审核方）。
+        const code = (f.code && String(f.code).trim()) || 'T-' + String(db.tenants.length + 1).padStart(3, '0');
+        const t = { id: 't-' + Date.now(), code, name: f.name, type: f.type, country: f.country, maxLevel: f.maxLevel ? Number(f.maxLevel) : null, status: f.status, registrationStatus: f.registrationStatus || 'approved', createdAt: now().slice(0, 10) };
+        // one-stop provisioning: tenant + master account (+ WhatsApp binding) in a single step
+        const master = f.master && f.master.name
+          ? { id: 'a-' + Date.now(), name: f.master.name, tenantId: t.id, type: 'tenant', phone: f.master.phone, password: f.master.password || null, whatsapp: f.master.whatsapp || null, status: 'Active', main: true }
+          : null;
+        setDb(prev => ({ ...prev, tenants: [...prev.tenants, t], accounts: master ? [...prev.accounts, master] : prev.accounts }));
         if (f.master && f.master.name) toast(`Merchant ${f.name} created — master account ${f.master.name} ready${f.master.whatsapp ? ' (WhatsApp bound)' : ''}`, 'success');
         else toast(`Merchant ${f.name} created`, 'success');
+        return t;
       },
 
       suspendTenant(id) {
@@ -681,10 +979,105 @@ function App() {
         toast('Merchant suspended — all related accounts are now blocked', 'success');
       },
 
+      // R03 — set a custom level label on a downstream merchant.
+      // DISPLAY ONLY: this must never touch maxLevel. maxLevel is the single
+      // source for permission inference (tenantRole), so renaming a level
+      // cannot change what the merchant is allowed to do.
+      // The label lives on the LABELLED tenant (downstream), not on the
+      // upstream — so two distributors under the same upstream can carry
+      // different labels without overwriting each other.
+      setLevelLabel(tenantId, label) {
+        const raw = String(label == null ? '' : label).trim();
+        const next = raw ? raw.slice(0, 20) : null;   // AC-03-07: truncate silently
+        setDb(prev => ({ ...prev, tenants: prev.tenants.map(t => t.id === tenantId
+          ? { ...t, levelLabel: next, levelLabelUpdatedBy: account.id }
+          : t) }));
+        const t = db.tenants.find(x => x.id === tenantId);
+        toast(next ? `Level label set to "${next}" for ${t ? t.name : tenantId}` : `Level label cleared for ${t ? t.name : tenantId}`, 'success');
+      },
+
+      // R01 — platform-side onboarding review. registrationStatus is a separate
+      // dimension from status (Active/Suspended): a pending tenant is blocked
+      // at login but its records stay intact.
+      setRegistrationStatus(tenantId, status) {
+        setDb(prev => ({ ...prev, tenants: prev.tenants.map(t => t.id === tenantId ? { ...t, registrationStatus: status } : t) }));
+        const t = db.tenants.find(x => x.id === tenantId);
+        toast(`Merchant ${t ? t.name : tenantId} — onboarding ${status === 'approved' ? 'approved' : 'rejected'}`, 'success');
+      },
+
       createRelation(up, down) {
         const tnow = now().slice(0, 10);
         setDb(prev => ({ ...prev, relations: [...prev.relations, { upstream: up, downstream: down, createdAt: tnow }] }));
         toast('Supply relation established', 'success');
+      },
+
+      // ---- R09 tenant invitations ----
+      // 创建邀请（AC-09-09 先查重复用：同一 inviter + role + invitee 在
+      // pending 且未过期时复用，不叠加第二条）。
+      createInvitation(f) {
+        const role = (f && f.role) === 'supplier' ? 'supplier' : 'distributor';
+        const inviteeName = String((f && f.inviteeName) || '').trim();
+        const inviteePhone = String((f && f.inviteePhone) || '').trim();
+        const today = now().slice(0, 10);
+        const base = new Date(today + 'T00:00:00');
+        base.setDate(base.getDate() + 15);                     // Q9 采用 15 天有效期
+        const validUntil = base.toISOString().slice(0, 10);
+        const dup = (db.invitations || []).find(i =>
+          i.inviterTenantId === account.tenantId && i.role === role && i.status === 'pending' && i.validUntil >= today
+          && ((inviteePhone && i.inviteePhone === inviteePhone) || (!inviteePhone && inviteeName && i.inviteeName === inviteeName)));
+        if (dup) {
+          toast(`Valid invite already exists — reused (code ${dup.code})`, 'info');
+          return dup;
+        }
+        const inv = {
+          id: 'inv-' + Date.now(),
+          code: makeInviteCode((db.invitations || []).map(i => i.code)),
+          role,
+          inviterTenantId: account.tenantId,
+          inviterAccountId: account.id,
+          inviteeName, inviteePhone,
+          direction: role === 'supplier' ? 'invitee(upstream)→inviter(downstream)' : 'inviter(upstream)→invitee(downstream)',
+          status: 'pending',
+          createdAt: now(),
+          validUntil,
+          acceptedAt: null,
+          acceptedByTenantId: null,
+        };
+        setDb(prev => ({ ...prev, invitations: [...(prev.invitations || []), inv] }));
+        toast(`Invite created — code ${inv.code}`, 'success');
+        return inv;
+      },
+
+      // 接受邀请（AC-09-07）：置 accepted + 建 relations 边。
+      // 关系方向是本条最容易错的点：供应商邀请 → 被邀方做上游
+      //（edge: upstream=invitee, downstream=inviter）；
+      // 分销商邀请 → 被邀方做下游（edge: upstream=inviter, downstream=invitee）。
+      acceptInvitation(code, tenantId) {
+        const key = String(code || '').trim().toUpperCase();
+        const today = now().slice(0, 10);
+        const found = (db.invitations || []).find(i => String(i.code).toUpperCase() === key);
+        if (!found || found.status !== 'pending') { toast('Invite not found or no longer pending', 'error'); return false; }
+        if (found.validUntil < today) { toast('Invite expired — ask for a new one', 'error'); return false; }
+        const invitee = tenantId || null;
+        setDb(prev => {
+          // 懒过期：顺手把超期 pending 标记 expired（AC-09-06）
+          const invitations = (prev.invitations || []).map(i => (i.status === 'pending' && i.validUntil < today) ? { ...i, status: 'expired' } : i);
+          const edge = found.role === 'supplier'
+            ? { upstream: invitee, downstream: found.inviterTenantId }
+            : { upstream: found.inviterTenantId, downstream: invitee };
+          const relations = (edge.upstream && edge.downstream && !prev.relations.some(r => r.upstream === edge.upstream && r.downstream === edge.downstream))
+            ? [...prev.relations, { ...edge, createdAt: today }]
+            : prev.relations;
+          return { ...prev, invitations: invitations.map(i => i.id === found.id ? { ...i, status: 'accepted', acceptedAt: now(), acceptedByTenantId: invitee } : i), relations };
+        });
+        toast(`Invite ${found.code} accepted — supply relation established`, 'success');
+        return true;
+      },
+
+      // 懒过期（AC-09-06）：读列表前调用，超期 pending → expired。
+      expireInvitations() {
+        const today = now().slice(0, 10);
+        setDb(prev => ({ ...prev, invitations: (prev.invitations || []).map(i => (i.status === 'pending' && i.validUntil < today) ? { ...i, status: 'expired' } : i) }));
       },
       // 入库选供货方 — 当场新建：以往来单位（Supplier 类型商户）建档，
       // 立即返回新商户供本次选用；后续入库的供货方列表也会包含它。
@@ -731,7 +1124,9 @@ function App() {
         setDb(prev => {
           const code = 'T-' + String(prev.tenants.length + 1).padStart(3, '0');
           const parent = prev.tenants.find(x => x.id === account.tenantId);
-          const tenant = { id: tid, code, name: f.company, type: 'Agent', country: parent ? parent.country : 'Nigeria', maxLevel: Number(f.maxSubLevel) || 1, status: 'Active', createdAt: tnow.slice(0, 10) };
+          // R03 — 新建分销商可直接带层级标签（仅展示层；maxLevel 仍是权限唯一来源，AC-03-06）
+          const lvl = (f.levelLabel && String(f.levelLabel).trim()) ? String(f.levelLabel).trim().slice(0, 20) : null;
+          const tenant = { id: tid, code, name: f.company, type: 'Agent', country: parent ? parent.country : 'Nigeria', maxLevel: Number(f.maxSubLevel) || 1, status: 'Active', createdAt: tnow.slice(0, 10), levelLabel: lvl, levelLabelUpdatedBy: account.id, registrationStatus: 'approved' };
           const acc = { id: 'a-' + Date.now(), name: f.contact, tenantId: tid, type: 'tenant', phone: f.phone, email: f.email || null, whatsapp: f.whatsapp || null, password: f.password || null, status: 'Active', main: true };
           return { ...prev, tenants: [...prev.tenants, tenant], accounts: [...prev.accounts, acc], relations: [...prev.relations, { upstream: account.tenantId, downstream: tid, createdAt: tnow.slice(0, 10) }] };
         });
@@ -807,18 +1202,52 @@ function App() {
   // ---------- cart api — shopping-cart operations for the 3 modules ----------
   // inquiry / outbound lines merge by product; inbound lines merge by
   // product for existing items, quick-profiled new items stay separate.
+  // R07/R11 — cartApi 重构（先改 API 再改 UI，UI 只读）：
+  //   inbound  是容器对象 { supplierId, supplierName, supplierPhone, lines }，
+  //            行操作走 updateInLines（供应商字段不动）；供应商写入 setInSupplier。
+  //   outbound 是车数组，行操作定位「当前车（或指定车）」；新增 newCart /
+  //            switchCart / removeCart / setReceiver；submitOutbound 只提交当前车，
+  //            成功后移除该车并切到下一车。
   const cartApi = useMemo(() => {
-    const update = (module, fn) => setCarts(prev => ({ ...prev, [module]: fn(prev[module] || []) }));
     const norm = v => (Number(v) || 0);
+    const update = (module, fn) => setCarts(prev => ({ ...prev, [module]: fn(prev[module] || []) }));
+    // R07 — inbound 行列表变换（保持容器层供应商字段）
+    const updateInLines = fn => setCarts(prev => {
+      const base = Array.isArray(prev.inbound)
+        ? { supplierId: '', supplierName: '', supplierPhone: '', lines: prev.inbound }
+        : (prev.inbound || { supplierId: '', supplierName: '', supplierPhone: '', lines: [] });
+      return { ...prev, inbound: { ...base, lines: fn(base.lines || []) } };
+    });
+    // R11 — outbound 当前车（或指定车）的行列表变换
+    const updateOutLines = (fn, cartId) => setCarts(prev => {
+      const targetId = cartId || prev.outboundActiveId;
+      return { ...prev, outbound: outCarts(prev).map(c => c.id === targetId ? { ...c, lines: fn(c.lines || []) } : c) };
+    });
     function add(module, line) {
-      if (module === 'inquiry' || module === 'outbound') {
-        update(module, list => {
+      if (module === 'inquiry') {
+        update('inquiry', list => {
           const ex = list.find(l => l.pid === line.pid);
           if (ex) return list.map(l => l.pid === line.pid ? { ...l, qty: norm(l.qty) + norm(line.qty) } : l);
           return [...list, { pid: line.pid, qty: norm(line.qty) || 1 }];
         });
-      } else if (module === 'inbound') {
-        update('inbound', list => {
+        return true;
+      }
+      if (module === 'outbound') {
+        // R11/AC-11-02 — 未绑定收货方的车不可加货；无活跃车同样拦截（双端一致）
+        const cur = activeCart(carts);
+        if (!cur) { toast('Create a cart first', 'error'); return false; }
+        if (!cur.receiver || !cur.receiver.name) { toast('Bind a receiver for this cart before adding items', 'error'); return false; }
+        updateOutLines(list => {
+          const ex = list.find(l => l.pid === line.pid);
+          if (ex) return list.map(l => l.pid === line.pid ? { ...l, qty: norm(l.qty) + norm(line.qty) } : l);
+          return [...list, { pid: line.pid, qty: norm(line.qty) || 1 }];
+        });
+        return true;
+      }
+      if (module === 'inbound') {
+        // R07/AC-07-03 — 未选供应商时扫码/添加商品被拦（约束在数据结构层，双端口径一致）
+        if (!inSupplier(carts).supplierId) { toast('Select a supplier first — then scan or add products', 'error'); return false; }
+        updateInLines(list => {
           if (line.kind === 'exist') {
             const ex = list.find(l => l.kind === 'exist' && l.pid === line.pid);
             if (ex) return list.map(l => (l.kind === 'exist' && l.pid === line.pid) ? { ...l, qty: norm(l.qty) + norm(line.qty) } : l);
@@ -827,19 +1256,77 @@ function App() {
             const up = prod ? Number(ifnull(prod.marketPrice, prod.price)) || 0 : 0;
             return [...list, { kind: 'exist', pid: line.pid, qty: norm(line.qty) || 1, unitPrice: up }];
           }
-          return [...list, { kind: 'new', code: line.code || '', name: line.name || '', unit: line.unit || 'pcs', price: line.price || '', qty: norm(line.qty) || 1 }];
+          // R04 — 预览确认带进来的字段全部保留下来（可编辑），R05 的条码一起带
+          return [...list, {
+            kind: 'new', code: line.code || '', barcode: line.barcode || '', barcodeBody: line.barcodeBody || '',
+            name: line.name || '', spec: line.spec || '', model: line.model || '', brand: line.brand || '',
+            unit: line.unit || 'pcs', price: line.price || '', currency: line.currency || '',
+            qty: norm(line.qty) || 1,
+          }];
         });
+        return true;
       }
+      return false;
     }
     function addMany(module, pids) { (pids || []).forEach(pid => add(module, { pid, qty: 1 })); }
-    function setQty(module, i, qty) {
-      update(module, list => list.map((l, j) => i === j ? { ...l, qty: Math.max(1, norm(qty)) } : l));
+    function setQty(module, i, qty, cartId) {
+      const fn = list => list.map((l, j) => i === j ? { ...l, qty: Math.max(1, norm(qty)) } : l);
+      if (module === 'outbound') updateOutLines(fn, cartId);
+      else if (module === 'inbound') updateInLines(fn);
+      else update(module, fn);
     }
-    function setField(module, i, key, value) {
-      update(module, list => list.map((l, j) => i === j ? { ...l, [key]: value } : l));
+    function setField(module, i, key, value, cartId) {
+      const fn = list => list.map((l, j) => i === j ? { ...l, [key]: value } : l);
+      if (module === 'outbound') updateOutLines(fn, cartId);
+      else if (module === 'inbound') updateInLines(fn);
+      else update(module, fn);
     }
-    function removeAt(module, i) { update(module, list => list.filter((_, j) => j !== i)); }
-    function clear(module) { update(module, () => []); }
+    function removeAt(module, i, cartId) {
+      const fn = list => list.filter((_, j) => j !== i);
+      if (module === 'outbound') updateOutLines(fn, cartId);
+      else if (module === 'inbound') updateInLines(fn);
+      else update(module, fn);
+    }
+    function clear(module) {
+      if (module === 'outbound') updateOutLines(() => []); // R11 — 清空当前车
+      else if (module === 'inbound') updateInLines(() => []);
+      else update(module, () => []);
+    }
+    // R07 — 供应商选择写入容器层（切换保留行、仅变更归属，AC-07-05 由 UI 二次确认）
+    function setInSupplier(patch) {
+      setCarts(prev => {
+        const base = Array.isArray(prev.inbound)
+          ? { supplierId: '', supplierName: '', supplierPhone: '', lines: prev.inbound }
+          : (prev.inbound || {});
+        return { ...prev, inbound: { supplierId: '', supplierName: '', supplierPhone: '', lines: [], ...base, ...patch } };
+      });
+    }
+    // R11 — 多车 API：新建（上限 10）/ 切换 / 删除（删空自动补一空车）/ 绑定收货方
+    function newCart() {
+      if (outCarts(carts).length >= 10) return false; // AC-11-01 建议上限 10
+      let seqNext = (carts.outboundSeq || 1) + 1;
+      setCarts(prev => {
+        const list = outCarts(prev);
+        if (list.length >= 10) return prev;
+        seqNext = (prev.outboundSeq || 1) + 1;
+        return { ...prev, outbound: [...list, { id: 'c-' + seqNext, receiver: null, lines: [], createdAt: now() }], outboundActiveId: 'c-' + seqNext, outboundSeq: seqNext };
+      });
+      return true;
+    }
+    function switchCart(id) { setCarts(prev => ({ ...prev, outboundActiveId: id })); }
+    function removeCart(id) {
+      setCarts(prev => {
+        const rest = outCarts(prev).filter(c => c.id !== id);
+        // 删空必须自动补一个空车，否则下次加货找不到活跃车（不回流，行数据丢弃）
+        const seq = (prev.outboundSeq || 1) + 1;
+        const next = rest.length ? rest : [{ id: 'c-' + seq, receiver: null, lines: [], createdAt: now() }];
+        const stillActive = next.find(c => c.id === prev.outboundActiveId);
+        return { ...prev, outbound: next, outboundActiveId: (stillActive || next[0]).id, outboundSeq: rest.length ? prev.outboundSeq : seq };
+      });
+    }
+    function setReceiver(cartId, recvObj) {
+      setCarts(prev => ({ ...prev, outbound: outCarts(prev).map(c => c.id === (cartId || prev.outboundActiveId) ? { ...c, receiver: recvObj } : c) }));
+    }
     function submitInquiry(date) {
       const lines = (carts.inquiry || []).filter(l => l.pid && norm(l.qty) > 0);
       if (!lines.length) { toast('Inquiry staging is empty', 'error'); return { ok: false, count: 0 }; }
@@ -869,16 +1356,21 @@ function App() {
       // docs：按供货方生成的询价单（一张/供货方），调用方据此进入对应 WhatsApp 对话
       return { ok: count > 0, count, docs };
     }
-    function submitInbound(supplier, note) {
-      const lines = carts.inbound || [];
+    function submitInbound(note) {
+      // R07 — 供应商从容器层读（结构层约束），不再作参数
+      const sup = inSupplier(carts);
+      const lines = inLines(carts);
       if (!lines.length) { toast('No items yet — scan to add', 'error'); return false; }
-      const ok = act.batchScanIn(lines, note, supplier);
-      if (ok) update('inbound', () => []);
-      return ok;
+      if (!sup.supplierId) { toast('Select a supplier for the stock-in', 'error'); return false; }
+      // 'self' = 自产（R08）：传标记，batchScanIn 内不建租户
+      const r = act.batchScanIn(lines, note, sup.supplierId === 'self' ? 'self' : sup.supplierId);
+      if (r && r.ok) setCarts(prev => ({ ...prev, inbound: { supplierId: '', supplierName: '', supplierPhone: '', lines: [] } }));
+      return (r && r.ok) ? r : null;
     }
-    function submitOutbound(note, receiver) {
-      // 实际销售价：未改动时默认渠道销售价及其币种，随出库流水留痕
-      const lines = (carts.outbound || []).map(l => {
+    function submitOutbound(note) {
+      // R11 — 只提交当前车；成功后该车从列表移除并切到下一车（其余车不受影响）
+      const cur = activeCart(carts);
+      const lines = ((cur || {}).lines || []).map(l => {
         const p = db.products.find(x => x.id === l.pid) || null;
         const sp = (l.salePrice === undefined || l.salePrice === null || String(l.salePrice).trim() === '')
           ? (p ? p.price : 0) : Number(l.salePrice);
@@ -886,14 +1378,33 @@ function App() {
           pid: l.pid, qty: norm(l.qty),
           salePrice: Number(sp) || 0,
           saleCurrency: l.saleCurrency || (p ? p.currency : 'USD') || 'USD',
+          discountPct: (l.discountPct === undefined || l.discountPct === null || l.discountPct === '') ? null : Number(l.discountPct),
         };
       }).filter(l => l.qty > 0);
-      if (!lines.length) { toast('No items yet — scan to add', 'error'); return false; }
-      const ok = act.batchScanOut(lines, note, receiver);
-      if (ok) update('outbound', () => []);
+      if (!cur || !lines.length) { toast('No items yet — scan to add', 'error'); return false; }
+      const ok = act.batchScanOut({
+        lines, receiver: cur.receiver,
+        discountPct: (cur.discountPct === undefined || cur.discountPct === null || cur.discountPct === '') ? null : Number(cur.discountPct),
+        freight: (cur.freight === undefined || cur.freight === null || cur.freight === '') ? null : Number(cur.freight),
+      }, note);
+      if (ok) {
+        setCarts(prev => {
+          const rest = outCarts(prev).filter(c => c.id !== cur.id);
+          const seq = (prev.outboundSeq || 1) + 1;
+          const next = rest.length ? rest : [{ id: 'c-' + seq, receiver: null, lines: [], createdAt: now() }];
+          return { ...prev, outbound: next, outboundActiveId: next[0].id, outboundSeq: rest.length ? prev.outboundSeq : seq };
+        });
+      }
       return ok;
     }
-    return { add, addMany, setQty, setField, removeAt, clear, submitInquiry, submitInbound, submitOutbound };
+    // R10 —— 车级字段（整体折扣 / 运费）写到当前出库车对象上
+    function setCartField(cartId, key, value) {
+      setCarts(prev => ({
+        ...prev,
+        outbound: outCarts(prev).map(c => (c.id === cartId ? { ...c, [key]: value } : c)),
+      }));
+    }
+    return { add, addMany, setQty, setField, setCartField, removeAt, clear, setInSupplier, newCart, switchCart, removeCart, setReceiver, submitInquiry, submitInbound, submitOutbound };
   }, [carts, act, db.products, toast]);
 
 

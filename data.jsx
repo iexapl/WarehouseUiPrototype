@@ -19,16 +19,69 @@ const IMG = {
   placeholder: 'data:image/jpeg;base64,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h/VqCfUJW0s+yM5G9xTvbQp/E/ou1OEy28nC/F4q+pzolVJG9A15Lsdn2Z7P2pBqUK107nWqGPUIC31lgeF4eB8lw+1okcWUwD69V6a6defFOzzW1GkeGN3DLPAcWxAj5Lht3WB/mFMges5LfWfZltBcwatO3tWn/VqSfU2V2OAkL010+keKd3mtqGSfDGznNl2RNEG9xR55toUwPaf0W9suzXZ20gvtqly7nWqE+wQF6lF3rwuKvarz24nLbvZ8dng2HYeB8ksrehHGnTAPrX2DJEXeIiOzjM79ZERFKBERAREQEREBERAREQEREBERAWuxXAbLF2/vFP5wejVbk4ePHxWxRVtWLRtaE1tNZ3iXOcY2UvsN3qjGm4oAemwZtHUfotK05ayuwEStHi+ydlie9UpgW1c577BkT1CzM+n+eP8Aw1MGoeWX/Lj+Px5enr6PxWlJEnVe/wAX7O8cvbxraNO33GiPKuqw0+GvsWSz7GripBvcWp0+baFIu9pI9y8dOEyz05XttxmGvqc8D1V1QcSAuyWPZNs9awa4ursjXytWAfBsL0FjsvgmGgfJMLs6RH8wpgu9ZzXprp958U7PNfUaemN3CLLCsTxGBZ2F3cdWUiR69F6Cy7NdpbyC60pWrTxr1QPYJK7UGgCIyHBTEL0V0+keKXmtqN58MbOZWXY/VP8AjsVa37NClPtd+i31l2X7P2sGrTuLp39WqQPU2F69F6K8Lir2h57cVlt3s11ls9hOHR8kw61oxxbTE+vVbGERd4iI6Q4TMz3ERFKBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQf/2Q==',
 };
 
+// ---------------------------------------------------------------------------
+// R10 / R12 / R13 / R14 / R15 — global settings.
+// SINGLE SOURCE OF TRUTH for every configurable knob. Read points are spread over
+// cart.jsx / mobile.jsx / web-dialogs.jsx, so defaults MUST live here (never rely
+// on per-call-site `?.` fallbacks — they drift apart: 30 here, 50 there).
+// makeInitialDb() deep-clones this; the settings page "Restore defaults" writes
+// back another deep clone.
+// ---------------------------------------------------------------------------
+const DEFAULT_SETTINGS = {
+  // R10 tax & freight
+  taxRate: null,                     // number|null — percent value (5 = 5%). null ⇒ no tax line at all
+  taxScope: 'document',              // 'document' | 'line'
+  taxBase: 'discounted',             // 'discounted' | 'original' (Q3: tax the discounted amount)
+  freightEnabled: false,
+  defaultFreight: 0,
+  freightCurrency: 'USD',
+
+  // R12 quote mode
+  quoteMode: 'manual',               // 'auto' | 'manual' (Q18: auto falls back to manual when out of stock)
+
+  // R13 AI discount boundary
+  aiPolicy: {
+    enabled: true,
+    floorDiscount: 0.97,             // lowest allowed discount (0.97 = 3% off), must be < 1
+    stepSize: 0.01,                  // per-round concession (1%)
+    maxRounds: 3,
+    escalateTo: 'main',              // 'main' | accountId
+    allowOverride: false
+  },
+
+  // R14 low-stock hint
+  lowStockThreshold: 30,             // same source as the web inventory page warning
+  outOfStockCopy: 'out',             // Q33: say nothing at all when stock is healthy
+
+  // R15 payee info
+  payeeInfo: {
+    bankName: '',
+    accountName: '',
+    accountNo: '',
+    swift: '',
+    methods: [],                     // Array<'Bank Transfer'|'OPay'|'Cash'|'Cheque'>
+    opayMerchantId: '',              // placeholder — marked "under review, unavailable" in the UI
+    configured: false
+  },
+
+  updatedAt: null
+};
+
 function makeInitialDb() {
+  // R01 / R03 / R05 — levelLabel is display-only, maxLevel stays the single source
+  // for permission inference (tenantRole()). registrationStatus is the onboarding
+  // gate, status is the operational switch — two independent dimensions.
+  // barcodePrefix uniqueness is checked against ALL tenants (incl. Suspended), else
+  // a disabled tenant's prefix gets recycled and historical barcodes collide.
   const tenants = [
-    { id: 't-sup', code: 'T-001', name: 'Global-Supply Co.', type: 'Supplier', country: 'China', maxLevel: null, status: 'Active', createdAt: '2026-06-12' },
-    { id: 't-lag', code: 'T-002', name: 'Lagos Agent Ltd', type: 'Agent', country: 'Nigeria', maxLevel: 2, status: 'Active', createdAt: '2026-07-03' },
-    { id: 't-iba', code: 'T-003', name: 'Ibadan Sub-Distributor', type: 'Agent', country: 'Nigeria', maxLevel: 1, status: 'Active', createdAt: '2026-08-05' },
-    { id: 't-kan', code: 'T-004', name: 'Kano Wholesale Hub', type: 'Agent', country: 'Nigeria', maxLevel: 1, status: 'Active', createdAt: '2026-08-18' },
-    { id: 't-abj', code: 'T-005', name: 'Abuja Retail Chain', type: 'Agent', country: 'Nigeria', maxLevel: 1, status: 'Suspended', createdAt: '2026-07-21' },
+    { id: 't-sup', code: 'T-001', name: 'Global-Supply Co.', type: 'Supplier', country: 'China', maxLevel: null, status: 'Active', createdAt: '2026-06-12', levelLabel: null, registrationStatus: 'approved', barcodePrefix: 'GS', barcodePrefixLocked: false, barcodePrefixUpdatedAt: null, levelLabelUpdatedBy: null },
+    { id: 't-lag', code: 'T-002', name: 'Lagos Agent Ltd', type: 'Agent', country: 'Nigeria', maxLevel: 2, status: 'Active', createdAt: '2026-07-03', levelLabel: null, registrationStatus: 'approved', barcodePrefix: 'LG', barcodePrefixLocked: false, barcodePrefixUpdatedAt: null, levelLabelUpdatedBy: null },
+    { id: 't-iba', code: 'T-003', name: 'Ibadan Sub-Distributor', type: 'Agent', country: 'Nigeria', maxLevel: 1, status: 'Active', createdAt: '2026-08-05', levelLabel: null, registrationStatus: 'approved', barcodePrefix: 'IB', barcodePrefixLocked: false, barcodePrefixUpdatedAt: null, levelLabelUpdatedBy: null },
+    { id: 't-kan', code: 'T-004', name: 'Kano Wholesale Hub', type: 'Agent', country: 'Nigeria', maxLevel: 1, status: 'Active', createdAt: '2026-08-18', levelLabel: 'North Region Wholesale', registrationStatus: 'approved', barcodePrefix: 'KN', barcodePrefixLocked: false, barcodePrefixUpdatedAt: null, levelLabelUpdatedBy: 'a-kano' },
+    { id: 't-abj', code: 'T-005', name: 'Abuja Retail Chain', type: 'Agent', country: 'Nigeria', maxLevel: 1, status: 'Suspended', createdAt: '2026-07-21', levelLabel: null, registrationStatus: 'approved', barcodePrefix: 'AB', barcodePrefixLocked: false, barcodePrefixUpdatedAt: null, levelLabelUpdatedBy: null },
     // downstream demo tenants — feed the multi-level "view stock" sales-chain tree
-    { id: 't-abk', code: 'T-006', name: 'Abeokuta Wholesale', type: 'Agent', country: 'Nigeria', maxLevel: 1, status: 'Active', createdAt: '2026-08-28' },
-    { id: 't-oyo', code: 'T-007', name: 'Oyo City Retail', type: 'Agent', country: 'Nigeria', maxLevel: 0, status: 'Active', createdAt: '2026-08-25' },
+    { id: 't-abk', code: 'T-006', name: 'Abeokuta Wholesale', type: 'Agent', country: 'Nigeria', maxLevel: 1, status: 'Active', createdAt: '2026-08-28', levelLabel: null, registrationStatus: 'approved', barcodePrefix: 'AO', barcodePrefixLocked: false, barcodePrefixUpdatedAt: null, levelLabelUpdatedBy: null },
+    { id: 't-oyo', code: 'T-007', name: 'Oyo City Retail', type: 'Agent', country: 'Nigeria', maxLevel: 0, status: 'Active', createdAt: '2026-08-25', levelLabel: null, registrationStatus: 'approved', barcodePrefix: 'OY', barcodePrefixLocked: false, barcodePrefixUpdatedAt: null, levelLabelUpdatedBy: null },
   ];
   const relations = [
     { upstream: 't-sup', downstream: 't-lag', createdAt: '2026-07-05' },
@@ -56,17 +109,49 @@ function makeInitialDb() {
   // ownerId — the tenant this product belongs to. Inquiry boundary: only products
   // owned by an UPSTREAM tenant can be inquired; price / stock adjustments apply
   // to your OWN products only.
+  // R05 / R08 / R20 / R21 — every product carries:
+  //   barcode     = barcodePrefix + body, '' means "not encoded yet" (AC-05-07)
+  //   barcodeBody = the part the merchant edits; the prefix is read-only
+  //   source      = 'self' (self-produced capability) | 'external'
+  //   purchasePrice / purchaseCurrency / purchaseUpdatedAt / purchaseRefNo / purchaseHistory
+  //                 purchasePrice is a DERIVED snapshot of purchaseHistory[0]; no form writes it.
+  // `price` / `cost` field names are deliberately NOT renamed (R20 is a copy + semantics
+  // unification, not a schema rename). `cost` is demoted to "initial purchase price at
+  // creation", i.e. the first history entry — read it only through purchasePriceOf().
   const products = [
-    { id: 'p-inv', ownerId: 't-sup', name: 'Solar Inverter 5kW', spec: '5kW / MPPT / 48V', model: 'SK-INV-5K', brand: 'SunKing', unit: 'pcs', price: 285.00, marketPrice: 299.00, cost: 236.00, currency: 'USD', image: IMG.inv, categories: ['cat-1', 'cat-6'] },
-    { id: 'p-bat', ownerId: 't-sup', name: 'LiFePO4 Battery 100Ah', spec: '100Ah / 51.2V / BMS', model: 'VC-LFP-100', brand: 'VoltCore', unit: 'pcs', price: 210.00, marketPrice: 225.00, cost: 172.00, currency: 'USD', image: IMG.bat, categories: ['cat-2'] },
-    { id: 'p-led', ownerId: 't-sup', name: 'LED Solar Street Light 60W', spec: '60W / PIR sensor / IP66', model: 'LX-SL-60', brand: 'LumenX', unit: 'pcs', price: 46.50, marketPrice: 52.00, cost: 37.00, currency: 'USD', image: IMG.led, categories: ['cat-4'] },
-    { id: 'p-pan', ownerId: 't-sup', name: 'Solar Panel Mono 550W', spec: '550W / 182mm cells / 30Y warranty', model: 'HM-PV-550', brand: 'HelioMax', unit: 'pcs', price: 98.00, marketPrice: 109.00, cost: 79.00, currency: 'USD', image: IMG.pan, categories: ['cat-3'] },
-    { id: 'p-ctl', ownerId: 't-sup', name: 'Hybrid Charge Controller 60A', spec: '60A / MPPT / 12-48V', model: 'VC-MPPT-60', brand: 'VoltCore', unit: 'pcs', price: 62.00, marketPrice: 69.00, cost: 49.00, currency: 'USD', image: IMG.ctl, categories: ['cat-5'] },
+    { id: 'p-inv', ownerId: 't-sup', name: 'Solar Inverter 5kW', spec: '5kW / MPPT / 48V', model: 'SK-INV-5K', brand: 'SunKing', unit: 'pcs', price: 285.00, marketPrice: 299.00, cost: 236.00, currency: 'USD', image: IMG.inv, categories: ['cat-1', 'cat-6'],
+      barcode: 'GS-INV5K01', barcodeBody: 'INV5K01', source: 'self', pendingReprice: false, pendingRepriceAt: null, purchasePrice: 236.00, purchaseCurrency: 'USD', purchaseUpdatedAt: '2026-10-18 09:40', purchaseRefNo: 'IN-20261018-001',
+      purchaseHistory: [{ ts: '2026-10-18 09:40', price: 236.00, currency: 'USD', qty: 120, supplierId: null, supplierLabel: 'Self-produced', selfProduced: true, refNo: 'IN-20261018-001', by: 'Sarah Okafor' }] },
+    { id: 'p-bat', ownerId: 't-sup', name: 'LiFePO4 Battery 100Ah', spec: '100Ah / 51.2V / BMS', model: 'VC-LFP-100', brand: 'VoltCore', unit: 'pcs', price: 210.00, marketPrice: 225.00, cost: 172.00, currency: 'USD', image: IMG.bat, categories: ['cat-2'],
+      barcode: 'GS-LFP1001', barcodeBody: 'LFP1001', source: 'self', pendingReprice: false, pendingRepriceAt: null, purchasePrice: 172.00, purchaseCurrency: 'USD', purchaseUpdatedAt: '2026-10-18 09:40', purchaseRefNo: 'IN-20261018-001',
+      purchaseHistory: [{ ts: '2026-10-18 09:40', price: 172.00, currency: 'USD', qty: 350, supplierId: null, supplierLabel: 'Self-produced', selfProduced: true, refNo: 'IN-20261018-001', by: 'Sarah Okafor' }] },
+    { id: 'p-led', ownerId: 't-sup', name: 'LED Solar Street Light 60W', spec: '60W / PIR sensor / IP66', model: 'LX-SL-60', brand: 'LumenX', unit: 'pcs', price: 46.50, marketPrice: 52.00, cost: 37.00, currency: 'USD', image: IMG.led, categories: ['cat-4'],
+      barcode: 'GS-SL60001', barcodeBody: 'SL60001', source: 'external', pendingReprice: false, pendingRepriceAt: null, purchasePrice: 37.00, purchaseCurrency: 'USD', purchaseUpdatedAt: '2026-10-12 15:05', purchaseRefNo: 'IN-20261012-004',
+      purchaseHistory: [{ ts: '2026-10-12 15:05', price: 37.00, currency: 'USD', qty: 800, supplierId: null, supplierLabel: 'Factory Direct', selfProduced: false, refNo: 'IN-20261012-004', by: 'David Chen' }] },
+    { id: 'p-pan', ownerId: 't-sup', name: 'Solar Panel Mono 550W', spec: '550W / 182mm cells / 30Y warranty', model: 'HM-PV-550', brand: 'HelioMax', unit: 'pcs', price: 98.00, marketPrice: 109.00, cost: 79.00, currency: 'USD', image: IMG.pan, categories: ['cat-3'],
+      barcode: 'GS-PV550001', barcodeBody: 'PV550001', source: 'self', pendingReprice: false, pendingRepriceAt: null, purchasePrice: 79.00, purchaseCurrency: 'USD', purchaseUpdatedAt: '2026-10-18 09:40', purchaseRefNo: 'IN-20261018-001',
+      purchaseHistory: [{ ts: '2026-10-18 09:40', price: 79.00, currency: 'USD', qty: 640, supplierId: null, supplierLabel: 'Self-produced', selfProduced: true, refNo: 'IN-20261018-001', by: 'Sarah Okafor' }] },
+    { id: 'p-ctl', ownerId: 't-sup', name: 'Hybrid Charge Controller 60A', spec: '60A / MPPT / 12-48V', model: 'VC-MPPT-60', brand: 'VoltCore', unit: 'pcs', price: 62.00, marketPrice: 69.00, cost: 49.00, currency: 'USD', image: IMG.ctl, categories: ['cat-5'],
+      barcode: 'GS-MPPT6001', barcodeBody: 'MPPT6001', source: 'external', pendingReprice: false, pendingRepriceAt: null, purchasePrice: 49.00, purchaseCurrency: 'USD', purchaseUpdatedAt: '2026-10-12 15:05', purchaseRefNo: 'IN-20261012-004',
+      purchaseHistory: [{ ts: '2026-10-12 15:05', price: 49.00, currency: 'USD', qty: 210, supplierId: null, supplierLabel: 'Factory Direct', selfProduced: false, refNo: 'IN-20261012-004', by: 'David Chen' }] },
     // Lagos Agent's own products (T-002) — adjustable price / stock, not inquirable
-    { id: 'p-kit', ownerId: 't-lag', name: 'Solar Home System Kit 200W', spec: '200W / panel + battery + 2 lamps', model: 'LG-SHS-200', brand: 'NaijaPower', unit: 'set', price: 189.00, marketPrice: 205.00, cost: 148.00, currency: 'USD', image: IMG.kit, categories: ['cat-1', 'cat-2', 'cat-6'] },
-    { id: 'p-pole', ownerId: 't-lag', name: 'Street Light Pole 6m', spec: '6m / galvanized steel / octagonal', model: 'LG-POLE-6', brand: 'NaijaPower', unit: 'pcs', price: 32.00, marketPrice: 38.00, cost: 24.00, currency: 'USD', image: IMG.pole, categories: ['cat-6'] },
+    { id: 'p-kit', ownerId: 't-lag', name: 'Solar Home System Kit 200W', spec: '200W / panel + battery + 2 lamps', model: 'LG-SHS-200', brand: 'NaijaPower', unit: 'set', price: 189.00, marketPrice: 205.00, cost: 148.00, currency: 'USD', image: IMG.kit, categories: ['cat-1', 'cat-2', 'cat-6'],
+      barcode: 'LG-SHS20001', barcodeBody: 'SHS20001', source: 'self', pendingReprice: false, pendingRepriceAt: null, purchasePrice: 148.00, purchaseCurrency: 'USD', purchaseUpdatedAt: '2026-10-20 11:15', purchaseRefNo: 'IN-20261020-002',
+      purchaseHistory: [{ ts: '2026-10-20 11:15', price: 148.00, currency: 'USD', qty: 45, supplierId: null, supplierLabel: 'Self-produced', selfProduced: true, refNo: 'IN-20261020-002', by: 'Chidi Mensah' }] },
+    { id: 'p-pole', ownerId: 't-lag', name: 'Street Light Pole 6m', spec: '6m / galvanized steel / octagonal', model: 'LG-POLE-6', brand: 'NaijaPower', unit: 'pcs', price: 32.00, marketPrice: 38.00, cost: 24.00, currency: 'USD', image: IMG.pole, categories: ['cat-6'],
+      barcode: 'LG-POLE6001', barcodeBody: 'POLE6001', source: 'self', pendingReprice: false, pendingRepriceAt: null, purchasePrice: 24.00, purchaseCurrency: 'USD', purchaseUpdatedAt: '2026-10-20 11:15', purchaseRefNo: 'IN-20261020-002',
+      purchaseHistory: [{ ts: '2026-10-20 11:15', price: 24.00, currency: 'USD', qty: 60, supplierId: null, supplierLabel: 'Self-produced', selfProduced: true, refNo: 'IN-20261020-002', by: 'Chidi Mensah' }] },
+    // R21 demo: a product whose purchase price was renegotiated — two history rows, newest wins
+    { id: 'p-lamp', ownerId: 't-lag', name: 'Solar Garden Lamp 20W', spec: '20W / IP65 / motion sensor', model: 'LG-GL-20', brand: 'NaijaPower', unit: 'pcs', price: 18.00, marketPrice: 22.00, cost: 12.80, currency: 'USD', image: IMG.led, categories: ['cat-4'],
+      barcode: 'LG-GL20001', barcodeBody: 'GL20001', source: 'self', pendingReprice: false, pendingRepriceAt: null, purchasePrice: 11.20, purchaseCurrency: 'USD', purchaseUpdatedAt: '2026-10-27 16:20', purchaseRefNo: 'IN-20261027-003',
+      purchaseHistory: [
+        { ts: '2026-10-27 16:20', price: 11.20, currency: 'USD', qty: 12, supplierId: null, supplierLabel: 'Self-produced', selfProduced: true, refNo: 'IN-20261027-003', by: 'Chidi Mensah' },
+        { ts: '2026-09-14 10:05', price: 12.80, currency: 'USD', qty: 30, supplierId: null, supplierLabel: 'Self-produced', selfProduced: true, refNo: 'IN-20260914-001', by: 'Chidi Mensah' }
+      ] },
     // Ibadan Sub-Distributor's product (T-003) — downstream of Lagos: view-only for the agent
-    { id: 'p-fan', ownerId: 't-iba', name: 'Rechargeable Solar Fan 16"', spec: '16" / 12V DC / 8h battery', model: 'IB-FAN-16', brand: 'SaharaCool', unit: 'pcs', price: 54.00, marketPrice: 61.00, cost: 42.00, currency: 'USD', image: IMG.fan, categories: ['cat-4', 'cat-6'] },
+    { id: 'p-fan', ownerId: 't-iba', name: 'Rechargeable Solar Fan 16"', spec: '16" / 12V DC / 8h battery', model: 'IB-FAN-16', brand: 'SaharaCool', unit: 'pcs', price: 54.00, marketPrice: 61.00, cost: 42.00, currency: 'USD', image: IMG.fan, categories: ['cat-4', 'cat-6'],
+      barcode: 'IB-FAN16001', barcodeBody: 'FAN16001', source: 'external', pendingReprice: false, pendingRepriceAt: null, purchasePrice: 42.00, purchaseCurrency: 'USD', purchaseUpdatedAt: '2026-10-08 14:30', purchaseRefNo: 'IN-20261008-002',
+      purchaseHistory: [{ ts: '2026-10-08 14:30', price: 42.00, currency: 'USD', qty: 15, supplierId: 't-lag', supplierLabel: 'Lagos Agent Ltd', selfProduced: false, refNo: 'IN-20261008-002', by: 'Tunde Bello' }] },
   ];
   // stock per tenant-product
   const stock = {
@@ -639,8 +724,48 @@ function makeInitialDb() {
     { id: 'e-2', ts: '2026-09-02 09:40', by: 'Chidi Mensah', action: 'Download Invoice', detail: 'FP-20260901-001' },
   ];
 
-  return { tenants, relations, accounts, categories, products, stock, movements, docs, pushes, events };
+  // R10/R12/R13/R14/R15 — settings is a COMPLETE default object (never partially
+  // filled + `?.` fallback at read sites: the readers live in cart.jsx / mobile.jsx
+  // / web-dialogs.jsx and would drift on their own defaults). Deep-cloned so that
+  // mutating one session's db can never leak into DEFAULT_SETTINGS itself.
+  const settings = JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
+  // R09 — tenant invitations (empty on boot; act.createInvitation() appends)
+  const invitations = [];
+
+  return { tenants, relations, accounts, categories, products, stock, movements, docs, pushes, events, settings, invitations };
 }
+
+// ---- R09 invite helpers ---------------------------------------------------
+// 邀请码：INV- 前缀 + 6–8 位大写字母数字（去掉易混淆的 I/O/0/1），
+// 与既有邀请码去重（AC-09-05）。传入既有码数组，返回唯一新码。
+function makeInviteCode(existing) {
+  const used = new Set(existing || []);
+  const CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  for (let i = 0; i < 200; i++) {
+    const len = 6 + Math.floor(Math.random() * 3);          // 6 / 7 / 8 位
+    let code = 'INV-';
+    for (let j = 0; j < len; j++) code += CHARS[Math.floor(Math.random() * CHARS.length)];
+    if (!used.has(code)) return code;
+  }
+  return 'INV-' + Date.now().toString(36).toUpperCase();      // 兜底：几乎不可能触发
+}
+
+// R09 两套邀请话术（AC-09-03）：供应商 / 分销商各自的「对方得到什么 / 我得到什么」。
+// 弹窗只渲染不写死，便于后续改文案。
+const INVITE_COPY = {
+  supplier: {
+    title: 'Invite a Supplier',
+    toThem: 'Your partner gets listed on TierLink, receives your purchase orders and inquiries via WhatsApp, and keeps every receipt linked to your company in one place.',
+    toYou: 'You get a stable partner profile for stock-in records — their name, WhatsApp and contact details are pre-filled on every inbound from them.',
+    waText: 'Join TierLink Warehouse — I would like to source from you and send you purchase orders. Invite code:',
+  },
+  distributor: {
+    title: 'Invite a Distributor',
+    toThem: 'Your partner gets access to your catalog at channel prices, places orders directly from their phone, and confirms receipts with a tap.',
+    toYou: 'You expand your downstream network — their orders land in your order list automatically, with full document traceability.',
+    waText: 'Join TierLink Warehouse — become my distributor and source from my catalog. Invite code:',
+  },
+};
 
 // ---- helpers ----
 // QA #16 — ISO 4217 style: currency code + space + amount (symbol omitted).
@@ -654,6 +779,95 @@ function tenantName(db, id) { const t = db.tenants.find(x => x.id === id); retur
 function tenantCode(db, id) { const t = db.tenants.find(x => x.id === id); return t ? t.code : id; }
 function accountById(db, id) { return db.accounts.find(x => x.id === id); }
 function productName(db, pid) { const p = db.products.find(x => x.id === pid); return p ? p.name : pid; }
+
+// ---- R05 barcode helpers -------------------------------------------------
+// Full barcode = tenant barcodePrefix + '-' + merchant-editable body.
+// An empty string means "not encoded yet" (AC-05-07) and must stay empty —
+// never fall back to the model code silently.
+function splitBarcode(barcode) {
+  const s = String(barcode || '');
+  if (!s) return { prefix: '', body: '' };
+  const i = s.indexOf('-');
+  if (i < 0) return { prefix: '', body: s };
+  return { prefix: s.slice(0, i), body: s.slice(i + 1) };
+}
+function isOwnBarcode(barcode, tenant) {
+  const mine = ((tenant || {}).barcodePrefix || '').toUpperCase();
+  return !!mine && splitBarcode(barcode).prefix.toUpperCase() === mine;
+}
+// R05 — 2–4 uppercase letters from the tenant name, serial-suffixed on collision.
+// Uniqueness is checked against ALL tenants (Suspended ones included) so a
+// retired prefix can never be recycled onto historical barcodes.
+function makeBarcodePrefix(name, tenants) {
+  const base = String(name || 'TT').replace(/[^A-Za-z]/g, '').toUpperCase().slice(0, 3) || 'TT';
+  let p = base.length >= 2 ? base : base + 'X';
+  const used = new Set((tenants || []).map(t => (t.barcodePrefix || '').toUpperCase()));
+  if (!used.has(p)) return p;
+  let i = 2;
+  while (used.has(p + i)) i++;
+  return p + i;
+}
+
+// R05 — 本商户条码前缀（租户维度）。非租户账号返回空串 → 表单不显示前缀区。
+function ownBarcodePrefix(db, account) {
+  if (!account || !account.tenantId) return '';
+  const tn = (db.tenants || []).find(x => x.id === account.tenantId);
+  return (tn && tn.barcodePrefix) || '';
+}
+// R05 — 拼完整条码 = 前缀 + '-' + 主体码。主体码为空 → 整个条码为空
+// （AC-05-07：条码非强制，空条码保持空，绝不回落成型号）。
+function composeBarcode(prefix, body) {
+  const b = String(body == null ? '' : body).trim();
+  if (!b) return '';
+  const p = String(prefix == null ? '' : prefix).trim().toUpperCase();
+  return p ? p + '-' + b : b;
+}
+// R05 — 全库条码查重。唯一性范围是全平台 db.products（跨租户，AC-05-04/05），
+// 空条码不参与校验（AC-05-07）。exceptProductId 用于编辑时排除自身。
+function findBarcodeConflict(db, barcode, exceptProductId) {
+  const code = String(barcode || '').trim();
+  if (!code) return null;
+  const up = code.toUpperCase();
+  return (db.products || []).find(p => p.id !== exceptProductId
+    && String(p.barcode || '').trim().toUpperCase() === up) || null;
+}
+
+// ---- R20/R21 price helpers ----------------------------------------------
+// The single read entry for purchase price. Prefers purchasePrice (newest
+// stock-in price), falls back to cost (value at record creation), then price.
+// NO display site may read p.cost directly — that is what keeps the three
+// price concepts (purchase / market reference / channel sales) separated.
+function purchasePriceOf(p) {
+  if (!p) return 0;
+  if (p.purchasePrice != null) return p.purchasePrice;
+  if (p.cost != null) return p.cost;
+  return p.price || 0;
+}
+function purchaseCurrencyOf(p) {
+  return p.purchaseCurrency || p.currency || 'USD';
+}
+// R21 — patch that prepends a PurchaseRecord and refreshes the derived snapshot.
+// The caller folds this into its own SINGLE setDb call (a second setDb inside
+// the same event handler would overwrite the first under React batching).
+function purchasePatch(product, record) {
+  const old = (product && product.purchaseHistory) || [];
+  return {
+    purchaseHistory: [record, ...old].slice(0, 50),
+    purchasePrice: record.price,
+    purchaseCurrency: record.currency || 'USD',
+    purchaseUpdatedAt: record.ts,
+    purchaseRefNo: record.refNo || null
+  };
+}
+function recordPurchasePrice(db, pid, record) {
+  const p = ((db || {}).products || []).find(x => x.id === pid) || {};
+  return purchasePatch(p, record);
+}
+function latestPurchase(db, pid) {
+  const p = ((db || {}).products || []).find(x => x.id === pid);
+  return ((p && p.purchaseHistory) || [])[0] || null;
+}
+
 
 function relatedTenantIds(db, tid) {
   const set = new Set([tid]);
@@ -681,6 +895,24 @@ function upstreamTenantIds(db, tid) {
     frontier = next;
   }
   return out;
+}
+
+// R02 — 子账号与分销商管理分离。团队 = 本租户的账号（不含主账号）；
+// 分销商 = 关系图里的下游商户（是 tenants，不是 accounts 里的记录）。
+// 两端（Web / H5）共用这两个函数，避免两份过滤逻辑漂移。
+// 注意：判据是「本租户账号」与「下游租户」两个集合，不要按 account.type 过滤 ——
+// db.accounts 里既没有分销商（分销商是 tenants），子账号也没有独立 type。
+function deriveTeam(db, account) {
+  if (!account || account.type !== 'tenant' || !account.tenantId) return [];
+  return db.accounts.filter(a => a.tenantId === account.tenantId && !a.main);
+}
+
+function deriveDistributors(db, account) {
+  if (!account || account.type !== 'tenant' || !account.tenantId) return [];
+  return db.relations
+    .filter(r => r.upstream === account.tenantId)
+    .map(r => db.tenants.find(t => t.id === r.downstream))
+    .filter(Boolean);
 }
 
 // inquiry boundary — a product can be inquired only if its owner is an upstream tenant
@@ -744,8 +976,93 @@ function docSide(db, account, doc) {
   return 'observer';
 }
 
-function docAmount(doc) {
-  return doc.items.reduce((s, it) => s + (it.qty * (it.price || 0)), 0);
+// R10 — 单据金额五行的唯一计算源（§2.8 口径）：
+//   行原价 = qty × unitPrice
+//   行折后 = 行原价 × (1 − 该行 discountPct)，未单设则用整体 discountPct
+//   subtotal = Σ 行原价；discountTotal = Σ (行原价 − 行折后)
+//   taxAmount = (subtotal − discountTotal) × taxRate / 100   （折扣后计税，运费不计税）
+//   total    = subtotal − discountTotal + taxAmount + freight
+// docAmount 保留 number 签名（24 个调用点零改动），内部转发到本函数。
+function docAmountBreakdown(doc) {
+  const items = (doc && doc.items) || [];
+  const pct = Number(doc && doc.discountPct) || 0;
+  let subtotal = 0, discountTotal = 0;
+  items.forEach(it => {
+    const gross = (Number(it.qty) || 0) * (Number(it.price) || 0);
+    // 单行优先：用 ?? 语义（0 是合法的「无折扣」），未单设才回落整体折扣
+    const rowPct = (it.discountPct === undefined || it.discountPct === null) ? pct : (Number(it.discountPct) || 0);
+    subtotal += gross;
+    discountTotal += gross * rowPct / 100;
+  });
+  // 单据已冻结金额时直接读快照（改税率不得改历史单据，AC-10-13）
+  if (doc && doc.amountsFrozen) {
+    return {
+      subtotal: Number(doc.subtotal) || 0,
+      discountTotal: Number(doc.discountTotal) || 0,
+      taxAmount: Number(doc.taxAmount) || 0,
+      freight: Number(doc.freight) || 0,
+      taxRate: doc.taxRate === undefined ? null : doc.taxRate,
+      total: Number(doc.totalAmount) || 0,
+    };
+  }
+  // 税率以单据自身为准：未写 taxRate 的单据不计税、不显示税额行（AC-10-10）
+  const rate = doc && doc.taxRate !== null && doc.taxRate !== undefined ? Number(doc.taxRate) : null;
+  // 已写 taxAmount 的单据（如 FP）优先读快照，避免与开票时点税率不一致
+  const taxAmount = (doc && doc.taxAmount !== undefined && doc.taxAmount !== null)
+    ? Number(doc.taxAmount)
+    : (rate ? Math.round((subtotal - discountTotal) * rate) / 100 : 0);
+  const freight = Number(doc && doc.freight) || 0;
+  return {
+    subtotal: Math.round(subtotal * 100) / 100,
+    discountTotal: Math.round(discountTotal * 100) / 100,
+    taxAmount, freight,
+    taxRate: rate,
+    total: Math.round((subtotal - discountTotal + taxAmount + freight) * 100) / 100,
+  };
+}
+function docAmount(doc) { return docAmountBreakdown(doc).total; }
+
+// R15 — demo-grade voucher parse (Q35 演示态): the structured result is derived
+// from the file NAME only, e.g. "payment-1200-TRF88213-2026-11-03-cash.jpg"
+// → { method, ref, amount, date }. parseConfidence stays 'demo'.
+function parseVoucherDemo(fileName) {
+  const name = String(fileName || '');
+  const dm = name.match(/(\d{4}-\d{2}-\d{2})/);
+  const am = name.match(/(?:^|[^0-9.])(\d+(?:\.\d{1,2})?)(?:[^0-9.]|$)/);
+  const rm = name.replace(/\.[A-Za-z0-9]+$/, '').match(/[A-Za-z]{2,}[A-Za-z0-9]*\d[A-Za-z0-9-]*/);
+  const method = /cash/i.test(name) ? 'Cash' : /pos\b/i.test(name) ? 'POS' : /cheq/i.test(name) ? 'Cheque' : 'Bank Transfer';
+  return { method, ref: rm ? rm[0] : '', amount: am ? am[1] : '', date: dm ? dm[1] : '' };
+}
+// R10 — 单行金额三列（原始价 / 折后价 / 优惠金额）。行折扣优先于整体折扣。
+function lineAmounts(items, cartPct) {
+  const pct = Number(cartPct) || 0;
+  return (items || []).map(it => {
+    const gross = (Number(it.qty) || 0) * (Number(it.price) || 0);
+    const rowPct = (it.discountPct === undefined || it.discountPct === null) ? pct : (Number(it.discountPct) || 0);
+    const net = gross * (1 - rowPct / 100);
+    return { gross: Math.round(gross * 100) / 100, pct: rowPct, net: Math.round(net * 100) / 100, saving: Math.round((gross - net) * 100) / 100 };
+  });
+}
+// R10 — 批量调价纯函数（Web / H5 共用同一份，避免两端行为漂移）
+//   op = { type:'pct', value:20, target:'sale'|'market'|'both' }
+//      | { type:'set', value:99, target:... }
+//      | { type:'markup', value:1.3 }        // 采购价 × 倍率 → 写渠道销售价
+//   value 为负数即下调（AC-10-02）；预览只算不写（AC-10-05）。
+function applyBulk(rows, op) {
+  return (rows || []).map(r => {
+    const next = { ...r };
+    const apply = (key, base) => {
+      if (op.type === 'pct') next[key] = +(base * (1 + op.value / 100)).toFixed(2);
+      if (op.type === 'set') next[key] = +Number(op.value).toFixed(2);
+    };
+    if (op.type === 'markup') {
+      next.salePrice = +(Number(r.purchasePrice || 0) * op.value).toFixed(2);
+      return next;
+    }
+    if (op.target === 'sale' || op.target === 'both') apply('salePrice', r.salePrice);
+    if (op.target === 'market' || op.target === 'both') apply('marketPrice', r.marketPrice);
+    return next;
+  });
 }
 
 function nextNo(prefix, docs) {
@@ -766,8 +1083,8 @@ const STATUS_META = {
   // R88 — raw keys unchanged (logic); display names come from PO_ORDER_LABEL.
   // New raw status 'Rejected' = 已拒绝 (supplier rejected the order), distinct
   // from 'Receipt Rejected' = 已拒收 (buyer rejected the shipment).
-  PO: { 'Pending Acceptance': ['Pending Acceptance', 'warning'], 'Pending Payment': ['Accepted', 'warning'], 'Pending Outbound': ['Paid', 'warning'], 'Pending Shipment': ['Shipped', 'primary'], 'Pending Receipt': ['Shipped', 'primary'], Received: ['Received', 'success'], 'Partially Received': ['Partially Received', 'warning'], 'Receipt Rejected': ['Receipt Rejected', 'danger'], Rejected: ['Rejected', 'danger'], 'Receiving Closed': ['Receiving Closed', 'dark'] },
-  CK: { 'Pending Shipment': ['Pending Shipment', 'warning'], Shipped: ['Shipped', 'primary'], Received: ['Received', 'success'], 'Partial Variance': ['Partial Variance', 'warning'], Rejected: ['Rejected', 'danger'] },
+  PO: { 'Pending Acceptance': ['Pending Acceptance', 'warning'], 'Pending Payment': ['Accepted', 'warning'], 'Pending Payment Confirmation': ['Payment Review', 'warning'], 'Pending Outbound': ['Paid', 'warning'], 'Pending Picking': ['Pending Picking', 'warning'], 'Picking': ['Picking', 'warning'], 'Pending Shipment': ['Shipped', 'primary'], 'Pending Receipt': ['Shipped', 'primary'], Received: ['Received', 'success'], 'Partially Received': ['Partially Received', 'warning'], 'Receipt Rejected': ['Receipt Rejected', 'danger'], Rejected: ['Rejected', 'danger'], 'Receiving Closed': ['Receiving Closed', 'dark'] },
+  CK: { 'Picking': ['Picking', 'warning'], 'Pending Shipment': ['Pending Shipment', 'warning'], Shipped: ['Shipped', 'primary'], Received: ['Received', 'success'], 'Partial Variance': ['Partial Variance', 'warning'], Rejected: ['Rejected', 'danger'] },
   RK: { Received: ['Received', 'success'], 'Partial Variance': ['Partial Variance', 'warning'], Rejected: ['Rejected', 'danger'] },
   FP: { Draft: ['Draft', 'info'], Issued: ['Issued', 'success'], Archived: ['Archived', 'dark'], RedFlushed: ['Red-flushed', 'danger'] },
 };
@@ -778,7 +1095,7 @@ const STATUS_META = {
 // → 已收货 / 部分收货 / 已拒收 / 已拒绝 / 已终止收货. ORDER_FLOW_STATUSES now
 // carries the nine DISPLAY names (used by the filter panels); the raw
 // statuses keep driving all logic, actions and transitions.
-const ORDER_FLOW_STATUSES = ['Pending Acceptance', 'Accepted', 'Paid', 'Shipped', 'Received', 'Partially Received', 'Receiving Closed', 'Rejected', 'Receipt Rejected'];
+const ORDER_FLOW_STATUSES = ['Pending Acceptance', 'Accepted', 'Payment Review', 'Paid', 'Pending Picking', 'Picking', 'Shipped', 'Received', 'Partially Received', 'Receiving Closed', 'Rejected', 'Receipt Rejected'];
 // R85 — 待收货 (shipped, awaiting receipt) or later: outbound order / waybill
 // print & export unlock at this stage in the PO detail (raw statuses)
 // R99h — raw 'Pending Shipment' ALSO displays 已发货 (ship form submitted →
@@ -792,7 +1109,7 @@ const PO_SHIPPED_OR_LATER = ['Pending Shipment', 'Pending Receipt', 'Received', 
 // order-flow status EXCEPT 待接受 (Pending Acceptance) and 已拒绝 (Rejected).
 // Both roles (buyer & seller) see the entry; the doc-visibility layer already
 // guarantees each party can open the PO detail.
-const PO_ACCEPTED_OR_LATER = ['Pending Payment', 'Pending Outbound', 'Pending Shipment', 'Pending Receipt', 'Received', 'Partially Received', 'Receiving Closed', 'Receipt Rejected'];
+const PO_ACCEPTED_OR_LATER = ['Pending Payment', 'Pending Payment Confirmation', 'Pending Outbound', 'Pending Picking', 'Picking', 'Pending Shipment', 'Pending Receipt', 'Received', 'Partially Received', 'Receiving Closed', 'Receipt Rejected'];
 // R88 — PO raw status → order-flow display name. Pending Payment displays
 // 已接受 (accepted + invoice issued), Pending Outbound displays 已付款
 // (payment recorded, awaiting shipment), Pending Shipment AND Pending
@@ -803,7 +1120,10 @@ const PO_ACCEPTED_OR_LATER = ['Pending Payment', 'Pending Outbound', 'Pending Sh
 const PO_ORDER_LABEL = {
   'Pending Acceptance': 'Pending Acceptance',
   'Pending Payment': 'Accepted',
+  'Pending Payment Confirmation': 'Payment Review',
   'Pending Outbound': 'Paid',
+  'Pending Picking': 'Pending Picking',
+  'Picking': 'Picking',
   'Pending Shipment': 'Shipped',
   'Pending Receipt': 'Shipped',
   'Received': 'Received',
@@ -816,6 +1136,7 @@ const PO_ORDER_LABEL = {
 // documents display the corresponding ORDER-flow status names instead of
 // their raw logistics statuses (display-level only).
 const CK_RK_ORDER_LABEL = {
+  'Picking': 'Picking',
   'Pending Shipment': 'Shipped',
   'Shipped': 'Shipped',
   'Received': 'Received',
@@ -827,6 +1148,8 @@ const ORDER_DISPLAY_CLASS = {
   'Pending Acceptance': 'warning',
   'Accepted': 'warning',
   'Paid': 'primary',
+  'Pending Picking': 'warning',
+  'Picking': 'warning',
   'Shipped': 'primary',
   'Received': 'success',
   'Partially Received': 'warning',
@@ -960,8 +1283,11 @@ function docActions(db, account, doc) {
       if (doc.status === 'Pending Acceptance') a.push('Accept', 'Reject');
       // buyer pays OFFLINE; the supplier records the payment here (→ 待出库)
       if (!doc.paid && ['Pending Payment', 'Pending Outbound', 'Pending Shipment', 'Pending Receipt'].includes(doc.status)) a.push('Record Payment');
+      // R15 — supplier confirms the recorded payment (已付款待确认 → 待出库)
+      if (doc.status === 'Pending Payment Confirmation') a.push('Confirm Payment');
       // 确认发货 (待出库 + paid) → generates CK + waybill (R91: 补货 now buyer-side)
-      if (doc.status === 'Pending Outbound' && doc.paid) a.push('Ship');
+      // R15 — status is the SOLE gate: Pending Outbound is reachable only after payment confirmation
+      if (doc.status === 'Pending Outbound') a.push('Ship');
       // R83 — supplier issues a replenishment outbound to cover the shortfall
       // after a partial receipt (buyer may Re-receive or Terminate Receiving)
       // R91 — 补货 moved to the BUYER side per the status/action table
@@ -970,8 +1296,12 @@ function docActions(db, account, doc) {
     }
   }
   if (doc.type === 'CK') {
+    // R16 — CK is born at 拣货中: the seller picks first (Start Picking opens
+    // the picking page); Dispatch exists ONLY after picking completes
+    // (AC-16-01/05). fromStaging CKs (no PO behind them) have no dispatch flow.
+    if (side === 'seller' && doc.status === 'Picking') a.push('Start Picking');
     // R82 — seller dispatches the generated outbound order (待出货 → 待收货)
-    if (side === 'seller' && doc.status === 'Pending Shipment') a.push('Dispatch');
+    if (side === 'seller' && doc.status === 'Pending Shipment' && !doc.fromStaging) a.push('Dispatch');
     // R92 — order-flow table applied to ALL order list items: 已发货 (raw
     // Pending Shipment / Shipped) → buyer Confirm Receipt; 部分收货
     // (Partial Variance) → buyer recovery actions, resolved to the parent order
@@ -1006,7 +1336,7 @@ function docActions(db, account, doc) {
   }
   a.push('View', 'Print');
   // ensure unique and order stable
-  const order = ['View', 'Edit', 'Confirm Quote', 'Submit', 'Place Order', 'Delete', 'Quote', 'Accept', 'Reject', 'Approve', 'Record Payment', 'Ship', 'Dispatch', 'Confirm Receipt', 'Create Invoice', 'Confirm Invoice', 'Re-receive', 'Replenish', 'Terminate Receiving', 'Print', 'Download', 'Cancel', 'Close'];
+  const order = ['View', 'Edit', 'Confirm Quote', 'Submit', 'Place Order', 'Delete', 'Quote', 'Accept', 'Reject', 'Approve', 'Record Payment', 'Confirm Payment', 'Ship', 'Dispatch', 'Confirm Receipt', 'Create Invoice', 'Confirm Invoice', 'Re-receive', 'Replenish', 'Terminate Receiving', 'Print', 'Download', 'Cancel', 'Close'];
   const uniq = [];
   for (const k of order) { if (a.includes(k) && !uniq.includes(k)) uniq.push(k); }
   return uniq;
@@ -1053,7 +1383,7 @@ function downloadInvoiceFile(db, doc) {
   const lines = [
     ['Invoice No', doc.no], ['Seller', tenantName(db, doc.seller)], ['Buyer', tenantName(db, doc.buyer)], ['Order Ref', doc.poNo || ''],
     ['Issue Date', doc.issueDate || ''], ['Currency', doc.currency], ['Status', doc.status], [],
-    ['Product', 'Spec', 'Qty', 'Unit Price', 'Amount'],
+    ['Product', 'Spec', 'Qty', 'Channel Sales Price', 'Amount'],
     ...doc.items.map(it => [it.name, it.spec, it.qty, it.price, it.qty * it.price]),
     [], ['Total', '', '', '', docAmount(doc)],
   ];
@@ -1075,7 +1405,43 @@ function downloadOutboundFile(db, doc) {
   downloadFile(`${doc.no}_outbound.csv`, lines.map(r => r.map(csvEscape).join(',')).join('\n'));
 }
 
+// R14 — 返回库存提示文案（无提示时返回 ''，AC-14-02：充足时完全不提）。
+// 规则：任一商品 <= 0 → 断货话术（更强，AC-14-07）；任一商品 <= threshold → 少许话术；
+//      多商品时指名低库存品（最多列 2 个，避免话术过长，AC-14-06）。
+// 纯文本话术层，绝不改变 price / discount（AC-14-08）。
+function stockHintFor(db, tenantId, pids, threshold) {
+  const stock = db.stock[tenantId] || {};
+  const th = Number(threshold != null ? threshold : 30);
+  const lows = [], outs = [];
+  (pids || []).forEach(pid => {
+    const p = db.products.find(x => x.id === pid);
+    if (!p) return;
+    const q = stock[pid] || 0;
+    if (q <= 0) outs.push(p.name);
+    else if (q <= th) lows.push({ name: p.name, qty: q });
+  });
+  if (outs.length) return t('Out of stock — pre-order available') + ' · ' + outs.slice(0, 2).join(', ');
+  if (lows.length) return t('Low stock — order soon') + ' · ' + lows.slice(0, 2).map(x => x.name).join(', ');
+  return '';
+}
+
+// R13 — AI 让价阶梯（design 2.7）。round 从 0 起。两处硬编码（会话议价 / AI 草稿）都必须调
+// 这一个函数，不允许各写一份。人工折扣路径（cart.jsx / DocDetailDialog）不校 aiPolicy（AC-13-08）。
+function nextAiDiscount(policy, round) {
+  const p = policy || {};
+  const floor = Number(p.floorDiscount != null ? p.floorDiscount : 0.97);
+  const step = Number(p.stepSize || 0.01);
+  const maxRounds = Number(p.maxRounds || 3);
+  // 从「无折扣」起，每轮降一个 step，但不得低于 floor
+  const raw = 1 - step * (round + 1);
+  const discount = Math.max(raw, floor);
+  const hitFloor = discount <= floor + 1e-9;
+  return { discount: +discount.toFixed(4), hitFloor, canContinue: !hitFloor && round + 1 < maxRounds };
+}
+
 Object.assign(window, {
-  makeInitialDb, money, tenantName, tenantCode, accountById, productName, relatedTenantIds, upstreamTenantIds, downstreamChain, canInquireProduct, canManageProduct, productOwnerName, docVisible, docSide, docAmount, nextNo, quoteExpired, docStatusOf,
+  makeInitialDb, money, tenantName, tenantCode, accountById, productName, relatedTenantIds, upstreamTenantIds, downstreamChain, canInquireProduct, canManageProduct, productOwnerName, docVisible, docSide, docAmount, nextNo, quoteExpired, docStatusOf, nextAiDiscount, stockHintFor,
+  splitBarcode, isOwnBarcode, makeBarcodePrefix, ownBarcodePrefix, composeBarcode, findBarcodeConflict, applyBulk, lineAmounts, docAmountBreakdown, parseVoucherDemo, purchasePriceOf, purchaseCurrencyOf, purchasePatch, recordPurchasePrice, latestPurchase, DEFAULT_SETTINGS,
+  deriveTeam, deriveDistributors, makeInviteCode, INVITE_COPY,
   STATUS_META, statusLabel, statusTagClass, orderDisplayStatus, tabStatusOptions, docActions, parentPoOf, csvEscape, downloadFile, downloadProductTemplate, downloadInvoiceFile, downloadOutboundFile,
 });

@@ -3,7 +3,7 @@
 // ============================================================
 
 // round 56 — icon mapping for dialog document action verbs (icon+text buttons)
-const DLG_VERB_ICON = { Accept: 'check', Approve: 'check', Submit: 'check', Quote: 'edit', 'Confirm Quote': 'checkDouble', 'Place Order': 'cart', Ship: 'truck', Dispatch: 'truck', 'Confirm Receipt': 'checkDouble', 'Create Invoice': 'receipt', 'Confirm Invoice': 'checkDouble', 'Record Payment': 'receipt', Reject: 'close', Cancel: 'close', Close: 'close', Delete: 'trash', Print: 'print', Export: 'download', 'Re-receive': 'checkDouble', 'Replenish': 'truck', 'Terminate Receiving': 'close' };
+const DLG_VERB_ICON = { Accept: 'check', Approve: 'check', Submit: 'check', Quote: 'edit', 'Confirm Quote': 'checkDouble', 'Place Order': 'cart', Ship: 'truck', Dispatch: 'truck', 'Confirm Receipt': 'checkDouble', 'Create Invoice': 'receipt', 'Confirm Invoice': 'checkDouble', 'Record Payment': 'receipt', 'Confirm Payment': 'checkDouble', 'Start Picking': 'truck', Reject: 'close', Cancel: 'close', Close: 'close', Delete: 'trash', Print: 'print', Export: 'download', 'Re-receive': 'checkDouble', 'Replenish': 'truck', 'Terminate Receiving': 'close' };
 
 // ---------- product form ----------
 function ProductFormDialog({ editProduct, onClose }) {
@@ -16,18 +16,30 @@ function ProductFormDialog({ editProduct, onClose }) {
     categories: p.categories ? [...p.categories] : [],
     onSale: p.onSale !== false,
     images: p.images ? [...p.images] : (p.image ? [p.image] : []),
+    // R05 — 条码与型号彻底解耦（AC-05-01）：表里只存「主体码」，
+    // 完整条码由「本商户前缀 + 主体码」在提交时拼出。
+    barcodeBody: p.barcodeBody || '',
   });
   const [errors, setErrors] = useState({});
   const set = (k, v) => setF(s => ({ ...s, [k]: v }));
+  // R05 — 前缀是商户属性，表单里只读；主体码才可编辑（AC-05-02/03）
+  const prefix = ownBarcodePrefix(db, account);
   const save = (publish) => {
     const errs = {};
     if (!f.name) errs.name = 'Product name is required';
     if (f.price === '' || isNaN(f.price) || Number(f.price) <= 0) errs.price = 'Enter a valid price';
     if (!f.categories.length) errs.categories = 'Select at least one category';
+    // AC-05-04 — 与既有条码完全相同则拦截（空条码放行，AC-05-07）
+    const barcode = composeBarcode(prefix, f.barcodeBody);
+    if (barcode) {
+      const conflict = findBarcodeConflict(db, barcode, editProduct ? p.id : null);
+      if (conflict) errs.barcode = `Barcode ${barcode} is already used by "${conflict.name}"`;
+    }
     setErrors(errs);
     if (Object.keys(errs).length) { toast('Please fix the highlighted fields', 'error'); return; }
-    if (editProduct) { act.updateProduct(p.id, f); toast(`Product "${f.name}" updated`, 'success'); }
-    else { act.createProduct(f); toast(f.onSale !== false ? `Product "${f.name}" saved and published (On Sale)` : `Product "${f.name}" saved (Discontinued)`, 'success'); }
+    const payload = { ...f, barcode, barcodeBody: String(f.barcodeBody || '').trim() };
+    if (editProduct) { act.updateProduct(p.id, payload); toast(`Product "${f.name}" updated`, 'success'); }
+    else { act.createProduct(payload); toast(f.onSale !== false ? `Product "${f.name}" saved and published (On Sale)` : `Product "${f.name}" saved (Discontinued)`, 'success'); }
     onClose();
   };
   return (
@@ -53,10 +65,19 @@ function ProductFormDialog({ editProduct, onClose }) {
         <FormRow label="Model">
           <Input value={f.model} onChange={v => set('model', v)} placeholder="e.g. SK-INV-5K" />
         </FormRow>
+        {/* R05 — 条码独立字段，与型号互不替代（AC-05-01）。前缀区只读、主体码可编辑，
+            视觉上合成一个输入整体（AC-05-02）。留空表示「尚未编码」，允许保存（AC-05-07）。 */}
+        <FormRow label="Barcode" error={errors.barcode}
+          hint={prefix ? `Merchant prefix ${prefix} is fixed — only the body is editable. Leave it empty to save without a barcode.` : 'This account has no merchant prefix — the body is stored as the full barcode.'}>
+          <div className="flex gap8">
+            {prefix ? <span className="prefix-chip">{prefix}</span> : null}
+            <Input value={f.barcodeBody} onChange={v => set('barcodeBody', v)} placeholder="e.g. INV5K01" error={errors.barcode} />
+          </div>
+        </FormRow>
         <FormRow label="Unit">
           <Select value={f.unit} onChange={v => set('unit', v)} options={['pcs', 'box', 'set', 'kg'].map(u => ({ value: u, label: u }))} />
         </FormRow>
-        <FormRow label="Price" required error={errors.price}>
+        <FormRow label="Channel Sales Price" required error={errors.price}>
           {/* R108 — 价格表单项统一币种在前、金额在后 */}
           <div className="flex gap8">
             <Select value={f.currency} onChange={v => set('currency', v)} style={{ width: 100 }} options={['USD', 'NGN', 'CNY'].map(c => ({ value: c, label: c }))} />
@@ -308,7 +329,7 @@ function InquiryFormDialog({ editDoc, initialPid, onClose }) {
           {errors.items && <div className="field-error"><Icon name="error" size={12} />{errors.items}</div>}
           <div className="table-wrap">
             <table className="table">
-              <thead><tr><th>Product</th><th style={{ width: 110 }}>Qty</th><th style={{ width: 120 }}>Ref Price</th><th style={{ width: 90 }}>Supplier Stock</th><th style={{ width: 36 }}></th></tr></thead>
+              <thead><tr><th>Product</th><th style={{ width: 110 }}>Qty</th><th style={{ width: 36 }}></th></tr></thead>
               <tbody>
                 {f.items.map((it, i) => (
                   <tr key={i}>
@@ -318,12 +339,10 @@ function InquiryFormDialog({ editDoc, initialPid, onClose }) {
                       if (p) updItem(i, 'price', p.price);
                     }} placeholder="Select product" options={inqProducts.map(p => ({ value: p.id, label: `${p.name} (${p.model})${suppliers.length > 1 ? ' · ' + tenantName(db, p.ownerId) : ''}` }))} /></td>
                     <td><Input value={it.qty} onChange={v => updItem(i, 'qty', v)} type="number" placeholder="0" /></td>
-                    <td>{it.pid ? <Money amount={(db.products.find(x => x.id === it.pid) || {}).price || 0} currency={(db.products.find(x => x.id === it.pid) || {}).currency} /> : <span className="muted">—</span>}</td>
-                    <td className="mono small">{it.pid ? stockAvail(it.pid) : '—'}</td>
                     <td>{f.items.length > 1 && <button className="btn sm text error-text" onClick={() => setF(s => ({ ...s, items: s.items.filter((_, j) => j !== i) }))}><Icon name="trash" size={13} /></button>}</td>
                   </tr>
                 ))}
-                <tr><td colSpan={5}>
+                <tr><td colSpan={3}>
                   <button className="btn sm" onClick={() => setF(s => ({ ...s, items: [...s.items, { pid: '', qty: '' }] }))}><Icon name="plus" size={12} />Add Line</button>
                 </td></tr>
               </tbody>
@@ -353,7 +372,9 @@ function QuoteFormDialog({ inquiry, editQuote, onClose }) {
       const ref = db.products.find(p => p.id === it.pid);
       let price = it.price;
       if (ref) {
-        price = ref.currency === currency ? +(ref.price * 0.985).toFixed(2) : Math.round(ref.price * 1550 * 0.985);
+        // R13 — AI 草稿取阶梯首轮让价，同样受 settings.aiPolicy 边界约束（AC-13-05）
+        const step = 1 - nextAiDiscount(db.settings.aiPolicy, 0).discount;
+        price = ref.currency === currency ? +(ref.price * step).toFixed(2) : Math.round(ref.price * 1550 * step);
       }
       return { ...it, price, suggested: true };
     }));
@@ -382,7 +403,7 @@ function QuoteFormDialog({ inquiry, editQuote, onClose }) {
       <div className="section-label mt16">Quote Lines <span className="mini-chip ai" hidden={!aiUsed}>AI suggested prices — editable</span></div>
       <div className="table-wrap">
         <table className="table">
-          <thead><tr><th>Product</th><th style={{ width: 90 }}>Qty</th><th style={{ width: 150 }}>Unit Price ({currency})</th><th style={{ width: 130 }} className="right">Amount</th></tr></thead>
+          <thead><tr><th>Product</th><th style={{ width: 90 }}>Qty</th><th style={{ width: 150 }}>Channel Sales Price ({currency})</th><th style={{ width: 130 }} className="right">Amount</th></tr></thead>
           <tbody>
             {items.map((it, i) => (
               <tr key={i}>
@@ -407,6 +428,8 @@ function QuoteFormDialog({ inquiry, editQuote, onClose }) {
           <Input value="Auto: buyer main account" readonly />
         </FormRow>
       </div>
+      {/* R15 — payee info shown on the quote (readonly, same data as settings) */}
+      <PayeeInfoBlock />
     </Dialog>
   );
 }
@@ -484,7 +507,7 @@ function POFormDialog({ editDoc, onClose }) {
           {errors.items && <div className="field-error"><Icon name="error" size={12} />{errors.items}</div>}
           <div className="table-wrap">
             <table className="table">
-              <thead><tr><th>Product</th><th style={{ width: 90 }}>Qty</th><th style={{ width: 130 }}>Unit Price</th><th style={{ width: 100 }}>Supplier Stock</th><th style={{ width: 36 }}></th></tr></thead>
+              <thead><tr><th>Product</th><th style={{ width: 90 }}>Qty</th><th style={{ width: 130 }}>Channel Sales Price</th><th style={{ width: 100 }}>Supplier Stock</th><th style={{ width: 36 }}></th></tr></thead>
               <tbody>
                 {f.items.map((it, i) => (
                   <tr key={i}>
@@ -553,13 +576,30 @@ function AdjustStockDialog({ productId, onClose }) {
   );
 }
 
-// ---------- ship dialog ----------
+// ---------- ship dialog（R16：只确认发货 → 生成 CK 进入拣货，物流信息后置到发货 dispatch） ----------
 function ShipDialog({ po, onClose }) {
+  const { act } = useApp();
+  return (
+    <Dialog title={`Ship ${po.no}`} width="560px" onClose={onClose}
+      footer={<React.Fragment>
+        <button className="btn" onClick={onClose}><Icon name="close" size={13} />Cancel</button>
+        <button className="btn warning" onClick={() => {
+          act.ship(po);
+          onClose();
+        }}><NavIcon name="stockOut" size={13} />Confirm Shipment</button>
+      </React.Fragment>}>
+      <Banner tone="warning" icon="warehouse">Confirming shipment will: decrement your stock and generate outbound doc <b>CK-</b> at <b>Picking</b>. Pick the goods first, then dispatch with the carrier info — the waybill and the buyer's WhatsApp link are generated at dispatch.</Banner>
+    </Dialog>
+  );
+}
+
+// ---------- R16 · dispatch dialog（拣货完成后录入承运信息并发货，AC-16-06） ----------
+function DispatchDialog({ ck, onClose }) {
   const { act } = useApp();
   const [w, setW] = useState({ carrier: '', plate: '', driver: '', phone: '' });
   const [errors, setErrors] = useState({});
   return (
-    <Dialog title={`Ship ${po.no}`} width="560px" onClose={onClose}
+    <Dialog title={`Dispatch · ${ck.no}`} width="560px" onClose={onClose}
       footer={<React.Fragment>
         <button className="btn" onClick={onClose}><Icon name="close" size={13} />Cancel</button>
         <button className="btn warning" onClick={() => {
@@ -567,11 +607,11 @@ function ShipDialog({ po, onClose }) {
           ['carrier', 'driver'].forEach(k => { if (!w[k]) errs[k] = 'Required'; });
           setErrors(errs);
           if (Object.keys(errs).length) return;
-          act.ship(po, w);
+          act.dispatch(ck, w);
           onClose();
-        }}><NavIcon name="stockOut" size={13} />Confirm Shipment</button>
+        }}><NavIcon name="stockOut" size={13} />Dispatch</button>
       </React.Fragment>}>
-      <Banner tone="warning" icon="warehouse">Confirming shipment will: decrement your stock, generate outbound doc <b>CK-</b> and waybill, and push a WhatsApp confirmation link to the buyer.</Banner>
+      <Banner tone="info" icon="truck">Dispatching generates the waybill and pushes a login-free confirmation link to the buyer via WhatsApp. The order moves to awaiting receipt.</Banner>
       <div className="form mt16">
         <FormRow label="Carrier" required error={errors.carrier}>
           <Input value={w.carrier} onChange={v => setW(s => ({ ...s, carrier: v }))} placeholder="e.g. Swift Cargo" error={errors.carrier} />
@@ -590,6 +630,74 @@ function ShipDialog({ po, onClose }) {
   );
 }
 
+// ---------- R16 · picking dialog（CK 拣货：扫码/手动勾选双确认、进度、短拣原因） ----------
+function PickingDialog({ ckId, onClose }) {
+  const { db, act, toast } = useApp();
+  const ck = db.docs.find(d => d.id === ckId);
+  const lines = (ck && ck.picking && ck.picking.lines) || [];
+  const [picked, setPicked] = useState(() => Object.fromEntries(lines.map(l => [l.pid, String(l.pickedQty || 0)])));
+  const [confirmed, setConfirmed] = useState(() => Object.fromEntries(lines.map(l => [l.pid, !!l.scanConfirmed])));
+  const [manual, setManual] = useState(() => Object.fromEntries(lines.map(l => [l.pid, false])));
+  const [shortReasons, setShortReasons] = useState(() => Object.fromEntries(lines.map(l => [l.pid, l.shortReason || ''])));
+  // 打开即开始拣货（一次性；act 内部幂等：startedAt 已存在不重写）
+  useEffect(() => { if (ck && ck.status === 'Picking' && !(ck.picking && ck.picking.startedAt)) act.startPicking(ck); }, []);
+  if (!ck) return null;
+  const doneCount = lines.filter(l => confirmed[l.pid] || manual[l.pid]).length;
+  return (
+    <Dialog title={`Picking · ${ck.no}`} width="720px" onClose={onClose}
+      footer={<React.Fragment>
+        <button className="btn" onClick={onClose}><Icon name="close" size={13} />Pause</button>
+        <button className="btn success" disabled={doneCount < lines.length} title={doneCount < lines.length ? 'Confirm every line (scan or manual) before completing the pick' : ''} onClick={() => {
+          const ok = act.finishPicking(ck, picked, shortReasons);
+          if (ok) onClose();
+        }}><Icon name="checkDouble" size={13} />Complete Picking</button>
+      </React.Fragment>}>
+      <Banner tone="info" icon="warehouse">Pick each line by scanning the product barcode or confirming manually. Short picks are allowed but need a reason; over-picking is blocked.</Banner>
+      <div className="section-label mt16" style={{ display: 'flex', justifyContent: 'space-between' }}>
+        <span>Pick List</span>
+        <span style={{ fontWeight: 600 }}>{doneCount < lines.length ? <span style={{ color: '#C0392B' }}><Icon name="alertCircle" size={12} /> </span> : <span style={{ color: '#1E8449' }}><Icon name="check" size={12} /> </span>}{t('Picked')} {doneCount} / {lines.length}</span>
+      </div>
+      <div className="table-wrap">
+        <table className="table">
+          <thead><tr><th>Product</th><th style={{ width: 80 }}>Expected</th><th style={{ width: 110 }}>Picked Qty</th><th style={{ width: 210 }}>Confirm</th><th>Short-pick Reason</th></tr></thead>
+          <tbody>
+            {lines.map(l => {
+              const prod = db.products.find(p => p.id === l.pid) || {};
+              const done = confirmed[l.pid] || manual[l.pid];
+              const short = Number(picked[l.pid] || 0) < l.expectedQty;
+              return (
+                <tr key={l.pid} style={done ? { background: '#F0FAF4' } : undefined}>
+                  <td>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      {done && <Icon name="check" size={13} color="#1E8449" />}
+                      <div>
+                        <div style={{ fontSize: 13 }} className="bold">{prod.name || l.pid}</div>
+                        <div className="cell-sub mono">{prod.spec}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="mono">{l.expectedQty}</td>
+                  <td><Input value={picked[l.pid] != null ? String(picked[l.pid]) : ''} type="number" onChange={v => { setPicked(s => ({ ...s, [l.pid]: v })); setConfirmed(s => ({ ...s, [l.pid]: false })); }} /></td>
+                  <td>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <button className="btn sm" onClick={() => { setPicked(s => ({ ...s, [l.pid]: String(l.expectedQty) })); setConfirmed(s => ({ ...s, [l.pid]: true })); setManual(s => ({ ...s, [l.pid]: false })); }}><Icon name="scan" size={12} />{confirmed[l.pid] ? t('Scanned') : t('Scan')}</button>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, cursor: 'pointer' }}>
+                        <input type="checkbox" checked={!!manual[l.pid]} onChange={e => { setManual(s => ({ ...s, [l.pid]: e.target.checked })); if (e.target.checked) setConfirmed(s => ({ ...s, [l.pid]: false })); }} />
+                        {t('Manually confirmed')}
+                      </label>
+                    </div>
+                  </td>
+                  <td>{short ? <Input value={shortReasons[l.pid] || ''} onChange={v => setShortReasons(s => ({ ...s, [l.pid]: v }))} placeholder="Reason (required)" /> : <span className="muted" style={{ fontSize: 12 }}>—</span>}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </Dialog>
+  );
+}
+
 // ---------- receive dialog ----------
 function ReceiveDialog({ ck, onClose }) {
   const { db, act } = useApp();
@@ -597,6 +705,8 @@ function ReceiveDialog({ ck, onClose }) {
   const [qtys, setQtys] = useState(() => Object.fromEntries(ck.items.map(it => [it.pid, String(it.qty)])));
   const [reason, setReason] = useState('');
   const [err, setErr] = useState('');
+  // R16 — 签收签名（手写 / 点选，选填；随实收写入 RK）
+  const [signature, setSignature] = useState(null);
   // R97 — result drives the qty inputs:
   //   accept  → received = ordered, read-only
   //   partial → received defaults to 0, editable within [0, ordered]
@@ -618,7 +728,7 @@ function ReceiveDialog({ ck, onClose }) {
             }
           }
           setErr('');
-          act.receive(ck, mode, qtys, reason);
+          act.receive(ck, mode, qtys, reason, null, signature);
           onClose();
         }}><Icon name="checkDouble" size={13} />Confirm</button>
       </React.Fragment>}>
@@ -661,6 +771,8 @@ function ReceiveDialog({ ck, onClose }) {
         </div>
       )}
       {err && <div className="field-error mt8">{err}</div>}
+      <div className="section-label mt16">{t('Signature (optional)')}</div>
+      <SignatureBox value={signature} onChange={setSignature} />
     </Dialog>
   );
 }
@@ -684,7 +796,7 @@ function AcceptOrderDialog({ po, onClose }) {
       <div className="section-label mt16">Order Summary</div>
       <div className="table-wrap">
         <table className="table">
-          <thead><tr><th>Product</th><th style={{ width: 70 }}>Qty</th><th style={{ width: 110 }}>Unit Price</th></tr></thead>
+          <thead><tr><th>Product</th><th style={{ width: 70 }}>Qty</th><th style={{ width: 110 }}>Channel Sales Price</th></tr></thead>
           <tbody>
             {po.items.map(it => (
               <tr key={it.pid}>
@@ -717,6 +829,31 @@ function AcceptOrderDialog({ po, onClose }) {
 }
 
 // ---------- R94 · record payment dialog (supplier records the buyer's offline payment) ----------
+// ---------- R15 · readonly payee info block (quotes / order details) ----------
+function PayeeInfoBlock() {
+  const { db } = useApp();
+  const s = (db.settings && db.settings.payeeInfo) || {};
+  if (!s.configured) return (
+    <React.Fragment>
+      <div className="section-label mt16">{t('Payee info')}</div>
+      <Banner tone="info" icon="info">{t('Payee info not configured — please contact the supplier.')}</Banner>
+    </React.Fragment>
+  );
+  const rows = [
+    { label: t('Bank name'), value: s.bankName || '—' },
+    { label: t('Account name'), value: s.accountName || '—' },
+    { label: t('Account number'), value: <span className="mono">{s.accountNo || '—'}</span> },
+    { label: 'SWIFT', value: <span className="mono">{s.swift || '—'}</span> },
+  ];
+  if (s.methods && s.methods.length) rows.push({ label: t('Payment methods'), value: s.methods.join(' · ') });
+  return (
+    <React.Fragment>
+      <div className="section-label mt16">{t('Payee info')}</div>
+      <Descriptions cols={3} items={rows} />
+    </React.Fragment>
+  );
+}
+
 function PayDialog({ po, onClose }) {
   const { act, toast } = useApp();
   const [amount, setAmount] = useState(String(docAmount(po)));
@@ -725,22 +862,43 @@ function PayDialog({ po, onClose }) {
   const [ref, setRef] = useState('');
   const [note, setNote] = useState('');
   const [err, setErr] = useState('');
+  // R15 — structured voucher (demo parse from the file name, Q35 演示态)
+  const [voucher, setVoucher] = useState(null);
+  const [mismatchNote, setMismatchNote] = useState('');
+  const parsedAmt = voucher && voucher.parsed && voucher.parsed.amount !== '' && voucher.parsed.amount != null ? Number(voucher.parsed.amount) : null;
+  const mismatch = parsedAmt !== null && !isNaN(parsedAmt) && parsedAmt !== docAmount(po);
+  const onVoucher = (e) => {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    const parsed = parseVoucherDemo(f.name);
+    setVoucher({ fileName: f.name, fileType: /\.pdf$/i.test(f.name) ? 'pdf' : 'image', dataUrl: '', parsed, parseConfidence: 'demo', confirmedBy: null, confirmedAt: null });
+    if (parsed.ref) setRef(parsed.ref);
+    if (parsed.date) setDate(parsed.date);
+    if (parsed.amount !== '') setAmount(parsed.amount);
+    if (parsed.method) setMethod(parsed.method);
+    if (/^image\//.test(f.type)) {
+      const reader = new FileReader();
+      reader.onload = () => setVoucher(prev => prev ? { ...prev, dataUrl: String(reader.result || '') } : prev);
+      reader.readAsDataURL(f);
+    }
+  };
+  const mismatchErr = mismatch ? t('Voucher amount differs from the order total') : '';
   return (
     <Dialog title={`Record Payment · ${po.no}`} width="560px" onClose={onClose}
       footer={<React.Fragment>
         <button className="btn" onClick={onClose}><Icon name="close" size={13} />Cancel</button>
-        <button className="btn primary" onClick={() => {
+        <button className="btn primary" disabled={mismatch && !mismatchNote.trim()} onClick={() => {
           const n = Number(amount);
           if (!amount || isNaN(n) || n <= 0) { setErr('Enter a valid payment amount'); return; }
-          act.docVerb('Record Payment', po, null, null, { amount, date, method, ref: ref.trim(), note: note.trim() });
+          act.docVerb('Record Payment', po, null, null, { amount, date, method, ref: ref.trim(), note: note.trim(), voucher, mismatchNote: mismatchNote.trim() });
           onClose();
-          toast(`Payment recorded for ${po.no} — buyer notified, shipment unlocked`, 'success');
+          toast(`Payment recorded for ${po.no} — awaiting confirmation`, 'success');
         }}><NavIcon name="invoices" size={13} />Record Payment</button>
       </React.Fragment>}>
-      <Banner tone="warning" icon="receipt">The buyer pays offline (bank transfer / cash). Recording the payment notifies the buyer and unlocks shipment arrangements.</Banner>
+      <Banner tone="warning" icon="receipt">The buyer pays offline (bank transfer / cash). Recording the payment moves the order to payment review — shipment unlocks only after you confirm it.</Banner>
       <div className="form mt16">
-        <FormRow label="Amount Received" required error={err}>
-          <Input value={amount} onChange={v => { setAmount(v); setErr(''); }} type="number" error={err} prefix={po.currency} />
+        <FormRow label="Amount Received" required error={mismatchErr || err}>
+          <Input value={amount} onChange={v => { setAmount(v); setErr(''); }} type="number" error={mismatchErr || err} prefix={po.currency} />
         </FormRow>
         <FormRow label="Payment Date" required>
           <Input value={date} onChange={setDate} type="date" />
@@ -753,6 +911,30 @@ function PayDialog({ po, onClose }) {
         <FormRow label="Transaction Ref" hint="Bank slip / transfer reference for reconciliation">
           <Input value={ref} onChange={setRef} placeholder="e.g. TRF-88213-NGB" />
         </FormRow>
+        <FormRow label={t('Payment Voucher')} hint={t('Demo parse — fields filled from the file name')}>
+          <div>
+            <input type="file" accept="image/*,.pdf" onChange={onVoucher} style={{ fontSize: 12 }} />
+            {voucher && (
+              <div className="flex gap8 mt8" style={{ alignItems: 'center', flexWrap: 'wrap' }}>
+                <span className="mini-chip">{voucher.fileType === 'pdf' ? 'PDF' : 'IMAGE'}</span>
+                <span className="mono" style={{ fontSize: 12 }}>{voucher.fileName}</span>
+                <span className="mini-chip ai">DEMO PARSE</span>
+                {voucher.parsed.ref && <span className="muted" style={{ fontSize: 11 }}>Parsed from voucher: ref {voucher.parsed.ref}</span>}
+                <button className="btn" style={{ padding: '2px 8px' }} onClick={() => setVoucher(null)}><Icon name="close" size={12} />Remove</button>
+              </div>
+            )}
+          </div>
+        </FormRow>
+        {mismatch && (
+          <Banner tone="warning" icon="warn">
+            {t('Voucher amount differs from the order total')}: {po.currency === 'NGN' ? '₦' : '$'}{voucher.parsed.amount} ≠ {po.currency === 'NGN' ? '₦' : '$'}{docAmount(po)} — {t('Mismatch note is required')}
+          </Banner>
+        )}
+        {mismatch && (
+          <FormRow label={t('Mismatch note')} required error={!mismatchNote.trim() ? t('Mismatch note is required') : ''}>
+            <Textarea value={mismatchNote} onChange={setMismatchNote} rows={2} placeholder="e.g. Balance to be paid on delivery" />
+          </FormRow>
+        )}
         <FormRow label="Note">
           <Textarea value={note} onChange={setNote} rows={2} placeholder="e.g. Full payment received at Ibadan branch" />
         </FormRow>
@@ -931,6 +1113,9 @@ function DocDetailDialog({ docId, onClose, onOpenDoc }) {
     if (verb === 'Edit') return setDialog(doc.type === 'IQ' ? 'inquiry' : doc.type === 'PO' ? 'po' : 'quote');
     if (verb === 'Quote') return setDialog('quote');
     if (verb === 'Ship') return setDialog('ship');
+    // R16 — 拣货 / 发货（承运信息）专用表单
+    if (verb === 'Start Picking') return setDialog('picking');
+    if (verb === 'Dispatch') return setDialog('dispatch');
     if (verb === 'Confirm Receipt') return setDialog('receive');
     // R94 — dedicated forms for the order-flow actions
     if (verb === 'Accept' && doc.type === 'PO') return setDialog('accept');
@@ -940,8 +1125,6 @@ function DocDetailDialog({ docId, onClose, onOpenDoc }) {
     if (verb === 'Terminate Receiving') return setDialog('terminate');
     const msgs = {
       Accept: `Accept quote ${doc.no}? A purchase order will be auto-generated.`,
-      // R82 — dispatch the generated outbound order: waybill link pushed to the buyer
-      Dispatch: `Dispatch outbound order ${doc.no}? The waybill link is pushed to ${tenantName(db, doc.buyer)} and the order moves to awaiting receipt.`,
       Submit: `Submit ${doc.no}? It will be sent to ${tenantName(db, doc.seller)} and becomes non-editable.`,
       Cancel: `Cancel ${doc.no}? This cannot be undone.`,
       Close: `Close inquiry ${doc.no}?`,
@@ -950,6 +1133,7 @@ function DocDetailDialog({ docId, onClose, onOpenDoc }) {
       'Place Order': `Place order ${doc.no} with one tap? It will be submitted to ${tenantName(db, doc.seller)} for review.`,
       'Create Invoice': `Issue the invoice for ${doc.no}? The invoice link will be pushed to ${tenantName(db, doc.buyer)} via WhatsApp.`,
       'Confirm Invoice': `Confirm invoice ${doc.no}? It will be archived after confirmation.`,
+      'Confirm Payment': `Confirm the recorded payment for ${doc.no}? The order moves to awaiting outbound and shipment is unlocked.`,
     };
     // R94 — order Accept / Record Payment / Re-receive / Replenish / Terminate
     // Receiving all open dedicated FORM dialogs above (quote Accept stays here)
@@ -973,7 +1157,7 @@ function DocDetailDialog({ docId, onClose, onOpenDoc }) {
   if (doc.deliveryDate) headerItems.push({ label: 'Delivery Date', value: doc.deliveryDate });
   // R94 — form-captured details surface on the header
   if (doc.expectedShipDate) headerItems.push({ label: 'Expected Dispatch', value: <span className="mono">{doc.expectedShipDate}</span> });
-  if (doc.payment) headerItems.push({ label: 'Payment', value: <span className="mono">{doc.payment.method}{doc.payment.ref ? ` · ${doc.payment.ref}` : ''} · ${doc.payment.date}</span> });
+  if (doc.payment) headerItems.push({ label: 'Payment', value: <span className="mono">{doc.payment.method}{doc.payment.ref ? ` · ${doc.payment.ref}` : ''} · {doc.payment.date}{doc.payment.status === 'pending' ? ' · ' + t('Pending confirmation') : ''}{doc.payment.status === 'confirmed' ? ' · ' + t('Confirmed') : ''}</span> });
   if (doc.validUntil) headerItems.push({ label: 'Valid Until', value: doc.validUntil });
   if (doc.inquiryNo) headerItems.push({ label: 'Inquiry Ref', value: <span className="mono">{doc.inquiryNo}</span> });
   if (doc.quoteNo) headerItems.push({ label: 'Quote Ref', value: <span className="mono">{doc.quoteNo}</span> });
@@ -1034,7 +1218,7 @@ function DocDetailDialog({ docId, onClose, onOpenDoc }) {
         )}
         <button className="btn" onClick={onClose}><Icon name="close" size={13} />Close</button>
         {!isPlatform && side !== 'observer' && actions.filter(v => v !== 'View').map(verb => (
-          <button key={verb} className={`btn${['Confirm Receipt', 'Re-receive'].includes(verb) ? ' success' : ['Ship', 'Dispatch'].includes(verb) ? ' warning' : ['Accept', 'Approve', 'Submit', 'Quote', 'Confirm Quote', 'Place Order', 'Create Invoice', 'Confirm Invoice', 'Record Payment', 'Replenish'].includes(verb) ? ' primary' : ['Delete', 'Cancel', 'Reject', 'Close', 'Terminate Receiving'].includes(verb) ? ' error-plain' : ''}`} onClick={() => runVerb(verb)}><Icon name={DLG_VERB_ICON[verb] || 'check'} size={13} />{verb}</button>
+          <button key={verb} className={`btn${['Confirm Receipt', 'Re-receive'].includes(verb) ? ' success' : ['Ship', 'Dispatch'].includes(verb) ? ' warning' : ['Accept', 'Approve', 'Submit', 'Quote', 'Confirm Quote', 'Place Order', 'Create Invoice', 'Confirm Invoice', 'Record Payment', 'Confirm Payment', 'Replenish'].includes(verb) ? ' primary' : ['Delete', 'Cancel', 'Reject', 'Close', 'Terminate Receiving'].includes(verb) ? ' error-plain' : ''}`} onClick={() => runVerb(verb)}><Icon name={DLG_VERB_ICON[verb] || 'check'} size={13} />{verb}</button>
         ))}
       </React.Fragment>}>
       <Descriptions cols={3} items={headerItems} />
@@ -1068,7 +1252,7 @@ function DocDetailDialog({ docId, onClose, onOpenDoc }) {
       <div className="section-label mt16">Line Items</div>
       <div className="table-wrap">
         <table className="table">
-          <thead><tr><th>#</th><th>Product</th><th>Spec</th><th style={{ width: 70 }}>Qty</th><th style={{ width: 130 }} className="right">Unit Price</th><th style={{ width: 130 }} className="right">Amount</th>{doc.type === 'RK' && <th style={{ width: 110 }}>Received</th>}</tr></thead>
+          <thead><tr><th>#</th><th>Product</th><th>Spec</th><th style={{ width: 70 }}>Qty</th><th style={{ width: 130 }} className="right">{doc.type === 'RK' ? 'Purchase Price' : 'Channel Sales Price'}</th><th style={{ width: 130 }} className="right">Amount</th>{doc.type === 'RK' && <th style={{ width: 110 }}>Received</th>}</tr></thead>
           <tbody>
             {doc.items.map((it, i) => (
               <tr key={i}>
@@ -1090,6 +1274,38 @@ function DocDetailDialog({ docId, onClose, onOpenDoc }) {
           </tbody>
         </table>
       </div>
+      {/* R10 — 单据金额五行明细（AC-10-09/13）：优先读单据冻结快照，改税率不改历史单据 */}
+      {(() => { const bd = docAmountBreakdown(doc); return (
+        <div className="mt12" style={{ maxWidth: 340, marginLeft: 'auto' }}>
+          <AmountSummary subtotal={bd.subtotal} discountTotal={bd.discountTotal} taxAmount={bd.taxAmount} taxRate={bd.taxRate === undefined ? null : bd.taxRate} freight={bd.freight} total={bd.total} currency={doc.currency} />
+        </div>
+      ); })()}
+      {/* R15 — payment voucher: structured parse + original side by side (AC-15-08) */}
+      {doc.payment && doc.payment.voucher && doc.payment.voucher.fileName && (
+        <React.Fragment>
+          <div className="section-label mt16">{t('Payment Voucher')}</div>
+          <div className="flex gap16" style={{ alignItems: 'flex-start' }}>
+            <div style={{ width: 260, border: '1px solid var(--border-light)', borderRadius: 8, padding: 8, textAlign: 'center', flexShrink: 0 }}>
+              {doc.payment.voucher.dataUrl && doc.payment.voucher.fileType === 'image'
+                ? <img src={doc.payment.voucher.dataUrl} alt="voucher" style={{ maxWidth: '100%', borderRadius: 4 }} />
+                : <div className="muted" style={{ padding: '28px 0', fontSize: 12 }}><Icon name="file" size={22} /><div className="mt8 mono" style={{ fontSize: 11, wordBreak: 'break-all' }}>{doc.payment.voucher.fileName}</div></div>}
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <Descriptions cols={2} items={[
+                { label: 'Method', value: doc.payment.voucher.parsed.method || '—' },
+                { label: 'Transaction Ref', value: <span className="mono">{doc.payment.voucher.parsed.ref || '—'}</span> },
+                { label: 'Amount', value: doc.payment.voucher.parsed.amount !== '' && doc.payment.voucher.parsed.amount != null ? <Money amount={Number(doc.payment.voucher.parsed.amount)} currency={doc.currency} /> : '—' },
+                { label: 'Date', value: <span className="mono">{doc.payment.voucher.parsed.date || '—'}</span> },
+                { label: 'Parse', value: <span className="mini-chip ai">DEMO</span> },
+                { label: 'Confirmed By', value: doc.payment.voucher.confirmedBy ? `${doc.payment.voucher.confirmedBy} · ${doc.payment.voucher.confirmedAt}` : '—' },
+              ]} />
+              {doc.payment.mismatchNote && <Banner tone="warning" icon="warn">{t('Mismatch note')}: {doc.payment.mismatchNote}</Banner>}
+            </div>
+          </div>
+        </React.Fragment>
+      )}
+      {/* R15 — payee info on QT/PO details (readonly, same data as settings; AC-15-02/03/04) */}
+      {(doc.type === 'QT' || doc.type === 'PO') && <PayeeInfoBlock />}
       <div className="section-label mt16">Flow Timeline</div>
       <Timeline items={doc.timeline} />
       {confirm && <ConfirmDialog title={`${confirm.verb} ${doc.no}`} message={confirm.message} confirmText={confirm.verb}
@@ -1124,6 +1340,9 @@ function DocDetailDialog({ docId, onClose, onOpenDoc }) {
       {dialog === 'po' && <POFormDialog editDoc={doc} onClose={() => setDialog(null)} />}
       {dialog === 'quote' && <QuoteFormDialog inquiry={doc.type === 'IQ' ? doc : null} editQuote={doc.type === 'QT' ? doc : null} onClose={() => setDialog(null)} />}
       {dialog === 'ship' && <ShipDialog po={doc} onClose={() => setDialog(null)} />}
+      {/* R16 — 拣货 / 发货表单（CK 详情） */}
+      {dialog === 'picking' && <PickingDialog ckId={doc.id} onClose={() => setDialog(null)} />}
+      {dialog === 'dispatch' && <DispatchDialog ck={doc} onClose={() => setDialog(null)} />}
       {dialog === 'receive' && <ReceiveDialog ck={doc.type === 'PO' ? (db.docs.filter(d => d.type === 'CK' && d.poNo === doc.no && ['Shipped', 'Pending Shipment'].includes(d.status)).pop() || doc) : doc} onClose={() => setDialog(null)} />}
       {/* R94 — dedicated forms for the order-flow actions; recovery verbs from
           a CK/RK detail resolve the parent purchase order */}
@@ -1168,7 +1387,7 @@ function PrintPreviewDialog({ doc, onClose }) {
           <div><span className="muted">Date:</span> {doc.createdAt}</div>
         </div>
         <table className="table" style={{ marginTop: 12, fontSize: 12 }}>
-          <thead><tr><th>Product</th><th>Spec</th><th>Qty</th><th className="right">Unit Price</th><th className="right">Amount</th></tr></thead>
+          <thead><tr><th>Product</th><th>Spec</th><th>Qty</th><th className="right">{doc.type === 'RK' ? 'Purchase Price' : 'Channel Sales Price'}</th><th className="right">Amount</th></tr></thead>
           <tbody>
             {doc.items.map((it, i) => (
               <tr key={i}><td>{it.name}</td><td className="mono small">{it.spec}</td><td className="mono">{it.qty}</td>
@@ -1337,6 +1556,10 @@ function AccountFormDialog({ mode, onClose }) {
   const isPlatform = account.type === 'platform';
   const editing = mode.editAcc;
   const subAgent = mode.subAgent;
+  // R02 — team mode = "new sub-account of my own merchant". The master-account
+  // switch is hidden here: the Team page lists non-main accounts only, so a
+  // master account created from here would never show up in the list.
+  const team = !!mode.team;
   const ownTenant = db.tenants.find(t => t.id === account.tenantId);
   // a sub-agent's max level cannot exceed what the parent tenant may grant:
   // suppliers grant any level; agents grant at most maxLevel - 1
@@ -1347,7 +1570,7 @@ function AccountFormDialog({ mode, onClose }) {
     tenant: editing ? editing.tenantId : (isPlatform ? db.tenants[0].id : account.tenantId),
     main: editing ? !!editing.main : false,
     whatsapp: editing ? editing.whatsapp || '' : '',
-    company: '', contact: '', email: '', maxSubLevel: 1,
+    company: '', contact: '', email: '', maxSubLevel: 1, levelLabel: '',
     status: 'Active',
   }));
   const [errors, setErrors] = useState({});
@@ -1380,7 +1603,7 @@ function AccountFormDialog({ mode, onClose }) {
     setErrors(errs);
     if (Object.keys(errs).length) { toast('Please fix the highlighted fields', 'error'); return; }
     if (editing) toast(`Account ${f.name} updated`, 'success');
-    else act.createAccount(f);
+    else act.createAccount(team ? { ...f, main: false } : f);
     onClose();
   };
   const platAcc = f.accountType === 'platform';
@@ -1415,6 +1638,9 @@ function AccountFormDialog({ mode, onClose }) {
           <FormRow label="Max Sub-level" required error={errors.maxSubLevel} hint={`Depth of sub-agents this sub-agent may develop (your merchant grants at most ${grantMax})`}>
             <Input value={f.maxSubLevel} onChange={v => set('maxSubLevel', v)} type="number" error={errors.maxSubLevel} />
           </FormRow>
+          <FormRow label="Level Label" hint="Optional custom level wording shown to this distributor (max 20 chars)">
+            <Input value={f.levelLabel} onChange={v => set('levelLabel', String(v || '').slice(0, 20))} placeholder="optional custom label" />
+          </FormRow>
         </div>
       </React.Fragment>) : (<React.Fragment>
         <Banner tone="info" icon="user">{isPlatform
@@ -1439,7 +1665,7 @@ function AccountFormDialog({ mode, onClose }) {
           {!platAcc && <FormRow label="Merchant" required error={errors.tenant}>
             <Select value={f.tenant} onChange={v => set('tenant', v)} options={tenantOptions} disabled={!isPlatform} />
           </FormRow>}
-          {!platAcc && (isPlatform || account.main) && <FormRow label="Master Account" hint={editing && !isPlatform ? t('Only platform admins can change the master status of an existing account') : 'Master accounts receive document push links'}>
+          {!platAcc && !team && (isPlatform || account.main) && <FormRow label="Master Account" hint={editing && !isPlatform ? t('Only platform admins can change the master status of an existing account') : 'Master accounts receive document push links'}>
             <Select value={f.main ? 'yes' : 'no'} onChange={v => set('main', v === 'yes')} options={[
               { value: 'no', label: 'No — regular sub-account' },
               { value: 'yes', label: 'Yes — master of the merchant' },
@@ -1744,10 +1970,342 @@ function DataNotesDialog({ onClose }) {
   );
 }
 
+// ---------- R21 purchase price history ----------
+// Read-only procurement record trail: every successful stock-in appends one
+// row (price / currency / qty / supplier / time / source doc no), newest first.
+// Records are GROUPED BY CURRENCY — amounts are never converted, compared or
+// summed across currencies (Q27: no FX in the prototype). Purchase history is
+// the owner's procurement record (AC-21-10 boundary mirrors AC-20-10).
+function PurchaseHistoryDialog({ productId, onClose }) {
+  const { db, account } = useApp();
+  const p = db.products.find(x => x.id === productId);
+  if (!p) return null;
+  const hist = p.purchaseHistory || [];
+  const own = p.ownerId === account.tenantId;
+  const byCur = {};
+  hist.forEach(r => { const c = r.currency || 'USD'; (byCur[c] = byCur[c] || []).push(r); });
+  const isSelf = r => r.selfProduced || r.supplierId === 'self' || r.supplierLabel === 'Self-produced';
+  const supName = r => isSelf(r)
+    ? t('Self-produced')
+    : (r.supplierName || r.supplierLabel || (r.supplierId ? tenantName(db, r.supplierId) : '—'));
+  return (
+    <Dialog title={`Purchase Price History — ${p.name}`} width="760px" onClose={onClose}
+      footer={<button className="btn" onClick={onClose}><Icon name="close" size={13} />Close</button>}>
+      <Descriptions items={[
+        { label: 'Product', value: <span className="bold">{p.name}</span> },
+        { label: 'Latest Purchase Price', value: <span className="mono bold">{money(purchasePriceOf(p), purchaseCurrencyOf(p)).text}</span> },
+        { label: 'Updated', value: p.purchaseUpdatedAt ? <span className="mono small">{p.purchaseUpdatedAt}{p.purchaseRefNo ? ` · ${p.purchaseRefNo}` : ''}</span> : '—' },
+        { label: 'Records', value: `${hist.length}` },
+      ]} />
+      {!own ? (
+        <div className="section-label mt16">Purchase History</div>
+      ) : null}
+      {!own ? (
+        <div className="card" style={{ padding: '24px 16px', textAlign: 'center' }}>
+          <Icon name="lock" size={18} />
+          <div className="muted" style={{ marginTop: 8, fontSize: 12.5 }}>Purchase history is the owner&rsquo;s procurement record and is not visible to other merchants.</div>
+        </div>
+      ) : !hist.length ? (
+        <div className="card" style={{ padding: '24px 16px', textAlign: 'center' }}>
+          <Icon name="receipt" size={18} />
+          <div className="muted" style={{ marginTop: 8, fontSize: 12.5 }}>No purchase history yet — it appears after your first stock-in.</div>
+        </div>
+      ) : Object.keys(byCur).map(cur => (
+        <React.Fragment key={cur}>
+          <div className="section-label mt16">{t('Purchase Price History')} ({cur})</div>
+          <div className="table-wrap">
+            <table className="table">
+              <thead><tr><th>#</th><th>Time</th><th>Source Doc</th><th>Supplier</th><th className="right">Qty</th><th className="right">Purchase Price</th><th className="right">Amount</th></tr></thead>
+              <tbody>
+                {byCur[cur].map((r, i) => (
+                  <tr key={i}>
+                    <td className="mono small muted">{i + 1}</td>
+                    <td className="mono small">{r.ts}</td>
+                    <td className="mono small">{r.refNo || '—'}</td>
+                    <td>{isSelf(r) ? <Tag tone="teal" dot>{t('Self-produced')}</Tag> : supName(r)}</td>
+                    <td className="right mono">{r.qty} {p.unit}</td>
+                    <td className="right mono bold">{money(r.price, cur).text}</td>
+                    <td className="right mono">{money(Math.round(r.price * r.qty * 100) / 100, cur).text}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </React.Fragment>
+      ))}
+      {own && hist.length ? <div className="muted" style={{ fontSize: 11.5, marginTop: 12, lineHeight: 1.6 }}><Icon name="info" size={12} /> Records are grouped by currency — amounts are never converted or compared across currencies. History is read-only and written automatically by stock-ins.</div> : null}
+    </Dialog>
+  );
+}
+
+// ---------- R03 — custom level label for a downstream merchant ----------
+// The label is stored on the LABELLED tenant, so two distributors under the
+// same upstream can carry different labels without overwriting each other.
+// maxLength 20 on the input and slice(0,20) in act.setLevelLabel — over-long
+// values are truncated silently rather than rejected (AC-03-07).
+function LevelLabelDialog({ tenant, onClose }) {
+  const { db, account, act } = useApp();
+  const [v, setV] = useState(tenant.levelLabel || '');
+  // quick-pick chips: labels already used by this merchant's downstream
+  const used = [];
+  db.relations.filter(r => r.upstream === account.tenantId).forEach(r => {
+    const t = db.tenants.find(x => x.id === r.downstream);
+    if (t && t.levelLabel && used.indexOf(t.levelLabel) < 0) used.push(t.levelLabel);
+  });
+  const save = () => { act.setLevelLabel(tenant.id, v); onClose(); };
+  return (
+    <Dialog title={`Level Label — ${tenant.name}`} width="520px" onClose={onClose}
+      footer={<React.Fragment>
+        <button className="btn" onClick={onClose}><Icon name="close" size={13} />Cancel</button>
+        <button className="btn primary" onClick={save}><Icon name="check" size={13} />Save Label</button>
+      </React.Fragment>}>
+      <Banner tone="info" icon="info">
+        A custom label is <b>display only</b>. The numeric sub-agent depth (max level) is unchanged, so permissions and the relation graph stay exactly as they are.
+      </Banner>
+      <div className="form mt16">
+        <FormRow label="Level Label" hint={`${(v || '').length}/20 — longer input is truncated`}>
+          <Input value={v} onChange={setV} placeholder="e.g. North Region Wholesale" />
+        </FormRow>
+      </div>
+      {used.length ? (
+        <React.Fragment>
+          <div className="section-label mt16">Labels already in use</div>
+          <div className="flex gap6" style={{ flexWrap: 'wrap' }}>
+            {used.map(u => <button type="button" key={u} className="btn sm" onClick={() => setV(u)}>{u}</button>)}
+          </div>
+        </React.Fragment>
+      ) : null}
+      {tenant.levelLabel ? (
+        <div className="muted" style={{ fontSize: 11.5, marginTop: 12 }}>
+          Set by {(() => { const a = db.accounts.find(x => x.id === tenant.levelLabelUpdatedBy); return a ? a.name : (tenant.levelLabelUpdatedBy || '—'); })()}. Clearing the field restores the default role wording.
+        </div>
+      ) : null}
+    </Dialog>
+  );
+}
+
+// ============================================================
+// R09/AC-09-07 — 被邀请方「受理邀请」弹窗。
+// 邀请方发出邀请码后，被邀请方必须有界面入口把邀请码带进来：本弹窗
+// 输入码 → 调用 act.acceptInvitation(code, account.tenantId) → 建立
+// upstream/downstream 关系边（方向由邀请角色决定，逻辑在 app.jsx）。
+// 入口：H5「我的」页 + Web「分销商」页（两端同一组件，避免两套实现）。
+// ============================================================
+function AcceptInviteDialog({ onClose, compact }) {
+  const { db, account, act, toast } = useApp();
+  const [code, setCode] = useState('');
+  const [error, setError] = useState('');
+  const [done, setDone] = useState(null);      // 受理成功后的回执（关系方向 + 对方商户）
+  const isTenant = account.type === 'tenant' && !!account.tenantId;
+  const norm = String(code || '').trim().toUpperCase();
+  // 预览：输入到一半就把「这条码是谁发的、我要做上游还是下游」显示出来，
+  // 避免用户盲输（仅匹配仍在 pending 的邀请）。
+  const preview = isTenant
+    ? (db.invitations || []).find(i => String(i.code).toUpperCase() === norm)
+    : null;
+  const submit = () => {
+    if (!isTenant) { setError('Platform accounts cannot accept merchant invitations'); return; }
+    if (!norm) { setError('Enter the invite code'); return; }
+    const r = act.acceptInvitation(norm, account.tenantId);
+    if (!r) {
+      // acceptInvitation 内部已 toast 具体原因（不存在 / 已受理 / 已过期），
+      // 这里同步一份内联错误，弹窗不关、输入可改。
+      const found = (db.invitations || []).find(i => String(i.code).toUpperCase() === norm);
+      setError(!found ? 'Invite not found or no longer pending'
+        : (found.status === 'accepted' || found.status === 'rejected'
+          ? 'This invite has already been used'
+          : 'Invite expired — ask for a new one'));
+      return;
+    }
+    const found = (db.invitations || []).find(i => String(i.code).toUpperCase() === norm);
+    setError('');
+    setDone({
+      code: norm,
+      role: found ? found.role : null,
+      counterparty: found ? tenantName(db, found.inviterTenantId) : '—',
+      direction: found && found.role === 'supplier' ? 'Upstream' : 'Downstream',
+    });
+    // 成功提示由 act.acceptInvitation 内部统一发出（避免同一个动作弹两次 toast）
+  };
+  return (
+    <Dialog title={t('Accept an Invitation')} width="min(520px, 92%)" onClose={onClose}
+      footer={<React.Fragment>
+        <button className="btn" onClick={onClose}><Icon name="close" size={13} />{t('Close')}</button>
+        {!done && <button className="btn primary" onClick={submit}><Icon name="check" size={13} />{t('Accept Invitation')}</button>}
+      </React.Fragment>}>
+      {!done ? (
+        <React.Fragment>
+          <Banner tone="info" icon="link">
+            {t('Got an invite code from a supplier or an upstream distributor? Enter it here to link the two merchants — a supply relation is created the moment you accept.')}
+          </Banner>
+          {!isTenant && (
+            <Banner tone="warning" icon="warn">
+              {t('Switch to a merchant account to accept invitations — platform accounts are not part of any supply relation.')}
+            </Banner>
+          )}
+          <div className="form mt16">
+            <FormRow label={t('Invite code')} required error={error || undefined}>
+              <Input value={code} onChange={v => { setCode(v); setError(''); }}
+                placeholder="INV-XXXXXX" autoFocus />
+            </FormRow>
+          </div>
+          {preview && preview.status === 'pending' && (
+            <div className="card" style={{ padding: '10px 12px', marginTop: 4 }}>
+              <div className="muted" style={{ fontSize: 11 }}>{t('Invited by')}</div>
+              <div style={{ fontSize: 13.5, fontWeight: 600 }}>{tenantName(db, preview.inviterTenantId)}</div>
+              <div className="muted" style={{ fontSize: 11.5, marginTop: 2 }}>
+                {preview.role === 'supplier'
+                  ? t('Accepting makes them your upstream supplier')
+                  : t('Accepting makes you their downstream distributor')}
+                {' · '}{t('Valid until')} {preview.validUntil}
+              </div>
+            </div>
+          )}
+          <div className="muted" style={{ fontSize: 11.5, marginTop: 12 }}>
+            {t('A supply relation is recorded against your current merchant, then the invite is marked accepted.')}
+          </div>
+        </React.Fragment>
+      ) : (
+        <React.Fragment>
+          <Banner tone="success" icon="check">
+            {t('Invitation accepted — supply relation established.')}
+          </Banner>
+          {/* 回执信息：Web 端用两列 Descriptions（与现有弹窗一致）；
+              H5 窄框（约 380px）里 .desc-label 固定 150px 会把右列裁掉，
+              故 compact 走单列「标签 / 值」上下排列 */}
+          {compact ? (
+            <div className="card" style={{ padding: '12px 14px' }}>
+              {[
+                { k: t('Invite code'), v: <span className="mono bold">{done.code}</span> },
+                { k: t('Invited by'), v: done.counterparty },
+                { k: t('Your role'), v: done.direction === 'Upstream'
+                  ? <Tag tone="primary">{t('Upstream / Supplier')}</Tag>
+                  : <Tag tone="success">{t('Downstream / Distributor')}</Tag> },
+                { k: t('Relation'), v: done.direction === 'Upstream'
+                  ? `${t('You supply')} ${done.counterparty}`
+                  : `${done.counterparty} ${t('supplies you')}` },
+              ].map((row, i) => (
+                <div key={i} style={{ padding: '7px 0', borderTop: i ? '1px solid var(--border-light)' : 'none' }}>
+                  <div className="muted" style={{ fontSize: 11 }}>{row.k}</div>
+                  <div style={{ fontSize: 13, fontWeight: 600, marginTop: 2, display: 'flex', flexWrap: 'wrap', gap: 6 }}>{row.v}</div>
+                </div>
+              ))}
+            </div>
+          ) : (
+          <Descriptions cols={2} items={[
+            { label: 'Invite code', value: <span className="mono bold">{done.code}</span> },
+            { label: 'Invited by', value: done.counterparty },
+            { label: 'Your role', value: done.direction === 'Upstream'
+              ? <Tag tone="primary">Upstream / Supplier</Tag>
+              : <Tag tone="success">Downstream / Distributor</Tag> },
+            { label: 'Relation', value: done.direction === 'Upstream'
+              ? `${t('You supply')} ${done.counterparty}`
+              : `${done.counterparty} ${t('supplies you')}` },
+          ]} />)}
+          <div className="muted" style={{ fontSize: 11.5, marginTop: 12 }}>
+            {t('The pairing now appears in both merchants’ Distributors list — open it to verify.')}
+          </div>
+        </React.Fragment>
+      )}
+    </Dialog>
+  );
+}
+
+// ============================================================
+// R09 — 供应商/分销商邀请弹窗：两套话术（INVITE_COPY）+ 三种分享
+// 方式（WhatsApp / 复制邀请码 / 扫码占位）+ 邀请记录（状态标识）
+// ============================================================
+function InviteDialog({ role, onClose }) {
+  const { db, account, act, toast } = useApp();
+  const copy = INVITE_COPY[role] || INVITE_COPY.distributor;
+  const [inv, setInv] = useState(null);
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const today = new Date().toISOString().slice(0, 10);
+  const generate = () => {
+    const r = act.createInvitation({ role, inviteeName: name, inviteePhone: phone });
+    if (r) setInv(r);
+  };
+  const shareWa = () => {
+    if (!inv) return;
+    const text = `${copy.waText} ${inv.code} (valid until ${inv.validUntil})`;
+    window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank', 'noopener');
+  };
+  const copyCode = async () => {
+    if (!inv) return;
+    try { await navigator.clipboard.writeText(inv.code); toast(`Invite code ${inv.code} copied`, 'success'); }
+    catch (e) { toast(`Copy failed — please copy manually: ${inv.code}`, 'error'); }
+  };
+  const statusTag = i => {
+    if (i.status === 'accepted') return <Tag tone="success">Accepted</Tag>;
+    if (i.status === 'rejected') return <Tag tone="danger">Rejected</Tag>;
+    if (i.status === 'expired' || (i.status === 'pending' && i.validUntil < today)) return <Tag tone="gray">Expired</Tag>;
+    return <Tag tone="warning" dot>Pending</Tag>;
+  };
+  const mine = (db.invitations || []).filter(i => i.inviterTenantId === account.tenantId && i.role === role);
+  return (
+    <Dialog title={t(copy.title)} width="600px" onClose={onClose}
+      footer={<React.Fragment>
+        <button className="btn" onClick={onClose}><Icon name="close" size={13} />{t('Close')}</button>
+        <button className="btn primary" onClick={generate}><Icon name="link" size={13} />{inv ? t('Regenerate') : t('Generate Invite Code')}</button>
+      </React.Fragment>}>
+      {/* 双向收益话术（AC-09-02/03）：两套独立文案来自 data.jsx INVITE_COPY */}
+      <Banner tone="info" icon="users">
+        <b>{t('What they get')}:</b> {t(copy.toThem)}
+      </Banner>
+      <Banner tone="success" icon="check">
+        <b>{t('What you get')}:</b> {t(copy.toYou)}
+      </Banner>
+      <div className="form mt16">
+        <FormRow label={t('Invitee name (optional)')}>
+          <Input value={name} onChange={setName} placeholder={role === 'supplier' ? 'e.g. Shenzhen Cell Co.' : 'e.g. Enugu Distributor'} />
+        </FormRow>
+        <FormRow label={t('Invitee WhatsApp (optional)')}>
+          <Input value={phone} onChange={setPhone} placeholder="+234 ..." />
+        </FormRow>
+      </div>
+      {inv && (
+        <div className="card" style={{ padding: '12px 14px', marginTop: 12, borderColor: 'var(--primary)' }}>
+          <div className="flex gap10" style={{ alignItems: 'center' }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div className="muted" style={{ fontSize: 11 }}>{t('Invite code')}</div>
+              <div className="mono" style={{ fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>{inv.code}</div>
+              <div className="muted" style={{ fontSize: 11.5 }}>{t('Valid until')} {inv.validUntil}</div>
+            </div>
+            {/* 三种分享方式（AC-09-04），各自有可见的操作反馈 */}
+            <button className="btn success" onClick={shareWa}><Icon name="whatsapp" size={13} />{t('Share via WhatsApp')}</button>
+            <button className="btn" onClick={copyCode}><Icon name="link" size={13} />{t('Copy Invite Code')}</button>
+          </div>
+          <div className="flex gap10 mt8" style={{ alignItems: 'center' }}>
+            <div style={{ width: 72, height: 72, border: '1px dashed var(--border-light)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Icon name="scan" size={26} /></div>
+            <div className="muted" style={{ fontSize: 11.5, lineHeight: 1.6 }}>{t('Scan QR Code')} — {t('Demo placeholder — no real QR code in this prototype')}</div>
+          </div>
+        </div>
+      )}
+      {/* 邀请记录（AC-19-08）：拒绝/过期有状态标识 */}
+      {mine.length > 0 && (
+        <React.Fragment>
+          <div className="section-label mt16">{t('My invitations')}</div>
+          {mine.slice(-5).reverse().map(i => (
+            <div key={i.id} className="flex gap10" style={{ alignItems: 'center', padding: '6px 10px', background: 'var(--bg-2, #f6f7f9)', borderRadius: 6, marginBottom: 6 }}>
+              <span className="mono" style={{ fontSize: 12.5, fontWeight: 600 }}>{i.code}</span>
+              <span className="muted small" style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {(i.inviteeName || i.inviteePhone || t('No invitee specified'))} · {t('Valid until')} {i.validUntil}
+              </span>
+              {statusTag(i)}
+            </div>
+          ))}
+        </React.Fragment>
+      )}
+    </Dialog>
+  );
+}
+
 Object.assign(window, {
   ProductFormDialog, ImportDialog, CategoryDialog, InquiryFormDialog, QuoteFormDialog, POFormDialog, DownstreamStockDialog,
+  PurchaseHistoryDialog, LevelLabelDialog,
   AdjustStockDialog, ShipDialog, ReceiveDialog, DocDetailDialog, PrintPreviewDialog, TenantFormDialog, BindWhatsAppDialog,
   RelationDialog, TenantDetailDialog, AccountFormDialog, PermissionGuideDialog, DataNotesDialog, DataNotesTable, ProfileDialog, PermissionSummaryDialog,
-  AcceptOrderDialog, PayDialog, ReReceiveDialog, ReplenishDialog, TerminateDialog,
+  AcceptOrderDialog, PayDialog, ReReceiveDialog, ReplenishDialog, TerminateDialog, DispatchDialog, PickingDialog, InviteDialog, AcceptInviteDialog,
   BATCH_OK_ROWS, BATCH_FAIL_ROWS, BATCH_CORRECTED_ROWS,
 });
