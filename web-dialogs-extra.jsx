@@ -69,7 +69,7 @@ function WaybillCard({ doc }) {
                     </div>
                   </td>
                   <td className="small muted mono">{it.spec}</td>
-                  <td className="mono right">{it.qty} {it.unit}</td>
+                  <td className="mono right">{it.qty} {t(it.unit)}</td>
                 </tr>
               ))}
             </tbody>

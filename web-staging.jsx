@@ -124,7 +124,7 @@ function WebInquiryPanel({ onInquired }) {
         <Icon name="whatsapp" size={12} /> {t("After submitting, each inquiry is sent to the supplier's WhatsApp chat.")}
       </div>
       <div className="flex" style={{ alignItems: 'center', gap: 12 }}>
-        <div style={{ flex: 1 }} className="muted small">{`${lines.length} items · ${totalQty} units · ${groups.length} suppliers`}</div>
+        <div style={{ flex: 1 }} className="muted small">{`${tItems(lines.length)} · ${totalQty} ${t('units')} · ${groups.length} ${t('suppliers')}`}</div>
         <button className="btn error-plain" onClick={() => { cartApi.clear('inquiry'); toast('Inquiry staging cleared', 'info'); }}><Icon name="trash" size={13} />{t('Clear')}</button>
         <button className="btn primary" onClick={submit}><Icon name="whatsapp" size={13} />{t('Submit Inquiry')}</button>
       </div>
@@ -249,7 +249,7 @@ function WebInboundPanel({ onDone }) {
                             <img src={prodImg(p)} alt="" style={{ width: 36, height: 36, borderRadius: 6, objectFit: 'cover' }} />
                             <div>
                               <div className="flex gap6" style={{ alignItems: 'center' }}><span style={{ fontSize: 13, fontWeight: 600 }}>{p.name}</span><Tag tone="success">{t('Existing product')}</Tag></div>
-                              <div className="cell-sub mono">{p.model} · {t('On Hand')} {stockOf(l.pid)} {p.unit}</div>
+                              <div className="cell-sub mono">{p.model} · {t('On Hand')} {stockOf(l.pid)} {t(p.unit)}</div>
                             </div>
                           </div>
                         ) : (
@@ -274,7 +274,7 @@ function WebInboundPanel({ onDone }) {
           </div>
           {/* 合计金额 = Σ(物料单价 × 数量)；多币种按币种分别小计，逐币种上下堆叠 */}
           <div className="flex" style={{ alignItems: 'flex-start', justifyContent: 'space-between', padding: '10px 14px', background: '#F8FAFC', borderRadius: 8, margin: '2px 0 10px' }}>
-            <span className="muted small">{`${lines.length} items · ${totalQty} units`}</span>
+            <span className="muted small">{`${tItems(lines.length)} · ${totalQty} ${t('units')}`}</span>
             <div style={{ textAlign: 'right' }}>
               {Object.keys(totalsByCur).map(c => (
                 <div key={c} className="mono" style={{ fontSize: 13, fontWeight: 700, color: '#D35400', lineHeight: 1.6 }}>{t('Total')} {money(totalsByCur[c], c).text}</div>
@@ -466,7 +466,7 @@ function WebOutboundPanel({ onDone }) {
             <React.Fragment>
               <div className="table-wrap">
                 <table className="table">
-                  <thead><tr><th>Product</th><th style={{ width: 90 }}>{t('On Hand')}</th><th style={{ width: 80 }}>Qty</th><th style={{ width: 180 }}>{t('Channel Sales Price')}</th><th style={{ width: 100 }}>{t('Line discount')}</th><th style={{ width: 150 }} className="right">{t('Amount')}</th><th style={{ width: 40 }}></th></tr></thead>
+                  <thead><tr><th>Product</th><th style={{ width: 90 }}>{t('On Hand')}</th><th style={{ width: 80 }}>Qty</th><th style={{ width: 180 }}>{t('Channel sale price')}</th><th style={{ width: 100 }}>{t('Line discount')}</th><th style={{ width: 150 }} className="right">{t('Amount')}</th><th style={{ width: 40 }}></th></tr></thead>
                   <tbody>
                     {lines.map((l, i) => {
                       const p = db.products.find(x => x.id === l.pid) || {};
@@ -483,7 +483,7 @@ function WebOutboundPanel({ onDone }) {
                               </div>
                             </div>
                           </td>
-                          <td><span className="mono small">{onHand} {p.unit}</span></td>
+                          <td><span className="mono small">{onHand} {t(p.unit)}</span></td>
                           <td><Input value={String(l.qty)} onChange={v => cartApi.setQty('outbound', i, Math.max(0, parseInt(v, 10) || 0), cartId)} type="number" /></td>
                           <td>
                             <div className="flex gap6" style={{ alignItems: 'center' }}>
@@ -521,7 +521,7 @@ function WebOutboundPanel({ onDone }) {
                     <span className="muted mono small">%</span>
                   </div>
                   <div className="flex gap8" style={{ alignItems: 'center' }}>
-                    <span className="muted small">{t('Freight amount')}</span>
+                    <span className="muted small">{t('Courier fee amount')}</span>
                     <Input value={cur.freight === undefined || cur.freight === null ? '' : String(cur.freight)} placeholder="0" onChange={v => cartApi.setCartField(cartId, 'freight', v === '' ? null : Number(v))} type="number" style={{ width: 84 }} />
                     <span className="muted mono small">{t('Freight')}</span>
                   </div>
@@ -536,7 +536,7 @@ function WebOutboundPanel({ onDone }) {
                 </FormRow>
               </div>
               <div className="flex" style={{ alignItems: 'center', gap: 12, marginTop: 4 }}>
-                <div style={{ flex: 1 }} className="muted small">{`${lines.length} items · ${totalQty} units`}</div>
+                <div style={{ flex: 1 }} className="muted small">{`${tItems(lines.length)} · ${totalQty} ${t('units')}`}</div>
                 <button className="btn error-plain" onClick={() => { cartApi.clear('outbound'); toast('This cart cleared', 'info'); }}><Icon name="trash" size={13} />{t('Clear')}</button>
                 <button className="btn warning" onClick={confirm}><NavIcon name="stockOut" size={13} />{t('Confirm Batch Outbound')}</button>
               </div>
@@ -602,7 +602,7 @@ function WebWhatsAppDialog({ docIds, onOpenDoc, onClose }) {
                     <span className="wa-avatar" style={{ width: 36, height: 36, fontSize: 15 }}>{sup ? sup.name[0] : '?'}</span>
                     <div className="wa-body">
                       <div className="wa-title">{sup ? sup.name : d.seller}</div>
-                      <div className="wa-text">{t('Inquiry')} {d.no} · {d.items.length} items · {money(docAmount(d), d.currency).full}</div>
+                      <div className="wa-text">{t('Inquiry')} {d.no} · {tItems(d.items.length)} · {money(docAmount(d), d.currency).full}</div>
                       <div className="wa-meta">
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Icon name="checkDouble" size={12} color="#53BDEB" />{t('Sent via WhatsApp · Delivered')}</span>
                         {mainAcc && mainAcc.whatsapp ? <span className="mono">{mainAcc.whatsapp}</span> : null}

@@ -77,7 +77,7 @@ function ProductFormDialog({ editProduct, onClose }) {
         <FormRow label="Unit">
           <Select value={f.unit} onChange={v => set('unit', v)} options={['pcs', 'box', 'set', 'kg'].map(u => ({ value: u, label: u }))} />
         </FormRow>
-        <FormRow label="Channel Sales Price" required error={errors.price}>
+        <FormRow label="Channel sale price" required error={errors.price}>
           {/* R108 — 价格表单项统一币种在前、金额在后 */}
           <div className="flex gap8">
             <Select value={f.currency} onChange={v => set('currency', v)} style={{ width: 100 }} options={['USD', 'NGN', 'CNY'].map(c => ({ value: c, label: c }))} />
@@ -150,9 +150,9 @@ function DownstreamStockDialog({ productId, onClose }) {
     <Dialog title={`Downstream Stock — ${p.name}`} width="560px" onClose={onClose}
       footer={<button className="btn" onClick={onClose}><Icon name="close" size={13} />Close</button>}>
       <div className="flex gap10 mb12">
-        <div style={{ flex: 1, textAlign: 'center', padding: '8px 6px', background: '#F7F9FB', borderRadius: 8 }}><div className="muted small">My Stock</div><div className="mono bold" style={{ fontSize: 16 }}>{myStockV == null ? '—' : <React.Fragment>{myStockV} {p.unit}</React.Fragment>}</div></div>
+        <div style={{ flex: 1, textAlign: 'center', padding: '8px 6px', background: '#F7F9FB', borderRadius: 8 }}><div className="muted small">My Stock</div><div className="mono bold" style={{ fontSize: 16 }}>{myStockV == null ? '—' : <React.Fragment>{myStockV} {t(p.unit)}</React.Fragment>}</div></div>
         <div style={{ flex: 1, textAlign: 'center', padding: '8px 6px', background: '#F7F9FB', borderRadius: 8 }}><div className="muted small">Downstream Merchants</div><div className="mono bold" style={{ fontSize: 16 }}>{dsTenants}</div></div>
-        <div style={{ flex: 1, textAlign: 'center', padding: '8px 6px', background: '#F7F9FB', borderRadius: 8 }}><div className="muted small">Channel Total</div><div className="mono bold" style={{ fontSize: 16 }}>{dsTotal} {p.unit}</div></div>
+        <div style={{ flex: 1, textAlign: 'center', padding: '8px 6px', background: '#F7F9FB', borderRadius: 8 }}><div className="muted small">Channel Total</div><div className="mono bold" style={{ fontSize: 16 }}>{dsTotal} {t(p.unit)}</div></div>
       </div>
       <DownstreamStockTree db={db} rootTenantId={account.tenantId} productId={productId} />
       <div className="muted small mt12">Stock visibility follows the sales chain — each level shows the current on-hand quantity of this product; receiving and outbound update the numbers in real time.</div>
@@ -287,7 +287,7 @@ function InquiryFormDialog({ editDoc, initialPid, onClose }) {
   const stockAvail = pid => {
     const p = db.products.find(x => x.id === pid);
     const v = p ? (db.stock[f.seller] || {})[pid] : null;
-    return v == null ? '—' : <React.Fragment>{v} {p.unit}</React.Fragment>;
+    return v == null ? '—' : <React.Fragment>{v} {t(p.unit)}</React.Fragment>;
   };
   const save = (submit) => {
     const errs = {};
@@ -403,7 +403,7 @@ function QuoteFormDialog({ inquiry, editQuote, onClose }) {
       <div className="section-label mt16">Quote Lines <span className="mini-chip ai" hidden={!aiUsed}>AI suggested prices — editable</span></div>
       <div className="table-wrap">
         <table className="table">
-          <thead><tr><th>Product</th><th style={{ width: 90 }}>Qty</th><th style={{ width: 150 }}>Channel Sales Price ({currency})</th><th style={{ width: 130 }} className="right">Amount</th></tr></thead>
+          <thead><tr><th>Product</th><th style={{ width: 90 }}>Qty</th><th style={{ width: 150 }}>Channel sale price ({currency})</th><th style={{ width: 130 }} className="right">Amount</th></tr></thead>
           <tbody>
             {items.map((it, i) => (
               <tr key={i}>
@@ -507,7 +507,7 @@ function POFormDialog({ editDoc, onClose }) {
           {errors.items && <div className="field-error"><Icon name="error" size={12} />{errors.items}</div>}
           <div className="table-wrap">
             <table className="table">
-              <thead><tr><th>Product</th><th style={{ width: 90 }}>Qty</th><th style={{ width: 130 }}>Channel Sales Price</th><th style={{ width: 100 }}>Supplier Stock</th><th style={{ width: 36 }}></th></tr></thead>
+              <thead><tr><th>Product</th><th style={{ width: 90 }}>Qty</th><th style={{ width: 130 }}>Channel sale price</th><th style={{ width: 100 }}>Supplier Stock</th><th style={{ width: 36 }}></th></tr></thead>
               <tbody>
                 {f.items.map((it, i) => (
                   <tr key={i}>
@@ -557,7 +557,7 @@ function AdjustStockDialog({ productId, onClose }) {
       <Descriptions items={[
         { label: 'Product', value: <span className="bold">{p.name}</span> },
         { label: 'Warehouse', value: 'Default Warehouse' },
-        { label: 'Current On Hand', value: <span className="mono bold">{current} {p.unit}</span> },
+        { label: 'Current On Hand', value: <span className="mono bold">{current} {t(p.unit)}</span> },
       ]} />
       <div className="form mt16" style={{ gridTemplateColumns: '1fr' }}>
         <FormRow label="Change Type" required>
@@ -796,7 +796,7 @@ function AcceptOrderDialog({ po, onClose }) {
       <div className="section-label mt16">Order Summary</div>
       <div className="table-wrap">
         <table className="table">
-          <thead><tr><th>Product</th><th style={{ width: 70 }}>Qty</th><th style={{ width: 110 }}>Channel Sales Price</th></tr></thead>
+          <thead><tr><th>Product</th><th style={{ width: 70 }}>Qty</th><th style={{ width: 110 }}>Channel sale price</th></tr></thead>
           <tbody>
             {po.items.map(it => (
               <tr key={it.pid}>
@@ -1157,7 +1157,7 @@ function DocDetailDialog({ docId, onClose, onOpenDoc }) {
   if (doc.deliveryDate) headerItems.push({ label: 'Delivery Date', value: doc.deliveryDate });
   // R94 — form-captured details surface on the header
   if (doc.expectedShipDate) headerItems.push({ label: 'Expected Dispatch', value: <span className="mono">{doc.expectedShipDate}</span> });
-  if (doc.payment) headerItems.push({ label: 'Payment', value: <span className="mono">{doc.payment.method}{doc.payment.ref ? ` · ${doc.payment.ref}` : ''} · {doc.payment.date}{doc.payment.status === 'pending' ? ' · ' + t('Pending confirmation') : ''}{doc.payment.status === 'confirmed' ? ' · ' + t('Confirmed') : ''}</span> });
+  if (doc.payment) headerItems.push({ label: 'Payment', value: <span className="mono">{t(doc.payment.method)}{doc.payment.ref ? ` · ${doc.payment.ref}` : ''} · {doc.payment.date}{doc.payment.status === 'pending' ? ' · ' + t('Pending confirmation') : ''}{doc.payment.status === 'confirmed' ? ' · ' + t('Confirmed') : ''}</span> });
   if (doc.validUntil) headerItems.push({ label: 'Valid Until', value: doc.validUntil });
   if (doc.inquiryNo) headerItems.push({ label: 'Inquiry Ref', value: <span className="mono">{doc.inquiryNo}</span> });
   if (doc.quoteNo) headerItems.push({ label: 'Quote Ref', value: <span className="mono">{doc.quoteNo}</span> });
@@ -1252,7 +1252,7 @@ function DocDetailDialog({ docId, onClose, onOpenDoc }) {
       <div className="section-label mt16">Line Items</div>
       <div className="table-wrap">
         <table className="table">
-          <thead><tr><th>#</th><th>Product</th><th>Spec</th><th style={{ width: 70 }}>Qty</th><th style={{ width: 130 }} className="right">{doc.type === 'RK' ? 'Purchase Price' : 'Channel Sales Price'}</th><th style={{ width: 130 }} className="right">Amount</th>{doc.type === 'RK' && <th style={{ width: 110 }}>Received</th>}</tr></thead>
+          <thead><tr><th>#</th><th>Product</th><th>Spec</th><th style={{ width: 70 }}>Qty</th><th style={{ width: 130 }} className="right">{doc.type === 'RK' ? 'Purchase Price' : 'Channel sale price'}</th><th style={{ width: 130 }} className="right">Amount</th>{doc.type === 'RK' && <th style={{ width: 110 }}>Received</th>}</tr></thead>
           <tbody>
             {doc.items.map((it, i) => (
               <tr key={i}>
@@ -1264,7 +1264,7 @@ function DocDetailDialog({ docId, onClose, onOpenDoc }) {
                   </div>
                 </td>
                 <td className="small muted mono">{it.spec}</td>
-                <td className="mono">{it.qty} {it.unit}</td>
+                <td className="mono">{it.qty} {t(it.unit)}</td>
                 <td className="right"><Money amount={it.price} currency={doc.currency} /></td>
                 <td className="right"><Money amount={it.qty * it.price} currency={doc.currency} /></td>
                 {doc.type === 'RK' && <td className="mono">{it.actualQty != null ? it.actualQty : it.qty}</td>}
@@ -1387,7 +1387,7 @@ function PrintPreviewDialog({ doc, onClose }) {
           <div><span className="muted">Date:</span> {doc.createdAt}</div>
         </div>
         <table className="table" style={{ marginTop: 12, fontSize: 12 }}>
-          <thead><tr><th>Product</th><th>Spec</th><th>Qty</th><th className="right">{doc.type === 'RK' ? 'Purchase Price' : 'Channel Sales Price'}</th><th className="right">Amount</th></tr></thead>
+          <thead><tr><th>Product</th><th>Spec</th><th>Qty</th><th className="right">{doc.type === 'RK' ? 'Purchase Price' : 'Channel sale price'}</th><th className="right">Amount</th></tr></thead>
           <tbody>
             {doc.items.map((it, i) => (
               <tr key={i}><td>{it.name}</td><td className="mono small">{it.spec}</td><td className="mono">{it.qty}</td>
@@ -2023,7 +2023,7 @@ function PurchaseHistoryDialog({ productId, onClose }) {
                     <td className="mono small">{r.ts}</td>
                     <td className="mono small">{r.refNo || '—'}</td>
                     <td>{isSelf(r) ? <Tag tone="teal" dot>{t('Self-produced')}</Tag> : supName(r)}</td>
-                    <td className="right mono">{r.qty} {p.unit}</td>
+                    <td className="right mono">{r.qty} {t(p.unit)}</td>
                     <td className="right mono bold">{money(r.price, cur).text}</td>
                     <td className="right mono">{money(Math.round(r.price * r.qty * 100) / 100, cur).text}</td>
                   </tr>

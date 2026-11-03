@@ -165,8 +165,8 @@ function InboundWizard(props) {
         <label className="wiz-field"><span>{t('Apply to')}</span>
           <select className="input" style={{ height: 32 }} value={bulkTarget} onChange={e => setBulkTarget(e.target.value)}>
             <option value="both">{t('Both prices')}</option>
-            <option value="market">{t('Market reference price')}</option>
-            <option value="sale">{t('Channel sales price')}</option>
+            <option value="market">{t('market guide price')}</option>
+            <option value="sale">{t('channel sale price')}</option>
           </select>
         </label>
         <button type="button" className="btn" onClick={buildPreview}><Icon name="edit" size={13} />{t('Preview')}</button>
@@ -178,8 +178,8 @@ function InboundWizard(props) {
         <span style={{ width: 26 }}><input type="checkbox" checked={rows.length > 0 && sel.length === rows.length} onChange={toggleAll} /></span>
         <span style={{ flex: 1 }}>{t('Product')}</span>
         <span style={{ width: 92 }}>{t('Purchase price')}</span>
-        <span style={{ width: 92 }}>{t('Market reference price')}</span>
-        <span style={{ width: 92 }}>{t('Channel sales price')}</span>
+        <span style={{ width: 92 }}>{t('market guide price')}</span>
+        <span style={{ width: 92 }}>{t('channel sale price')}</span>
       </div>
       {rows.map(r => {
         const belowCost = r.salePrice > 0 && r.purchasePrice > 0 && r.salePrice < r.purchasePrice;

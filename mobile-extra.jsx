@@ -509,7 +509,7 @@ function H5StockPage({ push }) {
             <div className="muted mono" style={{ fontSize: 11 }}>{p.model}</div>
           </div>
           <div style={{ textAlign: 'right', marginRight: 6 }}>
-            <div className="mono bold" style={{ fontSize: 15 }}>{stock[p.id]} {p.unit}</div>
+            <div className="mono bold" style={{ fontSize: 15 }}>{stock[p.id]} {t(p.unit)}</div>
             <div className="muted" style={{ fontSize: 10.5 }}>on hand</div>
           </div>
           {canManageProduct(db, account, p) ? (
@@ -524,7 +524,7 @@ function H5StockPage({ push }) {
         <div style={{ position: 'absolute', inset: 0, background: 'rgba(23,35,47,0.5)', zIndex: 300, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: 16, paddingBottom: 40 }} onClick={() => setAdjust(null)}>
           <div style={{ background: '#f5f6f8', borderRadius: 14, padding: 16 }} onClick={e => e.stopPropagation()}>
             <div style={{ fontWeight: 700, fontSize: 15 }}>Adjust Stock — {adjust.name}</div>
-            <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>Current: <b className="mono">{stock[adjust.id]}</b> {adjust.unit}</div>
+            <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>Current: <b className="mono">{stock[adjust.id]}</b> {t(adjust.unit)}</div>
             <div className="flex gap8 mt12">
               {[['IN', 'Inbound +'], ['OUT', 'Outbound −'], ['ADJ', 'Count To']].map(([v, label]) => (
                 <span key={v} className={`h5-chip${mode === v ? ' on' : ''}`} style={{ flex: 1, textAlign: 'center' }} onClick={() => setMode(v)}>{label}</span>
@@ -577,7 +577,7 @@ function H5MovementsPage() {
               <Tag tone={tone}>{m.type}</Tag>
             </div>
             <div className="flex mt8 muted" style={{ fontSize: 11.5, justifyContent: 'space-between' }}>
-              <span className="mono">{m.before} → {m.after} ({m.qty > 0 ? '+' : ''}{m.qty}){p && <React.Fragment> {p.unit}</React.Fragment>}</span>
+              <span className="mono">{m.before} → {m.after} ({m.qty > 0 ? '+' : ''}{m.qty}){p && <React.Fragment> {t(p.unit)}</React.Fragment>}</span>
               <span>{m.ts}</span>
             </div>
             <div className="muted" style={{ fontSize: 11.5, marginTop: 4 }}>Ref <span className="mono">{m.refNo}</span> · by {m.by}</div>
@@ -684,7 +684,7 @@ function H5PrintPage({ docId }) {
           <div><span className="muted">Date:</span> {doc.createdAt}</div>
         </div>
         <table className="table" style={{ marginTop: 12, fontSize: 10 }}>
-          <thead><tr><th>Product</th><th>Spec</th><th>Qty</th><th className="right">Channel Sales Price</th><th className="right">Amount</th></tr></thead>
+          <thead><tr><th>Product</th><th>Spec</th><th>Qty</th><th className="right">Channel sale price</th><th className="right">Amount</th></tr></thead>
           <tbody>
             {doc.items.map((it, i) => (
               <tr key={i}><td>{it.name}</td><td className="mono small">{it.spec}</td><td className="mono">{it.qty}</td>
@@ -793,7 +793,7 @@ function H5GuestDocPage({ docNo, onExit }) {
               <span className="mono" style={{ fontWeight: 700, fontSize: 13 }}>{doc.no}</span>
               <StatusTag type={doc.type} status={doc.status} />
             </div>
-            <div className="muted" style={{ fontSize: 12, marginTop: 8 }}>{doc.items.length} items · {money(docAmount(doc), doc.currency).full}</div>
+            <div className="muted" style={{ fontSize: 12, marginTop: 8 }}>{tItems(doc.items.length)} · {money(docAmount(doc), doc.currency).full}</div>
             <div className="muted" style={{ fontSize: 11.5, marginTop: 4 }}>Seller {tenantName(db, doc.seller)} → Buyer {tenantName(db, doc.buyer)}</div>
             {doc.waybill && <div className="muted mono" style={{ fontSize: 11.5, marginTop: 4 }}>Waybill {doc.waybill.no} · {doc.waybill.carrier} · {doc.waybill.plate} · {doc.waybill.driver}</div>}
           </div>
@@ -807,7 +807,7 @@ function H5GuestDocPage({ docNo, onExit }) {
                 {img
                   ? <img src={img} alt="" style={{ width: 38, height: 38, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
                   : <div style={{ width: 38, height: 38, borderRadius: 8, background: '#F5F6F8', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Icon name="box" size={15} color="var(--text-3)" /></div>}
-                <span style={{ flex: 1, minWidth: 0 }}>{it.name}<div className="muted mono" style={{ fontSize: 10.5, marginTop: 2 }}>{it.spec}</div></span><span className="mono muted">{it.qty} {it.unit}</span>
+                <span style={{ flex: 1, minWidth: 0 }}>{it.name}<div className="muted mono" style={{ fontSize: 10.5, marginTop: 2 }}>{it.spec}</div></span><span className="mono muted">{it.qty} {t(it.unit)}</span>
               </div>
               );
             })}
@@ -1278,8 +1278,8 @@ function H5PriceFormPage({ productId, onDone }) {
             <Tag tone="dark">Read-only</Tag>
           </div>
         </div>
-        <div className="h5-form-row"><span className="k">Market Reference Price *</span><div style={{ flex: 1, display: 'flex', gap: 8 }}><Select value={mktCur} onChange={setMktCur} options={CUR_OPTS} style={{ width: 84, height: 32 }} /><input className="input" style={{ height: 32, flex: 1, minWidth: 0 }} type="number" value={market} onChange={e => setMarket(e.target.value)} placeholder="0.00" />{errs.market && <div className="field-error">{errs.market}</div>}</div></div>
-        <div className="h5-form-row"><span className="k">Channel Sales Price *</span><div style={{ flex: 1, display: 'flex', gap: 8 }}><Select value={saleCur} onChange={setSaleCur} options={CUR_OPTS} style={{ width: 84, height: 32 }} /><input className="input" style={{ height: 32, flex: 1, minWidth: 0 }} type="number" value={sale} onChange={e => setSale(e.target.value)} placeholder="0.00" />{errs.sale && <div className="field-error">{errs.sale}</div>}</div></div>
+        <div className="h5-form-row"><span className="k">Market guide price *</span><div style={{ flex: 1, display: 'flex', gap: 8 }}><Select value={mktCur} onChange={setMktCur} options={CUR_OPTS} style={{ width: 84, height: 32 }} /><input className="input" style={{ height: 32, flex: 1, minWidth: 0 }} type="number" value={market} onChange={e => setMarket(e.target.value)} placeholder="0.00" />{errs.market && <div className="field-error">{errs.market}</div>}</div></div>
+        <div className="h5-form-row"><span className="k">Channel sale price *</span><div style={{ flex: 1, display: 'flex', gap: 8 }}><Select value={saleCur} onChange={setSaleCur} options={CUR_OPTS} style={{ width: 84, height: 32 }} /><input className="input" style={{ height: 32, flex: 1, minWidth: 0 }} type="number" value={sale} onChange={e => setSale(e.target.value)} placeholder="0.00" />{errs.sale && <div className="field-error">{errs.sale}</div>}</div></div>
       </div>
       <div className="h5-card mt12 muted" style={{ fontSize: 11.5, lineHeight: 1.6 }}><Icon name="info" size={12} /> Purchase price is the procurement record and cannot be edited here. The adjustment updates the channel sales price / market reference price on your catalog and is logged in the operation events. Each price field keeps its own currency code — they are set independently.</div>
       <div className="flex gap10 mt16">
@@ -1320,8 +1320,8 @@ function H5AdjustStockPage({ productId, onDone }) {
       </div>
       <div className="h5-desc mt12">
         <div className="h5-desc-row"><div className="k">Warehouse</div><div className="v">Default Warehouse</div></div>
-        <div className="h5-desc-row"><div className="k">On Hand</div><div className="v mono bold">{current} {p.unit}</div></div>
-        <div className="h5-desc-row"><div className="k">After Adjust</div><div className="v mono bold" style={{ color: projected < 0 ? 'var(--danger)' : undefined }}>{projected} {p.unit}</div></div>
+        <div className="h5-desc-row"><div className="k">On Hand</div><div className="v mono bold">{current} {t(p.unit)}</div></div>
+        <div className="h5-desc-row"><div className="k">After Adjust</div><div className="v mono bold" style={{ color: projected < 0 ? 'var(--danger)' : undefined }}>{projected} {t(p.unit)}</div></div>
       </div>
       <div className="h5-section-title">Adjustment</div>
       <div className="h5-card">
@@ -1364,7 +1364,7 @@ function H5ReReceivePage({ poId, onDone }) {
           <span className="mono" style={{ fontWeight: 700, fontSize: 13 }}>{po.no}</span>
           <StatusTag type="PO" status={po.status} />
         </div>
-        <div className="muted" style={{ fontSize: 12, marginTop: 8 }}>From {tenantName(db, po.seller)} · {po.items.length} items</div>
+        <div className="muted" style={{ fontSize: 12, marginTop: 8 }}>From {tenantName(db, po.seller)} · {tItems(po.items.length)}</div>
       </div>
       <div className="h5-section-title">Actually Re-received</div>
       <div className="h5-card">
@@ -1412,7 +1412,7 @@ function H5AcceptPage({ poId, onDone }) {
           <span className="mono" style={{ fontWeight: 700, fontSize: 13 }}>{po.no}</span>
           <StatusTag type="PO" status={po.status} />
         </div>
-        <div className="muted" style={{ fontSize: 12, marginTop: 8 }}>From {tenantName(db, po.buyer)} · {po.items.length} items · {money(docAmount(po), po.currency).full}</div>
+        <div className="muted" style={{ fontSize: 12, marginTop: 8 }}>From {tenantName(db, po.buyer)} · {tItems(po.items.length)} · {money(docAmount(po), po.currency).full}</div>
       </div>
       <div className="h5-card mt12" style={{ background: '#EFF6FF', border: '1px dashed #93C5FD', fontSize: 11.5, color: '#1D4ED8', lineHeight: 1.6 }}>
         <Icon name="info" size={13} /> Accepting issues the sales invoice (FP-) automatically and pushes it to the buyer via WhatsApp. The order then awaits the buyer's offline payment.
@@ -1557,7 +1557,7 @@ function H5ReplenishPage({ poId, onDone }) {
           <span className="mono" style={{ fontWeight: 700, fontSize: 13 }}>{po.no}</span>
           <StatusTag type="PO" status={po.status} />
         </div>
-        <div className="muted" style={{ fontSize: 12, marginTop: 8 }}>From {tenantName(db, po.seller)} · {po.items.length} items</div>
+        <div className="muted" style={{ fontSize: 12, marginTop: 8 }}>From {tenantName(db, po.seller)} · {tItems(po.items.length)}</div>
       </div>
       <div className="h5-card mt12" style={{ background: '#FFF9E8', border: '1px dashed #E4CE8E', fontSize: 11.5, color: '#96601A', lineHeight: 1.6 }}>
         <Icon name="info" size={13} /> Append a follow-up shipment to make up the items that were not received previously.
@@ -1631,7 +1631,7 @@ function H5PurchaseHistoryPage({ productId }) {
           {byCur[cur].map((r, i) => (
             <div key={i} className="h5-card h5-desc" style={{ marginBottom: 8 }}>
               <div className="h5-desc-row"><div className="k">Purchase Price</div><div className="v mono bold">{money(r.price, cur).text}</div></div>
-              <div className="h5-desc-row"><div className="k">Qty</div><div className="v mono">{r.qty} {p.unit}</div></div>
+              <div className="h5-desc-row"><div className="k">Qty</div><div className="v mono">{r.qty} {t(p.unit)}</div></div>
               <div className="h5-desc-row"><div className="k">Amount</div><div className="v mono">{money(Math.round(r.price * r.qty * 100) / 100, cur).text}</div></div>
               <div className="h5-desc-row"><div className="k">Supplier</div><div className="v">{isSelf(r) ? <Tag tone="teal" dot>{t('Self-produced')}</Tag> : supName(r)}</div></div>
               <div className="h5-desc-row"><div className="k">Time</div><div className="v mono small">{r.ts}</div></div>
@@ -1765,20 +1765,20 @@ function H5SettingsPage({ onDone }) {
     <div className="h5-pad">
       <div className="h5-card" style={{ padding: 12, marginBottom: 8 }}>
         <div className="h5-form-row">
-          <span className="k">{t('Tax rate (%)')}</span>
+          <span className="k">{t('VAT rate (%)')}</span>
           <div style={{ flex: 1 }}>
             <input className="input mono" style={{ height: 32, width: '100%' }} type="number" step="0.01" value={taxRate}
               placeholder={t('Not set')} onChange={e => setTaxRate(e.target.value)} />
           </div>
         </div>
         <div className="h5-form-row">
-          <span className="k">{t('Enable freight')}</span>
+          <span className="k">{t('Enable courier fee')}</span>
           <div style={{ flex: 1 }}>
             <input type="checkbox" checked={freightEnabled} onChange={e => setFreightEnabled(e.target.checked)} />
           </div>
         </div>
         <div className="h5-form-row">
-          <span className="k">{t('Default freight')}</span>
+          <span className="k">{t('Default courier fee')}</span>
           <div style={{ flex: 1 }}>
             <input className="input mono" style={{ height: 32, width: '100%' }} type="number" step="0.01" value={defaultFreight}
               onChange={e => setDefaultFreight(e.target.value)} />

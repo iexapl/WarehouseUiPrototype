@@ -599,7 +599,7 @@ function InboundCartEditor({ onDone }) {
                 <img src={prodImg(p)} alt="" style={{ width: 40, height: 40, borderRadius: 8, objectFit: 'cover' }} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div className="flex gap6" style={{ alignItems: 'center' }}><span style={{ fontSize: 13, fontWeight: 600 }}>{p.name}</span><Tag tone="success">{t('Existing product')}</Tag></div>
-                  <div className="muted mono" style={{ fontSize: 11, marginTop: 2 }}>{p.model} · {t('On Hand')} {onHand} {p.unit}</div>
+                  <div className="muted mono" style={{ fontSize: 11, marginTop: 2 }}>{p.model} · {t('On Hand')} {onHand} {t(p.unit)}</div>
                 </div>
                 <span className="h5-back" title={t('Remove')} onClick={() => cartApi.removeAt('inbound', i)} style={{ color: 'var(--danger)' }}><Icon name="trash" size={16} /></span>
               </div>
@@ -614,11 +614,11 @@ function InboundCartEditor({ onDone }) {
                 </span>
               </div>
             <div className="flex mt8" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
-              <span className="muted mono" style={{ fontSize: 11.5 }}>{p.unit} × {l.qty}</span>
+              <span className="muted mono" style={{ fontSize: 11.5 }}>{t(p.unit)} × {l.qty}</span>
               <CartStepper value={l.qty} onChange={q => cartApi.setQty('inbound', i, q)} />
             </div>
               <div className="flex mt4" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
-                <span className="muted mono" style={{ fontSize: 11 }}>{onHand} → {onHand + qty} {p.unit}</span>
+                <span className="muted mono" style={{ fontSize: 11 }}>{onHand} → {onHand + qty} {t(p.unit)}</span>
                 <span className="mono" style={{ fontSize: 11.5 }}>{t('Amount')}: <b style={{ color: '#D35400' }}>{money(qty * (Number(l.unitPrice) || 0), lineCur(l, p)).text}</b></span>
               </div>
             </div>
@@ -681,7 +681,7 @@ function InboundCartEditor({ onDone }) {
               </div>
             </div>
             <div className="flex mt8" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
-              <span className="muted mono" style={{ fontSize: 11.5 }}>{l.unit} × {(Number(l.qty) || 0)}</span>
+              <span className="muted mono" style={{ fontSize: 11.5 }}>{t(l.unit)} × {(Number(l.qty) || 0)}</span>
               <CartStepper value={l.qty} onChange={q => cartApi.setQty('inbound', i, q)} />
             </div>
             <div className="mono" style={{ fontSize: 11.5, marginTop: 4, textAlign: 'right' }}>{t('Amount')}: <b style={{ color: '#D35400' }}>{money((Number(l.qty) || 0) * (Number(l.price) || 0), l.currency || 'USD').text}</b></div>
@@ -693,7 +693,7 @@ function InboundCartEditor({ onDone }) {
           {/* 合计金额 = Σ(物料单价 × 数量)；多币种按币种分别小计，逐币种上下堆叠 */}
           <div className="h5-card" style={{ padding: '10px 12px', marginBottom: Object.keys(totalsByCur).length > 1 ? 4 : 8 }}>
             <div className="flex" style={{ alignItems: 'flex-start', justifyContent: 'space-between' }}>
-              <span className="muted" style={{ fontSize: 12, lineHeight: 1.6 }}>{`${lines.length} items · ${totalQty} units`}</span>
+              <span className="muted" style={{ fontSize: 12, lineHeight: 1.6 }}>{`${tItems(lines.length)} · ${totalQty} ${t('units')}`}</span>
               <div style={{ textAlign: 'right' }}>
                 <div className="muted" style={{ fontSize: 11, lineHeight: 1.6 }}>{t('Total')}</div>
                 {Object.keys(totalsByCur).map(c => (
@@ -901,26 +901,26 @@ function OutboundCartEditor({ onDone }) {
               <img src={prodImg(p)} alt="" style={{ width: 40, height: 40, borderRadius: 8, objectFit: 'cover' }} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 13, fontWeight: 600 }}>{p.name}</div>
-                <div className="muted mono" style={{ fontSize: 11, marginTop: 2 }}>{p.model} · {t('On Hand')} {onHand} {p.unit}</div>
+                <div className="muted mono" style={{ fontSize: 11, marginTop: 2 }}>{p.model} · {t('On Hand')} {onHand} {t(p.unit)}</div>
               </div>
               <span className="h5-back" title={t('Remove')} onClick={() => cartApi.removeAt('outbound', i, cartId)} style={{ color: 'var(--danger)' }}><Icon name="trash" size={16} /></span>
             </div>
             {/* 价格体系：市场指导价 / 渠道销售价只读参考；实际销售价可改（默认渠道价及其币种）；价格区块在前、数量在后 */}
             <div className="flex mt8" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
-              <span className="muted mono" style={{ fontSize: 11 }}>{t('Market Reference Price')}: <b>{money(ifnull(p.marketPrice, p.price), marketCurOf(p)).text}</b></span>
-              <span className="muted mono" style={{ fontSize: 11 }}>{t('Channel Sales Price')}: <b>{money(p.price, p.currency).text}</b></span>
+              <span className="muted mono" style={{ fontSize: 11 }}>{t('Market guide price')}: <b>{money(ifnull(p.marketPrice, p.price), marketCurOf(p)).text}</b></span>
+              <span className="muted mono" style={{ fontSize: 11 }}>{t('Channel sale price')}: <b>{money(p.price, p.currency).text}</b></span>
             </div>
             <div className="flex mt8" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
-              <span className="muted" style={{ fontSize: 11.5 }}>{t('Channel Sales Price')}</span>
+              <span className="muted" style={{ fontSize: 11.5 }}>{t('Channel sale price')}</span>
               <span className="flex" style={{ alignItems: 'center', gap: 8 }}>
                 <Select value={saleCur(l, p)} onChange={v => cartApi.setField('outbound', i, 'saleCurrency', v, cartId)}
                   options={CURRENCIES.map(c => ({ value: c, label: c }))} style={{ height: 30, width: 82 }} />
                 <input className="input mono" style={{ height: 30, width: 92, textAlign: 'right' }} type="number" min="0" step="0.01"
-                  value={ifnull(l.salePrice, ifnull(p.price, 0))} aria-label={t('Channel Sales Price')} onChange={e => cartApi.setField('outbound', i, 'salePrice', e.target.value, cartId)} />
+                  value={ifnull(l.salePrice, ifnull(p.price, 0))} aria-label={t('Channel sale price')} onChange={e => cartApi.setField('outbound', i, 'salePrice', e.target.value, cartId)} />
               </span>
             </div>
             <div className="flex mt8" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
-              <span className="muted mono" style={{ fontSize: 11.5 }}>{p.unit} × {l.qty}</span>
+              <span className="muted mono" style={{ fontSize: 11.5 }}>{t(p.unit)} × {l.qty}</span>
               <CartStepper value={l.qty} onChange={q => cartApi.setQty('outbound', i, q, cartId)} />
             </div>
             {/* R10 —— 单行折扣（行折扣优先于整单折扣）+ 原始价/折后价/优惠金额三列 */}
@@ -939,7 +939,7 @@ function OutboundCartEditor({ onDone }) {
               <span className="muted mono" style={{ fontSize: 11 }}>{t('Saving')}: <b>{money(lineAmt.saving, saleCur(l, p)).text}</b></span>
             </div>
             <div className="flex mt4" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
-              <span className="muted mono" style={{ fontSize: 11 }}>{onHand} → {onHand - qty} {p.unit}</span>
+              <span className="muted mono" style={{ fontSize: 11 }}>{onHand} → {onHand - qty} {t(p.unit)}</span>
               <span className="mono" style={{ fontSize: 11.5 }}>{t('Amount')}: <b style={{ color: '#D35400' }}>{money(qty * saleNum(l, p), saleCur(l, p)).text}</b></span>
             </div>
             {qty > onHand && <div style={{ color: 'var(--danger)', fontSize: 11.5, marginTop: 4, textAlign: 'right' }}>{t('Exceeds on-hand quantity')}</div>}
@@ -955,7 +955,7 @@ function OutboundCartEditor({ onDone }) {
           {/* 合计金额 = Σ(实际销售价 × 数量)；多币种按币种分别小计（每车独立） */}
           <div className="h5-card" style={{ padding: '10px 12px', marginBottom: Object.keys(totalsByCur).length > 1 ? 4 : 8 }}>
             <div className="flex" style={{ alignItems: 'flex-start', justifyContent: 'space-between' }}>
-              <span className="muted" style={{ fontSize: 12, lineHeight: 1.6 }}>{`${lines.length} items · ${totalQty} units`}</span>
+              <span className="muted" style={{ fontSize: 12, lineHeight: 1.6 }}>{`${tItems(lines.length)} · ${totalQty} ${t('units')}`}</span>
               <div style={{ textAlign: 'right' }}>
                 <div className="muted" style={{ fontSize: 11, lineHeight: 1.6 }}>{t('Total')}</div>
                 {Object.keys(totalsByCur).map(c => (
@@ -979,10 +979,10 @@ function OutboundCartEditor({ onDone }) {
               </div>
             </div>
             <div className="h5-form-row" style={{ marginBottom: 0 }}>
-              <span className="k">{t('Freight amount')}</span>
+              <span className="k">{t('Courier fee amount')}</span>
               <div className="flex" style={{ alignItems: 'center', gap: 8 }}>
                 <input className="input mono" style={{ height: 30, width: 84, textAlign: 'right' }} type="number" min="0" step="0.01"
-                  value={ifnull(cur.freight, '')} placeholder="0" aria-label={t('Freight amount')}
+                  value={ifnull(cur.freight, '')} placeholder="0" aria-label={t('Courier fee amount')}
                   onChange={e => cartApi.setCartField(cartId, 'freight', e.target.value === '' ? null : Number(e.target.value))} />
                 <span className="muted mono" style={{ fontSize: 11.5 }}>{t('Freight')}</span>
               </div>

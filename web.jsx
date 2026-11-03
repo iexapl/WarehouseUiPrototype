@@ -219,7 +219,7 @@ function WebConsole() {
           {menu.map(m => (
             <div key={m.id} className={`top-menu-item${group === m.id ? ' active' : ''}`}
               onClick={() => { setGroup(m.id); setPage(m.children[0].id); }}>
-              {m.label}
+              {t(m.label)}
             </div>
           ))}
         </nav>
@@ -247,11 +247,11 @@ function WebConsole() {
               </div>
             </div>
           )}
-          <div className="sidebar-group-label">{(menu.find(m => m.id === group) || {}).label}</div>
+          <div className="sidebar-group-label">{t((menu.find(m => m.id === group) || {}).label)}</div>
           {(menu.find(m => m.id === group) || { children: [] }).children.map(c => (
             <div key={c.id} className={`side-item${page === c.id ? ' active' : ''}`} onClick={() => setPage(c.id)}>
               <Icon name={page === c.id ? 'chevronRight' : 'chevronRight'} size={13} />
-              <span>{c.label}</span>
+              <span>{t(c.label)}</span>
             </div>
           ))}
           <button className="side-collapse-btn" onClick={() => setCollapsed(!collapsed)} title={collapsed ? 'Expand' : 'Collapse'}>
@@ -577,11 +577,11 @@ function ProductListPage() {
             // cost/market/sale, upstream (channel) products market/sale only
             <div style={{ display: 'inline-flex', flexDirection: 'column', gap: 1, alignItems: 'flex-end' }}>
               {p.ownerId === account.tenantId && <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{t('Purchase Price')} <span className="mono">{money(purchasePriceOf(p), purchaseCurrencyOf(p)).text}</span>{p.purchaseUpdatedAt ? <span className="muted" style={{ marginLeft: 4 }}>{t('updated')} {p.purchaseUpdatedAt}</span> : null}</span>}
-              <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{t('Market Reference Price')} <span className="mono">{money(ifnull(p.marketPrice, p.price), marketCurOf(p)).text}</span></span>
-              <span style={{ fontSize: 11, color: 'var(--text-2)' }}>{t('Channel Sales Price')} <span className="mono bold" style={{ color: '#D35400' }}>{money(p.price, p.currency).text}</span></span>
+              <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{t('Market guide price')} <span className="mono">{money(ifnull(p.marketPrice, p.price), marketCurOf(p)).text}</span></span>
+              <span style={{ fontSize: 11, color: 'var(--text-2)' }}>{t('Channel sale price')} <span className="mono bold" style={{ color: '#D35400' }}>{money(p.price, p.currency).text}</span></span>
             </div>
           ) },
-          { key: 'stock', label: 'My Stock', width: 100, align: 'center', render: p => <span className="mono bold">{ifnull((db.stock[account.tenantId] || {})[p.id], 0)} {p.unit}</span> },
+          { key: 'stock', label: 'My Stock', width: 100, align: 'center', render: p => <span className="mono bold">{ifnull((db.stock[account.tenantId] || {})[p.id], 0)} {t(p.unit)}</span> },
           // R08/AC-08-04 — 商品档案区分自产 / 外购
           { key: 'source', label: 'Source', width: 110, render: p => p.source === 'self'
             ? <Tag tone="teal" dot>{t('Self-produced')}</Tag>
@@ -942,7 +942,7 @@ function InventoryPage() {
         <Table loading={loading} empty={filtered ? 'No SKUs match the search' : undefined} columns={[
           { key: 'name', label: 'Product', render: p => <div><div className="bold" style={{ fontSize: 13 }}>{p.name}</div><div className="cell-sub mono">{p.model} · {p.spec}</div></div> },
           { key: 'unit', label: 'Unit', width: 60, align: 'center' },
-          { key: 'qty', label: 'On Hand', width: 110, align: 'center', render: p => <span className="mono bold" style={{ color: stockMap[p.id] < lowTh ? 'var(--warning)' : 'inherit' }}>{stockMap[p.id]} {p.unit}</span> },
+          { key: 'qty', label: 'On Hand', width: 110, align: 'center', render: p => <span className="mono bold" style={{ color: stockMap[p.id] < lowTh ? 'var(--warning)' : 'inherit' }}>{stockMap[p.id]} {t(p.unit)}</span> },
           { key: 'ref', label: 'Purchase Price', width: 150, align: 'right', render: p => <div style={{ textAlign: 'right' }}><Money amount={purchasePriceOf(p)} currency={purchaseCurrencyOf(p)} />{p.purchaseUpdatedAt ? <div className="cell-sub">{t('updated')} {p.purchaseUpdatedAt}</div> : null}</div> },
           { key: 'last', label: 'Last Movement', width: 150, render: p => {
             const m = db.movements.filter(x => x.tenantId === account.tenantId && x.productId === p.id).slice(-1)[0];
@@ -1489,7 +1489,7 @@ function TeamPage() {
           <SearchBox value={q} onChange={setQ} placeholder="Search name / phone" width={240} />
           <span className="label">Members: {members.length}</span>
           <span className="label">WhatsApp bound: {waBound}/{members.length}</span>
-          <span className="label" style={{ marginLeft: 'auto' }}>{rows.length} shown</span>
+          <span className="label" style={{ marginLeft: 'auto' }}>{`${rows.length} shown`}</span>
         </div>
         <Table loading={loading} rows={rows} rowKey={r => r.id} columns={[
           { key: 'name', label: 'Name', render: a => (
@@ -1539,17 +1539,17 @@ function DistributorPage() {
           <button className="btn" onClick={() => setAccDlg(true)}><Icon name="check" size={14} />{t('I have an invite code')}</button>
           {canCreate
             ? <button className="btn primary" onClick={() => setDialog({ subAgent: true })}><Icon name="plus" size={14} />New Distributor</button>
-            : <span className="muted" style={{ fontSize: 12 }}>{own ? `You can develop up to ${own.maxLevel} levels of sub-agents` : ''}</span>}
+            : <span className="muted" style={{ fontSize: 12 }}>{own ? t(`You can develop up to ${own.maxLevel} levels of sub-agents`) : ''}</span>}
         </div>
       </div>
       <Banner tone="info" icon="link">
-        <b>Scope:</b> only merchants linked downstream of {(own || {}).name || 'your merchant'} ({list.length}). Sub-accounts of your own merchant are listed under <b>Team</b> and never appear here.
+        <b>Scope:</b> only merchants linked downstream of {t((own || {}).name || 'your merchant')} ({list.length}). Sub-accounts of your own merchant are listed under <b>Team</b> and never appear here.
       </Banner>
       <div className="card">
         <div className="filter-bar">
           <SearchBox value={q} onChange={setQ} placeholder="Search merchant" width={240} />
           <span className="label">Distributors: {list.length}</span>
-          <span className="label" style={{ marginLeft: 'auto' }}>{rows.length} shown</span>
+          <span className="label" style={{ marginLeft: 'auto' }}>{`${rows.length} shown`}</span>
         </div>
         <Table loading={loading} rows={rows} rowKey={r => r.id} columns={[
           { key: 'name', label: 'Merchant', render: t => (
@@ -1705,7 +1705,7 @@ function PendingRepriceBanner({ onOpen }) {
   return (
     <div className="wiz-banner">
       <Icon name="info" size={14} />
-      <span>{t('Pending price adjustment')} — {pend.length} {t('items')}</span>
+      <span>{t('Pending price adjustment')} — {tItems(pend.length)}</span>
       <button type="button" className="btn" style={{ height: 28, marginLeft: 'auto' }} onClick={() => onOpen(pend.map(p => p.id))}>{t('Continue pricing')}</button>
     </div>
   );
@@ -1740,19 +1740,19 @@ function SettingsPage() {
   return (
     <div className="page" style={{ maxWidth: 760 }}>
       <div className="card" style={{ padding: 14, marginBottom: 12 }}>
-        <div className="card-title">{t('Tax & freight')}</div>
+        <div className="card-title">{t('VAT & courier fee')}</div>
         <div className="flex gap10" style={{ alignItems: 'center', marginBottom: 10 }}>
-          <span className="k" style={{ width: 150 }}>{t('Tax rate (%)')}</span>
+          <span className="k" style={{ width: 150 }}>{t('VAT rate (%)')}</span>
           <input className="input mono" style={{ width: 120, height: 32 }} type="number" step="0.01" value={taxRate}
             placeholder={t('Not set')} onChange={e => setTaxRate(e.target.value)} />
           <span className="muted small">{t('Leave empty to turn tax off')}</span>
         </div>
         <div className="flex gap10" style={{ alignItems: 'center', marginBottom: 10 }}>
-          <span className="k" style={{ width: 150 }}>{t('Enable freight')}</span>
+          <span className="k" style={{ width: 150 }}>{t('Enable courier fee')}</span>
           <input type="checkbox" checked={freightEnabled} onChange={e => setFreightEnabled(e.target.checked)} />
         </div>
         <div className="flex gap10" style={{ alignItems: 'center' }}>
-          <span className="k" style={{ width: 150 }}>{t('Default freight')}</span>
+          <span className="k" style={{ width: 150 }}>{t('Default courier fee')}</span>
           <input className="input mono" style={{ width: 120, height: 32 }} type="number" step="0.01" value={defaultFreight}
             onChange={e => setDefaultFreight(e.target.value)} />
         </div>

@@ -680,7 +680,7 @@ function Pagination({ total, page, pageSize, onChange }) {
   for (let i = 1; i <= pages; i++) btns.push(i);
   return (
     <div className="pagination">
-      <span className="page-size">Total {total} items</span>
+      <span className="page-size">Total {tItems(total)}</span>
       <button className="page-btn" disabled={page <= 1} onClick={() => onChange(page - 1)}>‹</button>
       {btns.map(i => <button key={i} className={`page-btn${i === page ? ' active' : ''}`} onClick={() => onChange(i)}>{i}</button>)}
       <button className="page-btn" disabled={page >= pages} onClick={() => onChange(page + 1)}>›</button>
@@ -814,7 +814,7 @@ function DownstreamStockTree({ db, rootTenantId, productId }) {
             </div>
             <div className="muted mono" style={{ fontSize: 10.5, marginTop: 1 }}>{`${t.code || ''} · ${t.type || ''}`}</div>
           </div>
-          <div className="mono bold" style={{ fontSize: 14, flexShrink: 0, marginLeft: 10 }}>{s == null ? '—' : <React.Fragment>{s} {unit}</React.Fragment>}</div>
+          <div className="mono bold" style={{ fontSize: 14, flexShrink: 0, marginLeft: 10 }}>{s == null ? '—' : <React.Fragment>{s} {t(unit)}</React.Fragment>}</div>
         </div>
         {n.children.map(c => renderNode(c, level + 1))}
       </div>
@@ -832,7 +832,7 @@ function DownstreamStockTree({ db, rootTenantId, productId }) {
             <div className="muted mono" style={{ fontSize: 10.5, marginTop: 1 }}>{`${root.code || ''} · ${root.type || ''}`}</div>
           </div>
         </div>
-        <div className="mono bold" style={{ fontSize: 15 }}>{stockOf(rootTenantId) == null ? '—' : <React.Fragment>{stockOf(rootTenantId)} {unit}</React.Fragment>}</div>
+        <div className="mono bold" style={{ fontSize: 15 }}>{stockOf(rootTenantId) == null ? '—' : <React.Fragment>{stockOf(rootTenantId)} {t(unit)}</React.Fragment>}</div>
       </div>
       {chain.length
         ? chain.map(n => renderNode(n, 0))

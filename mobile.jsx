@@ -7,11 +7,9 @@ const VERB_ICON = { Accept: 'check', Approve: 'check', Submit: 'check', Quote: '
 
 // fix #21 — smart date-time: show year only when crossing year boundary
 const fmtDateTime = (ts) => {
+  // P2-1 — 同屏统一为 YYYY-MM-DD HH:mm（与单据时间同格式，中英一致）
   if (!ts) return '';
-  const year = ts.slice(0, 4);
-  const currentYear = String(new Date().getFullYear());
-  const short = ts.slice(5).replace('-', '/');
-  return year === currentYear ? short : `${year}/${short}`;
+  return String(ts).slice(0, 16).replace('T', ' ');
 };
 
 // R100f — demo delay for the skeleton loading effect: every page/tab entry
@@ -546,7 +544,7 @@ function H5Home({ openDoc, push, platform, noPerm, setTab }) {
         {(isFreshTenant ? grid.filter(g => !g[4] && !['Inquiry', 'Inquiry List', 'Quote', 'Orders', 'Invoices'].includes(g[0])) : grid).map(([label, icon, [bg, color], handler]) => (
           <div key={label} className="h5-action" onClick={handler}>
             <span className="a-icon" style={{ background: bg, color }}><NavIcon name={icon} size={18} /></span>
-            <span className="a-label">{label}</span>
+            <span className="a-label">{t(label)}</span>
           </div>
         ))}
       </div>
@@ -698,7 +696,7 @@ function H5Products({ push, platform, skReady = true }) {
               <div className="p-head">
                 <div className="p-name">{p.name}</div>
                 <div className="p-stock">
-                  <span className="ps-v">{sv == null ? '—' : <React.Fragment>{sv} {p.unit}</React.Fragment>}</span>
+                  <span className="ps-v">{sv == null ? '—' : <React.Fragment>{sv} {t(p.unit)}</React.Fragment>}</span>
                   <span className="ps-l">{t('Stock')}</span>
                 </div>
               </div>
@@ -723,8 +721,8 @@ function H5Products({ push, platform, skReady = true }) {
                 <div className="p-meta"><span className="p-chip"><Icon name="inquiry" size={10} />{t('Price on quote')}</span></div>
               ) : <div className="p-prices">
                 {p.ownerId === account.tenantId && <div className="p-price-line"><span className="pl-k">{t('Purchase Price')}</span><span className="pl-v">{money(purchasePriceOf(p), purchaseCurrencyOf(p)).text}</span></div>}
-                <div className="p-price-line"><span className="pl-k">{t('Market Reference Price')}</span><span className="pl-v">{money(ifnull(p.marketPrice, p.price), marketCurOf(p)).text}</span></div>
-                <div className="p-price-line"><span className="pl-k">{t('Channel Sales Price')}</span><span className="pl-v pl-sale">{money(p.price, p.currency).text}</span></div>
+                <div className="p-price-line"><span className="pl-k">{t('Market guide price')}</span><span className="pl-v">{money(ifnull(p.marketPrice, p.price), marketCurOf(p)).text}</span></div>
+                <div className="p-price-line"><span className="pl-k">{t('Channel sale price')}</span><span className="pl-v pl-sale">{money(p.price, p.currency).text}</span></div>
               </div>}
             </div>
             </div>
@@ -796,7 +794,7 @@ function H5ChannelStockPage({ productId }) {
       <div className="flex gap10 mt12">
         <div className="h5-card" style={{ flex: 1, textAlign: 'center', padding: '10px 6px' }}>
           <div className="muted" style={{ fontSize: 11 }}>My Stock</div>
-          <div className="mono bold" style={{ fontSize: 17, marginTop: 2 }}>{myStock == null ? '—' : <React.Fragment>{myStock} {p.unit}</React.Fragment>}</div>
+          <div className="mono bold" style={{ fontSize: 17, marginTop: 2 }}>{myStock == null ? '—' : <React.Fragment>{myStock} {t(p.unit)}</React.Fragment>}</div>
         </div>
         <div className="h5-card" style={{ flex: 1, textAlign: 'center', padding: '10px 6px' }}>
           <div className="muted" style={{ fontSize: 11 }}>Downstream Merchants</div>
@@ -804,7 +802,7 @@ function H5ChannelStockPage({ productId }) {
         </div>
         <div className="h5-card" style={{ flex: 1, textAlign: 'center', padding: '10px 6px' }}>
           <div className="muted" style={{ fontSize: 11 }}>Channel Total</div>
-          <div className="mono bold" style={{ fontSize: 17, marginTop: 2 }}>{dsTotal} {p.unit}</div>
+          <div className="mono bold" style={{ fontSize: 17, marginTop: 2 }}>{dsTotal} {t(p.unit)}</div>
         </div>
       </div>
       <div className="h5-section-title mt12">Downstream Stock Tree</div>
@@ -1025,7 +1023,7 @@ function H5DocCard({ doc, onClick, showRole, onVerb }) {
         <span>{cp}</span>
         <span className="d-amount"><span className="cur-code">{doc.currency}</span>{' '}{money(docAmount(doc), doc.currency).num}</span>
       </div>
-      <div className="muted" style={{ fontSize: 11, marginTop: 8 }}>{doc.items.length} items · {doc.createdAt} · by {doc.createdBy}</div>
+      <div className="muted" style={{ fontSize: 11, marginTop: 8 }}>{tItems(doc.items.length)} · {doc.createdAt} · by {doc.createdBy}</div>
       {/* R82 — list items show only the buyer / seller role; no observer role */}
       {showRole && (side === 'buyer' || side === 'seller') && (
         <div className="muted" style={{ fontSize: 11, marginTop: 8, display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -1407,7 +1405,7 @@ function H5WhatsAppPage({ docId, push, setConfirm, platform, noPerm }) {
           <span className="mono" style={{ fontWeight: 700, fontSize: 13 }}>{doc.no}</span>
           <StatusTag type={doc.type} status={docStatusOf(doc)} />
         </div>
-        <div className="muted" style={{ fontSize: 12, marginTop: 8 }}>{doc.items.length} items · {money(docAmount(doc), doc.currency).full}</div>
+        <div className="muted" style={{ fontSize: 12, marginTop: 8 }}>{tItems(doc.items.length)} · {money(docAmount(doc), doc.currency).full}</div>
         {doc.waybill && <div className="muted mono" style={{ fontSize: 11.5, marginTop: 4 }}>Waybill {doc.waybill.no} · {doc.waybill.carrier} · {doc.waybill.plate}</div>}
       </div>
       <div className="h5-section-title">Items</div>
@@ -1420,7 +1418,7 @@ function H5WhatsAppPage({ docId, push, setConfirm, platform, noPerm }) {
             {img
               ? <img src={img} alt="" style={{ width: 38, height: 38, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
               : <div style={{ width: 38, height: 38, borderRadius: 8, background: '#F5F6F8', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Icon name="box" size={15} color="var(--text-3)" /></div>}
-            <span style={{ flex: 1, minWidth: 0 }}>{it.name}</span><span className="mono muted">{it.qty} {it.unit}</span>
+            <span style={{ flex: 1, minWidth: 0 }}>{it.name}</span><span className="mono muted">{it.qty} {t(it.unit)}</span>
           </div>
           );
         })}
@@ -1456,7 +1454,7 @@ function WaChatCore({ docId, back, onClose, onOpenDoc }) {
   const totalFor = (d) => doc ? doc.items.reduce((s, it) => s + it.qty * it.price * (1 - d), 0) : 0;
   const offerLines = (d) => doc ? [
     'Here is our best offer:',
-    ...doc.items.map(it => `• ${it.name} × ${it.qty} ${it.unit} — ${money(it.price * (1 - d), doc.currency).text} / ${it.unit}`),
+    ...doc.items.map(it => `• ${it.name} × ${it.qty} ${t(it.unit)} — ${money(it.price * (1 - d), doc.currency).text} / ${t(it.unit)}`),
     `Total ${money(totalFor(d), doc.currency).full} · valid for 7 days`,
   ] : [];
   const CHIPS_STD = [
@@ -1469,8 +1467,8 @@ function WaChatCore({ docId, back, onClose, onOpenDoc }) {
   ];
   const [msgs, setMsgs] = useState(() => doc ? [{ me: true, ts: hhmm(), lines: [
     'Hello! We would like to request a quotation for the following items:',
-    `Inquiry ${doc.no} — ${doc.items.length} items`,
-    ...doc.items.map(it => `• ${it.name} × ${it.qty} ${it.unit} @ ${money(it.price, doc.currency).text} / ${it.unit}`),
+    `Inquiry ${doc.no} — ${tItems(doc.items.length)}`,
+    ...doc.items.map(it => `• ${it.name} × ${it.qty} ${t(it.unit)} @ ${money(it.price, doc.currency).text} / ${t(it.unit)}`),
     `Est. total ${money(docAmount(doc), doc.currency).full} · Delivery by ${doc.deliveryDate || 'TBC'}`,
     'Please share your best price. Thank you!',
   ] }] : []);
@@ -1677,7 +1675,7 @@ function H5WaInboxPage({ docIds, push, back }) {
             <span className="wa-avatar">{sup ? sup.name[0] : '?'}</span>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 13, fontWeight: 600 }}>{sup ? sup.name : d.seller}</div>
-              <div className="muted" style={{ fontSize: 11.5, marginTop: 2 }}>{t('Inquiry')} {d.no} · {d.items.length} items · {money(docAmount(d), d.currency).full}</div>
+              <div className="muted" style={{ fontSize: 11.5, marginTop: 2 }}>{t('Inquiry')} {d.no} · {tItems(d.items.length)} · {money(docAmount(d), d.currency).full}</div>
               <div className="muted" style={{ fontSize: 11, marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
                 <Icon name="checkDouble" size={11} color="#53BDEB" />{t('Sent via WhatsApp · Delivered')}
                 {mainAcc && mainAcc.whatsapp ? <span className="mono">· {mainAcc.whatsapp}</span> : null}
@@ -1882,7 +1880,7 @@ function H5ReceivePage({ ckId, onDone }) {
           <span className="mono" style={{ fontWeight: 700, fontSize: 13 }}>{ck.no}</span>
           <StatusTag type="CK" status={ck.status} />
         </div>
-        <div className="muted" style={{ fontSize: 12, marginTop: 8 }}>From {tenantName(db, ck.seller)} · {ck.items.length} items</div>
+        <div className="muted" style={{ fontSize: 12, marginTop: 8 }}>From {tenantName(db, ck.seller)} · {tItems(ck.items.length)}</div>
       </div>
       <div className="h5-section-title mt12">Result</div>
       <div className="h5-card" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -1946,7 +1944,7 @@ function H5ShipPage({ poId, onDone }) {
           <span className="mono" style={{ fontWeight: 700, fontSize: 13 }}>{po.no}</span>
           <StatusTag type="PO" status={po.status} />
         </div>
-        <div className="muted" style={{ fontSize: 12, marginTop: 8 }}>To {tenantName(db, po.buyer)} · {po.items.length} items · {money(docAmount(po), po.currency).full}</div>
+        <div className="muted" style={{ fontSize: 12, marginTop: 8 }}>To {tenantName(db, po.buyer)} · {tItems(po.items.length)} · {money(docAmount(po), po.currency).full}</div>
       </div>
       <div className="h5-card mt12" style={{ fontSize: 12.5, lineHeight: 1.7, color: 'var(--text-2)', display: 'flex', gap: 8 }}>
         <Icon name="info" size={15} style={{ flexShrink: 0, marginTop: 2 }} />
@@ -1973,7 +1971,7 @@ function H5DispatchPage({ ckId, onDone }) {
           <span className="mono" style={{ fontWeight: 700, fontSize: 13 }}>{ck.no}</span>
           <StatusTag type="CK" status={ck.status} />
         </div>
-        <div className="muted" style={{ fontSize: 12, marginTop: 8 }}>To {tenantName(db, ck.buyer)} · {ck.items.length} items · {money(docAmount(ck), ck.currency).full}</div>
+        <div className="muted" style={{ fontSize: 12, marginTop: 8 }}>To {tenantName(db, ck.buyer)} · {tItems(ck.items.length)} · {money(docAmount(ck), ck.currency).full}</div>
         {ck.picking && ck.picking.shortPick && <div style={{ fontSize: 11.5, marginTop: 6, color: '#C0392B' }}><Icon name="alertCircle" size={12} /> Short pick on this shipment — picked quantities were shipped.</div>}
       </div>
       <div className="h5-section-title">Logistics Information</div>
@@ -2031,8 +2029,8 @@ function H5ProductPage({ productId, push, platform, inquiry }) {
           <div className="h5-section-title">Prices</div>
           <div className="h5-desc">
             {showCost && <div className="h5-desc-row"><div className="k">Purchase Price</div><div className="v mono bold">{money(purchasePriceOf(p), purchaseCurrencyOf(p)).text}</div>{p.purchaseUpdatedAt ? <div className="cell-sub">{t('updated')} {p.purchaseUpdatedAt}</div> : null}</div>}
-            <div className="h5-desc-row"><div className="k">Market Reference Price</div><div className="v mono bold">{money(ifnull(p.marketPrice, p.price), marketCurOf(p)).text}</div></div>
-            <div className="h5-desc-row"><div className="k">Channel Sales Price</div><div className="v mono bold" style={{ color: '#D35400' }}>{money(p.price, p.currency).text}</div></div>
+            <div className="h5-desc-row"><div className="k">Market guide price</div><div className="v mono bold">{money(ifnull(p.marketPrice, p.price), marketCurOf(p)).text}</div></div>
+            <div className="h5-desc-row"><div className="k">Channel sale price</div><div className="v mono bold" style={{ color: '#D35400' }}>{money(p.price, p.currency).text}</div></div>
           </div>
         </React.Fragment>
       ) : (
@@ -2044,9 +2042,9 @@ function H5ProductPage({ productId, push, platform, inquiry }) {
         <div className="h5-desc-row"><div className="k">Model</div><div className="v mono">{p.model}</div></div>
         <div className="h5-desc-row"><div className="k">Brand</div><div className="v">{p.brand}</div></div>
         <div className="h5-desc-row"><div className="k">Specification</div><div className="v">{p.spec}</div></div>
-        <div className="h5-desc-row"><div className="k">Unit</div><div className="v">{p.unit}</div></div>
+        <div className="h5-desc-row"><div className="k">Unit</div><div className="v">{t(p.unit)}</div></div>
         <div className="h5-desc-row"><div className="k">Owner</div><div className="v">{productOwnerName(db, p)}{p.ownerId === account.tenantId && <React.Fragment> · <Tag tone="teal" dot>Ours</Tag></React.Fragment>}</div></div>
-        <div className="h5-desc-row"><div className="k">My Stock</div><div className="v mono bold">{stock === '—' ? '—' : <React.Fragment>{stock} {p.unit}</React.Fragment>}</div></div>
+        <div className="h5-desc-row"><div className="k">My Stock</div><div className="v mono bold">{stock === '—' ? '—' : <React.Fragment>{stock} {t(p.unit)}</React.Fragment>}</div></div>
         <div className="h5-desc-row"><div className="k">Status</div><div className="v"><Tag tone={p.onSale === false ? 'dark' : 'teal'} dot>{p.onSale === false ? 'Discontinued' : 'On Sale'}</Tag></div></div>
       </div>
       {hasActions && (

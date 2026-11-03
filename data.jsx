@@ -1383,7 +1383,7 @@ function downloadInvoiceFile(db, doc) {
   const lines = [
     ['Invoice No', doc.no], ['Seller', tenantName(db, doc.seller)], ['Buyer', tenantName(db, doc.buyer)], ['Order Ref', doc.poNo || ''],
     ['Issue Date', doc.issueDate || ''], ['Currency', doc.currency], ['Status', doc.status], [],
-    ['Product', 'Spec', 'Qty', 'Channel Sales Price', 'Amount'],
+    ['Product', 'Spec', 'Qty', 'Channel sale price', 'Amount'],
     ...doc.items.map(it => [it.name, it.spec, it.qty, it.price, it.qty * it.price]),
     [], ['Total', '', '', '', docAmount(doc)],
   ];

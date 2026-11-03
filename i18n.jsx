@@ -111,8 +111,8 @@ const ZH = {
   'Low stock — order soon': '库存少许，请及时下单',
   // ---- R13 AI 折扣权限边界 ----
   'AI discount boundary': 'AI 折扣边界',
-  'Defaults when not configured: 3% floor / 1% per round / up to 3 rounds': '未配置时默认：最低 97 折 / 每轮让 1% / 最多 3 轮',
-  'Lowest allowed discount (0.97 = 3% off)': '最低允许折扣（0.97 = 97 折）',
+  'Defaults when not configured: 3% floor / 1% per round / up to 3 rounds': '未配置时默认：最低 97 折（让价 3%）/ 每轮让 1% / 最多 3 轮',
+  'Lowest allowed discount (0.97 = 3% off = 97% of list price)': '最低允许折扣（0.97 = 97 折，即让价 3%）',
   'Concession step per round': '每轮让价步长',
   'Max negotiation rounds': '最多让价轮次',
   'Escalate to': '触界后转人工给',
@@ -141,8 +141,8 @@ const ZH = {
   'Bulk price adjustment': '批量调价',
   'Original total': '原价合计',
   'Discount total': '优惠合计',
-  'Tax': '税额',
-  'Freight': '运费',
+  'Tax': '增值税',
+  'Freight': '快递费',
   'Total payable': '应付合计',
   'Inbound reference': '入库单号',
   'Total quantity': '总数量',
@@ -168,18 +168,18 @@ const ZH = {
   'Save prices and finish': '完成入库并调价',
   'Request discount': '申请折扣',
   'Overall discount': '整体折扣',
-  'Freight amount': '运费金额',
+  'Courier fee amount': '快递费金额',
   'Line discount': '单行折扣',
   'Original': '原价',
   'Discounted': '折后价',
   'Saving': '优惠金额',
   'Pending price adjustment': '待调价',
   'Continue pricing': '继续调价',
-  'Tax & freight': '税率与运费',
-  'Tax rate (%)': '税率（%）',
+  'VAT & courier fee': '增值税与快递费',
+  'VAT rate (%)': '增值税率（%）',
   'Leave empty to turn tax off': '留空表示不计税、不显示税额行',
-  'Enable freight': '启用运费',
-  'Default freight': '默认运费',
+  'Enable courier fee': '启用快递费',
+  'Default courier fee': '默认快递费',
   'Quote & inventory': '报价与库存',
   'Quote mode': '报价模式',
   'Quote mode manual': '手动报价',
@@ -259,8 +259,8 @@ const ZH = {
   'Already added': '已添加',
   'Prices': '价格',
   'Cost Price': '成本价',
-  'Market Reference Price': '市场指导价',
-  'Channel Sales Price': '渠道销售价',
+  'Market guide price': '市场指导价',
+  'Channel sale price': '渠道销售价',
   'Purchase History': '采购价历史',
   'Purchase Price History': '采购价历史',
   'Latest Purchase Price': '最新采购价',
@@ -1745,8 +1745,8 @@ const ZH = {
   'MVP: permissions are flattened — creating an account grants the same action set.': 'MVP：权限已扁平化——创建账号即授予同一套操作。',
   '· Members': '· 成员',
   'Me': '我',
-  'Market Reference Price *': '市场指导价 *',
-  'Channel Sales Price *': '渠道销售价 *',
+  'Market guide price *': '市场指导价 *',
+  'Channel sale price *': '渠道销售价 *',
   'Change Type *': '变动类型 *',
   'Quantity *': '数量 *',
   'Delivery Date *': '交货日期 *',
@@ -1927,11 +1927,68 @@ const ZH = {
   'The pairing now appears in both merchants’ Distributors list — open it to verify.': '两家商户的「分销商」列表中均已出现该配对——可前往核对。',
   'This invite has already been used': '该邀请已被使用',
   'updated': '已更新',
+  // ---- i18n 修复批次（11 条扫描问题）----
+  // P1-4 复数：中文无复数标记，只保留一条词条；英文侧由 tItems() 分支
+  'item': '件',
+  'units': '件',
+  'suppliers': '家供货方',
+  // P1-3 导航项
+  'Team': '团队成员',
+  'Distributors': '分销商',
+  // P0-1 Team 页（web）—— 句子被 <b> 切开，逐片段给键
+  'Team members are the accounts of': '团队成员是',
+  'your own merchant': '本商户',
+  '— sub-accounts that sign in with the same data scope. Distributors (downstream merchants) are managed separately on the Distributors page.':
+    '名下的账号——子账号以同一数据范围登录。分销商（下游商户）在「分销商」页单独管理。',
+  'New Sub-Account': '新建子账号',
+  'Scope:': '范围：',
+  'only accounts belonging to': '仅列出属于',
+  'are listed here (': ' 的账号（',
+  '). Distributor merchants are listed under': '）。分销商商户列在「',
+  '— creating a sub-account never changes the distributor list, and creating a distributor never changes this list.':
+    '」——新建子账号不会改变分销商列表，新建分销商也不会改变本列表。',
+  'Members:': '成员：',
+  'WhatsApp bound:': 'WhatsApp 绑定：',
+  'shown': '已显示',
+  // P0-2 Distributors 页（web）
+  'Distributors are': '分销商是',
+  'downstream merchants': '下游商户',
+  'in your relation graph — separate companies, not accounts of yours. Creating one registers a new merchant, its master account and the supply relation in one step.':
+    '，属于您关系图谱中的独立公司，而非您的账号。新建分销商将一步完成商户建档、其主账号开通与供货关系建立。',
+  'New Distributor': '新建分销商',
+  'only merchants linked downstream of': '仅列出挂接在',
+  '). Sub-accounts of your own merchant are listed under': '）的子账号列在「',
+  'and never appear here.': '」且不会出现在本页。',
+  'Distributors:': '分销商：',
+  'Max sub-level': '最大子级',
+  'Set Label': '设置标签',
+  'Set a custom level label': '设置自定义层级标签',
+  'Search merchant': '搜索商户',
+  // P1-1 小写变体（pricing.jsx 用句中小写）
+  'market guide price': '市场指导价',
+  'channel sale price': '渠道销售价',
+  'your merchant': '本商户',
+  // P0-3 移动端「我的」页副标题
+  'tax · freight · quote mode': '税率 · 快递费 · 报价模式',
+  'accounts of my merchant': '本商户名下的账号',
+  // P0-4 收款方式（通用支付方式，品牌名 OPay 保留）
+  'Bank Transfer': '银行转账',
+  'Cash': '现金',
+  'POS': 'POS 机',
+  'Cheque': '支票',
 };
 
 // ---------- pattern-based translation for dynamic strings ----------
 // Order matters: earlier patterns take precedence
 const PATTERNS = [
+  [/^You can develop up to (\d+) levels of sub-agents$/, '最多可发展 $1 级下级代理'],
+  [/^Levels of sub-agents: (\d+)$/, '下级代理层级：$1'],
+  // ---- i18n 修复：动态计数与格式 ----
+  [/^(\d+) shown$/, '已显示 $1 条'],
+  [/^(\d+) item$/, '$1 件'],
+  [/^(\d+) units$/, '$1 件'],
+  [/^(\d+) suppliers$/, '$1 家供货方'],
+
   // ---- R01 注册审核 ----
   [/^(.+) — registration rejected by the platform, sign-in unavailable$/, '$1 商户注册已被平台驳回，暂无法登录'],
   [/^(.+) is under platform review — sign-in available once approved$/, '$1 正在平台审核中 — 通过后即可登录'],
@@ -2440,6 +2497,15 @@ function t(s) {
   return s;
 }
 
+// ---------- count-aware wording (P1-4: English "1 item" vs "2 items") ----------
+// The zh dictionary has no plural marker, so count>0 keeps the dictionary path
+// and count===1 only needs a singular dictionary key on the English source side.
+function tItems(n) {
+  const c = Number(n) || 0;
+  if (_lang === 'zh') return c + ' 个物料';
+  return c + ' ' + (c === 1 ? 'item' : 'items');
+}
+
 function setLang(l) {
   _lang = l;
   try { if (typeof localStorage !== 'undefined') localStorage.setItem('lang', l); } catch (e) { /* noop */ }
@@ -2480,4 +2546,4 @@ function LangSwitch({ mobile }) {
   );
 }
 
-Object.assign(window, { t, setLang, getLang, LangSwitch });
+Object.assign(window, { t, tItems, setLang, getLang, LangSwitch });

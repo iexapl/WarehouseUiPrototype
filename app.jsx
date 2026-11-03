@@ -698,7 +698,7 @@ function App() {
           timeline: [{ ts: tnow, text: `Outbound order generated from staging cart (${refNo})`, by: 'System' }],
         };
         updateDocs(prev => [...prev, ck]);
-        toast(`Batch outbound complete — ${lines.length} items, ${total} units to ${recv.name} (${refNo})`, 'success');
+        toast(`Batch outbound complete — ${tItems(lines.length)}, ${total} ${t('units')} to ${recv.name} (${refNo})`, 'success');
         return true;
       },
 
@@ -803,7 +803,7 @@ function App() {
           stock: { ...prev.stock, [tid]: nextStock },
           movements: [...prev.movements, ...newMoves],
         }));
-        toast(`Batch stock-in complete — ${lines.length} items, ${total} units, ${amountsText} in (${refNo})`, 'success');
+        toast(`Batch stock-in complete — ${tItems(lines.length)}, ${total} ${t('units')}, ${amountsText} in (${refNo})`, 'success');
         // R06 — 返回入库结果给两步向导：第一步（只读确认）与第二步（批量调价）
         const priceRows = touchedPids.map(pid => {
           const np = newProducts.find(x => x.id === pid);
