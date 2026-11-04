@@ -1813,6 +1813,7 @@ const ZH = {
   'Confirm Quote completed': '报价已确认',
   'Place Order completed': '订单已提交',
   'Record Payment completed': '付款已记录',
+  'Confirm Payment completed': '收款已确认',
   'Create Invoice completed': '发票已开具',
   'Confirm Invoice completed': '发票已确认归档',
   'Inquiry Detail': '询价单详情',
@@ -1976,6 +1977,25 @@ const ZH = {
   'Cash': '现金',
   'POS': 'POS 机',
   'Cheque': '支票',
+
+  // ---- R16 拣货 / 派送（移动端入口补齐 + 页面文案）----
+  // 'Picking' / 'Dispatch' 已有词条，此处只补缺失项，避免词典重复键
+  'Pause': '暂存',
+  'lines': '行',
+  'line': '行',
+  'required': '必填',
+  'e.g. shelf count short by 2': '如：货架实盘少 2 件',
+  'Confirm every line (scan or manual) before completing the pick': '请先确认每一行（扫码或人工勾选）再完成拣货',
+  'Outbound order not generated yet — confirm shipment first': '尚未生成出库单——请先确认发货',
+  'Short pick on this shipment — picked quantities were shipped.': '本次发货存在短拣——按实拣数量发货。',
+  'Dispatching generates the waybill and pushes a login-free confirmation link to the buyer': '发货会生成运单号，并向买方推送免登录的录单确认链接',
+  '+234 ...': '+234 ……',
+
+  // ---- 报价金额校验（移动端 + Web 共用词条）----
+  'Unit price is required': '请填写单价',
+  'Unit price must be a valid number': '单价必须是有效数字',
+  'Unit price must be greater than zero': '单价必须大于 0',
+  'Enter a valid unit price before sending the quote': '发送报价前请填写有效的单价',
 };
 
 // ---------- pattern-based translation for dynamic strings ----------
@@ -2117,6 +2137,9 @@ const PATTERNS = [
   [/^Reject quote (.+)\? A rejection reason is required\.$/, '拒绝报价 $1？需填写拒绝理由。'],
   [/^Accept order (.+)\? An invoice will be issued automatically and pushed to the buyer\.$/, '接受订单 $1？将自动开具发票并推送给买方。'],
   [/^Record the offline payment for order (.+)\? The buyer pays offline — recording it notifies the buyer and unlocks shipment\.$/, '记录订单 $1 的线下付款？买方线下付款——记录后将通知买方并解锁发货。'],
+  [/^Confirm the recorded payment for (.+)\? The order moves to awaiting outbound and shipment is unlocked\.$/, '确认已记录的付款（$1）？订单将转为待出库并解锁发货。'],
+  // R16 — 拣货页扫码确认 toast（模板字符串，走 pattern 而非词典）
+  [/^(.+) — barcode scanned, (\d+) picked$/, '$1 — 已扫码，实拣 $2 件'],
   [/^Order rejected — reason recorded$/, '订单已拒绝——理由已记录'],
   [/^Quote rejected — reason recorded$/, '报价已拒绝——理由已记录'],
   [/^Purchase order (PO-\S+) auto-generated$/, '已自动生成采购订单 $1'],

@@ -1288,6 +1288,14 @@ function docActions(db, account, doc) {
       // 确认发货 (待出库 + paid) → generates CK + waybill (R91: 补货 now buyer-side)
       // R15 — status is the SOLE gate: Pending Outbound is reachable only after payment confirmation
       if (doc.status === 'Pending Outbound') a.push('Ship');
+      // R16 — 确认发货后订单转「待拣货」：seller 从订单本身也能进入拣货 / 派送
+      // （移动端订单页只列 PO，出库单(CK)不在列表里，故订单行必须带入口；
+      //   exec 时解析到订单对应的出库单 CK）
+      if (['Pending Picking', 'Picking'].includes(doc.status)) a.push('Start Picking');
+      if (doc.status === 'Pending Shipment') {
+        const shipCkOf = db.docs.find(d => d.type === 'CK' && d.poNo === doc.no);
+        if (shipCkOf && !shipCkOf.fromStaging) a.push('Dispatch');
+      }
       // R83 — supplier issues a replenishment outbound to cover the shortfall
       // after a partial receipt (buyer may Re-receive or Terminate Receiving)
       // R91 — 补货 moved to the BUYER side per the status/action table
@@ -1336,7 +1344,7 @@ function docActions(db, account, doc) {
   }
   a.push('View', 'Print');
   // ensure unique and order stable
-  const order = ['View', 'Edit', 'Confirm Quote', 'Submit', 'Place Order', 'Delete', 'Quote', 'Accept', 'Reject', 'Approve', 'Record Payment', 'Confirm Payment', 'Ship', 'Dispatch', 'Confirm Receipt', 'Create Invoice', 'Confirm Invoice', 'Re-receive', 'Replenish', 'Terminate Receiving', 'Print', 'Download', 'Cancel', 'Close'];
+  const order = ['View', 'Edit', 'Confirm Quote', 'Submit', 'Place Order', 'Delete', 'Quote', 'Accept', 'Reject', 'Approve', 'Record Payment', 'Confirm Payment', 'Ship', 'Start Picking', 'Dispatch', 'Confirm Receipt', 'Create Invoice', 'Confirm Invoice', 'Re-receive', 'Replenish', 'Terminate Receiving', 'Print', 'Download', 'Cancel', 'Close'];
   const uniq = [];
   for (const k of order) { if (a.includes(k) && !uniq.includes(k)) uniq.push(k); }
   return uniq;

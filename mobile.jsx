@@ -192,6 +192,7 @@ function MobileApp() {
     members: 'Team Members', distributors: 'Distributors', bindwa: 'Bind WhatsApp', adjustPrice: 'Adjust Price', adjustStock: 'Adjust Stock',
     channelStock: 'Downstream Stock', priceHistory: 'Purchase Price History', waChat: 'WhatsApp Chat', waInbox: 'WhatsApp', rereceive: 'Re-receive',
     accept: 'Accept Order', pay: 'Record Payment', replenish: 'Replenish',
+    picking: 'Picking', dispatch: 'Dispatch',
   };
   // R96 — the doc detail title shows the DOCUMENT TYPE; R97 — 入库记录/出库单/
   // 采购订单 are unified as 订单详情 (Order Detail)
@@ -924,6 +925,7 @@ function h5DocVerb(verb, doc, ctx) {
   }
   if (verb === 'Accept' || verb === 'Submit' || verb === 'Cancel' || verb === 'Close' || verb === 'Delete'
     || verb === 'Confirm Quote' || verb === 'Place Order' || verb === 'Record Payment' || verb === 'Create Invoice' || verb === 'Confirm Invoice'
+    || verb === 'Confirm Payment'
     || verb === 'Re-receive' || verb === 'Replenish' || verb === 'Terminate Receiving') {
     // R92 — the partial-receipt recovery actions can be triggered from a CK/RK
     // list item; they always operate on the parent purchase order
@@ -967,6 +969,7 @@ function h5DocVerb(verb, doc, ctx) {
       'Confirm Quote': `Confirm the AI-drafted quote ${doc.no} with one tap? The quote link will be pushed to ${tenantName(db, doc.buyer)} via WhatsApp.`,
       'Place Order': `Place order ${doc.no} with one tap? It will be submitted to ${tenantName(db, doc.seller)} for review.`,
       'Record Payment': `Record the offline payment for order ${doc.no}? The buyer pays offline — recording it notifies the buyer and unlocks shipment.`,
+      'Confirm Payment': `Confirm the recorded payment for ${doc.no}? The order moves to awaiting outbound and shipment is unlocked.`,
       'Create Invoice': `Issue the invoice for ${doc.no}? The invoice link will be pushed to ${tenantName(db, doc.buyer)} via WhatsApp.`,
       'Confirm Invoice': `Confirm invoice ${doc.no}? It will be archived after confirmation.`,
       // R83 — partial receipt recovery (R92: po.no — the doc may be a CK/RK item)
@@ -985,8 +988,15 @@ function h5DocVerb(verb, doc, ctx) {
     return;
   }
   // R16 — 拣货 / 发货（承运信息）专用页面（CK 行）
-  if (verb === 'Start Picking') return push({ name: 'picking', docId: doc.id });
-  if (verb === 'Dispatch') return push({ name: 'dispatch', docId: doc.id });
+  // 订单（PO）在「待拣货 / 拣货中 / 待发货」时也带这两个动作：移动端订单页只列
+  // PO，出库单(CK)不出现在任何列表里，所以必须从订单解析到它生成的 CK 再进页面。
+  if (verb === 'Start Picking' || verb === 'Dispatch') {
+    const target = doc.type === 'PO'
+      ? db.docs.filter(d => d.type === 'CK' && d.poNo === doc.no).pop()
+      : doc;
+    if (!target) { toast('Outbound order not generated yet — confirm shipment first', 'error'); return; }
+    return push({ name: verb === 'Start Picking' ? 'picking' : 'dispatch', docId: target.id });
+  }
   if (verb === 'Ship') return push({ name: 'ship', docId: doc.id });
   // R91/R92 — the buyer can confirm receipt directly from the ORDER (or a CK
   // list item) at 已发货: resolve to the outbound (CK) and open the receiving

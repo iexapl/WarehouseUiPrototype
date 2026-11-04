@@ -600,6 +600,10 @@ function H5QuoteFormPage({ docId, onDone }) {
   const [items, setItems] = useState(() => inquiry ? inquiry.items.map(it => ({ ...it, price: ifnull(it.price, ''), suggested: false })) : []);
   const [validUntil, setValidUntil] = useState(() => { const d = new Date(); d.setDate(d.getDate() + 7); return d.toISOString().slice(0, 10); });
   const [aiUsed, setAiUsed] = useState(false);
+  // 报价金额校验：逐行记录错误（空 / 非数字 / ≤0 均拦截），
+  // 错误常驻在本行下方（不只靠 toast），用户改动该行即清除，
+  // 已填的其他字段（数量、有效期等）一律保留。
+  const [priceErrors, setPriceErrors] = useState({});
   if (!inquiry) return null;
   const currency = inquiry.currency;
   const aiDraft = () => {
@@ -610,9 +614,25 @@ function H5QuoteFormPage({ docId, onDone }) {
       return { ...it, price, suggested: true };
     }));
     setAiUsed(true);
+    setPriceErrors({});
     toast('AI quote draft generated — review before sending', 'success');
   };
   const total = items.reduce((s, it) => s + (Number(it.price) || 0) * it.qty, 0);
+  // 单价必须为有限正数；空串 / 非数字 / 0 / 负数一律视为无效（报价单不能没有金额）
+  const priceOf = (it) => {
+    const raw = String(it.price == null ? '' : it.price).trim();
+    if (raw === '') return { ok: false, msg: 'Unit price is required' };
+    const n = Number(raw);
+    if (!isFinite(n)) return { ok: false, msg: 'Unit price must be a valid number' };
+    if (n <= 0) return { ok: false, msg: 'Unit price must be greater than zero' };
+    return { ok: true, n };
+  };
+  const validatePrices = () => {
+    const errs = {};
+    items.forEach((it, i) => { const r = priceOf(it); if (!r.ok) errs[i] = r.msg; });
+    setPriceErrors(errs);
+    return errs;
+  };
   return (
     <div className="h5-pad">
       <div className="h5-card">
@@ -633,10 +653,11 @@ function H5QuoteFormPage({ docId, onDone }) {
           <div className="muted mono" style={{ fontSize: 11, marginTop: 2 }}>{it.spec}</div>
           <div className="flex gap8 mt8" style={{ alignItems: 'center' }}>
             <span className="cur-code" style={{ fontSize: 11 }}>{currency}</span>
-            <input className="input" style={{ height: 32, flex: 1 }} type="number" value={it.price} onChange={e => setItems(items.map((x, j) => i === j ? { ...x, price: e.target.value, suggested: false } : x))} placeholder="unit price" />
+            <input className="input" style={{ height: 32, flex: 1, borderColor: priceErrors[i] ? 'var(--danger)' : undefined }} type="number" value={it.price} onChange={e => { const v = e.target.value; setItems(items.map((x, j) => i === j ? { ...x, price: v, suggested: false } : x)); setPriceErrors(prev => { if (!prev[i]) return prev; const n = { ...prev }; delete n[i]; return n; }); }} placeholder={t('unit price')} aria-label="Unit price" />
             {it.suggested && <span className="h5-badge-ai">AI</span>}
             <span className="mono bold" style={{ fontSize: 12.5, width: 84, textAlign: 'right' }}>{money((Number(it.price) || 0) * it.qty, currency).num}</span>
           </div>
+          {priceErrors[i] && <div className="field-error"><Icon name="alertCircle" size={12} /> {t(priceErrors[i])}</div>}
         </div>
       ))}
       <div className="h5-card flex" style={{ justifyContent: 'space-between' }}>
@@ -649,7 +670,9 @@ function H5QuoteFormPage({ docId, onDone }) {
       <div className="flex gap10 mt16">
         <button className="h5-btn" style={{ flex: 1 }} onClick={aiDraft}><Icon name="ai" size={14} />AI Draft</button>
         <button className="h5-btn primary" style={{ flex: 1.4 }} onClick={() => {
-          if (items.some(it => it.price === '' || isNaN(it.price))) { toast('Enter a unit price for every line', 'error'); return; }
+          const errs = validatePrices();
+          const keys = Object.keys(errs);
+          if (keys.length) { toast(errs[keys[0]], 'error'); return; }
           act.sendQuote(inquiry, items, validUntil);
           onDone();
         }}><Icon name="check" size={14} />Send Quote</button>

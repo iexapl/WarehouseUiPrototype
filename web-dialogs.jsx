@@ -366,6 +366,9 @@ function QuoteFormDialog({ inquiry, editQuote, onClose }) {
     return editQuote ? editQuote.validUntil : d.toISOString().slice(0, 10);
   });
   const [aiUsed, setAiUsed] = useState(false);
+  // 报价金额校验：空 / 非数字 / ≤0 都拦截；错误常驻行内（不只靠 toast），
+  // 改动该行即清除，其他已填字段保持不变。
+  const [priceErrors, setPriceErrors] = useState({});
   const currency = inquiry ? inquiry.currency : editQuote.currency;
   const aiDraft = () => {
     setItems(items.map(it => {
@@ -379,7 +382,23 @@ function QuoteFormDialog({ inquiry, editQuote, onClose }) {
       return { ...it, price, suggested: true };
     }));
     setAiUsed(true);
+    setPriceErrors({});
     toast('AI quote draft generated from inquiry lines — review before sending', 'success');
+  };
+  // 单价必须为有限正数：空 / 非数字 / 0 / 负数都不允许生成报价单
+  const priceOf = (it) => {
+    const raw = String(it.price == null ? '' : it.price).trim();
+    if (raw === '') return { ok: false, msg: 'Unit price is required' };
+    const n = Number(raw);
+    if (!isFinite(n)) return { ok: false, msg: 'Unit price must be a valid number' };
+    if (n <= 0) return { ok: false, msg: 'Unit price must be greater than zero' };
+    return { ok: true, n };
+  };
+  const validatePrices = () => {
+    const errs = {};
+    items.forEach((it, i) => { const r = priceOf(it); if (!r.ok) errs[i] = r.msg; });
+    setPriceErrors(errs);
+    return errs;
   };
   return (
     <Dialog title={inquiry ? `Quote for ${inquiry.no}` : `Edit Quote ${editQuote.no}`} width="720px" onClose={onClose}
@@ -388,7 +407,9 @@ function QuoteFormDialog({ inquiry, editQuote, onClose }) {
         <button className="btn" onClick={onClose}><Icon name="close" size={13} />Cancel</button>
         <button className="btn" onClick={aiDraft}><Icon name="ai" size={14} />AI Draft Quote</button>
         <button className="btn primary" onClick={() => {
-          if (items.some(it => it.price === '' || isNaN(it.price))) { toast('Enter a unit price for every line', 'error'); return; }
+          const errs = validatePrices();
+          const keys = Object.keys(errs);
+          if (keys.length) { toast(errs[keys[0]], 'error'); return; }
           act.sendQuote(inquiry, items, validUntil, editQuote);
           onClose();
         }}><Icon name="check" size={13} />Send Quote</button>
@@ -409,10 +430,13 @@ function QuoteFormDialog({ inquiry, editQuote, onClose }) {
               <tr key={i}>
                 <td><div style={{ fontSize: 13 }} className="bold">{it.name}</div><div className="cell-sub mono">{it.spec}</div></td>
                 <td className="mono">{it.qty}</td>
-                <td><div className="flex gap8">
+                <td><div className="flex gap8" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
                   {/* R108 — 币种在前、金额在后 */}
-                  <Input value={it.price} onChange={v => setItems(items.map((x, j) => i === j ? { ...x, price: v, suggested: false } : x))} placeholder="0.00" prefix={currency} />
-                  {it.suggested && <span className="mini-chip ai">AI</span>}
+                  <div className="flex gap8">
+                    <Input value={it.price} error={priceErrors[i]} onChange={v => { setItems(items.map((x, j) => i === j ? { ...x, price: v, suggested: false } : x)); setPriceErrors(prev => { if (!prev[i]) return prev; const n = { ...prev }; delete n[i]; return n; }); }} placeholder="0.00" prefix={currency} />
+                    {it.suggested && <span className="mini-chip ai">AI</span>}
+                  </div>
+                  {priceErrors[i] && <div className="field-error"><Icon name="alertCircle" size={12} /> {t(priceErrors[i])}</div>}
                 </div></td>
                 <td className="right"><Money amount={(Number(it.price) || 0) * it.qty} currency={currency} /></td>
               </tr>

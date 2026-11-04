@@ -430,9 +430,15 @@ function ActionButtons({ doc, openDoc, size = 'sm', extraAction }) {
       {dialog === 'po' && <POFormDialog editDoc={doc} onClose={() => setDialog(null)} />}
       {dialog === 'quote' && <QuoteFormDialog inquiry={doc.type === 'IQ' ? doc : null} editQuote={doc.type === 'QT' ? doc : null} onClose={() => setDialog(null)} />}
       {dialog === 'ship' && <ShipDialog po={doc} onClose={() => setDialog(null)} />}
-      {/* R16 — 拣货 / 发货表单（CK 行） */}
-      {dialog === 'picking' && <PickingDialog ckId={doc.id} onClose={() => setDialog(null)} />}
-      {dialog === 'dispatch' && <DispatchDialog ck={doc} onClose={() => setDialog(null)} />}
+      {/* R16 — 拣货 / 发货表单（CK 行；PO 行进入时解析到它生成的出库单） */}
+      {dialog === 'picking' && (() => {
+        const ck = doc.type === 'PO' ? db.docs.filter(d => d.type === 'CK' && d.poNo === doc.no).pop() : doc;
+        return ck ? <PickingDialog ckId={ck.id} onClose={() => setDialog(null)} /> : null;
+      })()}
+      {dialog === 'dispatch' && (() => {
+        const ck = doc.type === 'PO' ? db.docs.filter(d => d.type === 'CK' && d.poNo === doc.no).pop() : doc;
+        return ck ? <DispatchDialog ck={ck} onClose={() => setDialog(null)} /> : null;
+      })()}
       {/* R93 — a PO row at 已发货 opens the receive dialog on its generated CK (incl. Pending Shipment) */}
       {dialog === 'receive' && <ReceiveDialog ck={doc.type === 'PO' ? (db.docs.filter(d => d.type === 'CK' && d.poNo === doc.no && ['Shipped', 'Pending Shipment'].includes(d.status)).pop() || doc) : doc} onClose={() => setDialog(null)} />}
       {/* R94 — dedicated FORM dialogs for the order-flow actions (list rows);
